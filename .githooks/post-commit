@@ -1,0 +1,4 @@
+#!/bin/sh
+# Auto-push after each commit (enable with: git config core.hooksPath .githooks)
+branch="$(git rev-parse --abbrev-ref HEAD)"
+git push origin "$branch" 2>/dev/null || git push -u origin "$branch"
