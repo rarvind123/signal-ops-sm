@@ -11,13 +11,32 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function publicSupabaseKey(): string {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    ""
+  );
+}
+
+function serverSupabaseKey(): string {
+  return (
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    ""
+  );
+}
+
 // Server-side client (full access)
 export function getSupabase(): SupabaseClient {
   if (!serverClient) {
-    serverClient = createClient(
-      requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-      requireEnv("SUPABASE_SERVICE_ROLE_KEY")
-    );
+    const serviceKey = serverSupabaseKey();
+    if (!serviceKey) {
+      throw new Error(
+        "SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is not set. Add it to .env.local."
+      );
+    }
+    serverClient = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), serviceKey);
   }
   return serverClient;
 }
@@ -25,10 +44,13 @@ export function getSupabase(): SupabaseClient {
 // Client-side client (anon access)
 export function getSupabasePublic(): SupabaseClient {
   if (!publicClient) {
-    publicClient = createClient(
-      requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-      requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-    );
+    const publicKey = publicSupabaseKey();
+    if (!publicKey) {
+      throw new Error(
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set."
+      );
+    }
+    publicClient = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), publicKey);
   }
   return publicClient;
 }
