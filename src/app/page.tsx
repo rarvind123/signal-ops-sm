@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import type {
   SMClient,
@@ -74,12 +75,29 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#060608] px-6 py-10 text-zinc-200">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div>
-          <h1 className="text-lg font-light tracking-wide text-zinc-100">
-            ✦ SignalOps — Social Media Creative Engine
-          </h1>
-          <p className="mt-1 text-xs text-zinc-500">Strategy → creatives for brand posts</p>
-        </div>
+        <header className="flex items-center gap-5 border-b border-zinc-800/80 pb-6">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-violet-400/30 bg-white shadow-[0_0_40px_rgba(124,58,237,0.25)]">
+            <Image
+              src="/signalops-logo.png"
+              alt="SignalOps logo"
+              width={500}
+              height={500}
+              className="absolute left-1/2 top-1/2 h-[420%] w-[420%] max-w-none -translate-x-[38%] -translate-y-[30%]"
+              priority
+            />
+          </div>
+          <div className="min-w-0">
+            <h1 className="bg-gradient-to-r from-violet-200 via-white to-violet-300 bg-clip-text text-2xl font-light tracking-[0.18em] text-transparent uppercase">
+              SignalOps
+            </h1>
+            <p className="mt-1.5 text-sm font-light tracking-wide text-violet-300/90">
+              Social Media Creative Engine
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Strategy → creatives for brand posts
+            </p>
+          </div>
+        </header>
 
         <SMStepIndicator current={step} />
         {error && (

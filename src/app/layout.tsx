@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SignalOps — Social Media Creative Engine",
+  title: "SignalOps",
   description: "AI-powered social media creatives in under 10 minutes",
 };
 
