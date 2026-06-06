@@ -32,6 +32,7 @@ CREATE TABLE sm_creative_requests (
   goal                 TEXT,
   uploaded_image_urls  JSONB DEFAULT '[]',
   creative_lens        TEXT DEFAULT 'signalops',
+  creative_format      TEXT DEFAULT 'social_media',
   status               TEXT DEFAULT 'pending',
   created_at           TIMESTAMPTZ DEFAULT NOW()
 );
@@ -110,3 +111,4 @@ CREATE INDEX idx_sm_signalops_request ON sm_signalops_outputs(request_id);
 
 -- Existing deployments: add creative_lens if table already exists
 ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS creative_lens TEXT DEFAULT 'signalops';
+ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS creative_format TEXT DEFAULT 'social_media';

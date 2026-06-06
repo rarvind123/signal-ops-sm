@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import type {
   SMClient,
+  SMCreativeFormat,
   SMCreativeRequest,
   SMGeneratedAsset,
   SMSignalOpsOutput,
@@ -12,9 +13,11 @@ import BrandProfileForm from "@/components/sm/BrandProfileForm";
 import ClientSelector from "@/components/sm/ClientSelector";
 import CreativeBriefForm from "@/components/sm/CreativeBriefForm";
 import CreativePreviewGrid from "@/components/sm/CreativePreviewGrid";
+import FormatSelector from "@/components/sm/FormatSelector";
 import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
+import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 
-type SMStep = "brand" | "brief" | "signalops" | "assets";
+type SMStep = "format" | "brand" | "brief" | "signalops" | "assets";
 
 function SMStepIndicator({
   current,
@@ -62,7 +65,8 @@ function SMStepIndicator({
 }
 
 export default function Home() {
-  const [step, setStep] = useState<SMStep>("brand");
+  const [step, setStep] = useState<SMStep>("format");
+  const [activeFormat, setActiveFormat] = useState<SMCreativeFormat>("social_media");
   const [showCreateForm, setShowCreateForm] = useState(true);
   const [activeClient, setActiveClient] = useState<SMClient | null>(null);
   const [activeRequest, setActiveRequest] = useState<SMCreativeRequest | null>(null);
@@ -71,8 +75,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [signalopsLoading, setSignalopsLoading] = useState(false);
 
+  const formatMeta = CREATIVE_FORMATS.find((f) => f.id === activeFormat);
+
   function handleStartOver() {
-    setStep("brand");
+    setStep("format");
+    setActiveFormat("social_media");
     setActiveClient(null);
     setActiveRequest(null);
     setSignalOpsOutput(null);
@@ -122,29 +129,42 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#060608] px-6 py-10 text-zinc-200">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <header className="border-b border-zinc-800/80 pb-6">
-          <div className="flex items-center justify-between">
-            <Image
-              src="/inventious-logo.png"
-              alt="inventious"
-              width={378}
-              height={118}
-              className="h-10 w-auto object-contain object-left sm:h-12"
-              priority
-            />
-            {step !== "brand" && (
+        {step !== "format" && (
+          <header className="mb-2 border-b border-zinc-800/60 pb-5">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <Image
+                  src="/inventious-logo.png"
+                  alt="inventious"
+                  width={378}
+                  height={118}
+                  className="h-9 w-auto object-contain object-left"
+                  priority
+                />
+                <p className="mt-1 text-xs text-zinc-600">
+                  SignalOps → {formatMeta?.label ?? "Creative Engine"}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={handleStartOver}
-                className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+                className="text-xs text-zinc-600 hover:text-zinc-400"
               >
                 ← Start over
               </button>
-            )}
-          </div>
-        </header>
+            </div>
+          </header>
+        )}
 
-        <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
+        {step !== "format" && (
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
+              {formatMeta?.icon} {formatMeta?.label}
+            </span>
+            <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
+          </div>
+        )}
+
         {error && (
           <div className="flex items-start justify-between gap-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <span>⚠ {error}</span>
@@ -159,6 +179,15 @@ export default function Home() {
               </button>
             )}
           </div>
+        )}
+
+        {step === "format" && (
+          <FormatSelector
+            onSelect={(format) => {
+              setActiveFormat(format);
+              setStep("brand");
+            }}
+          />
         )}
 
         {step === "brand" && (
@@ -189,6 +218,7 @@ export default function Home() {
         {step === "brief" && activeClient && (
           <CreativeBriefForm
             client={activeClient}
+            activeFormat={activeFormat}
             onSubmit={async (request) => {
               await runSignalOps(request);
             }}

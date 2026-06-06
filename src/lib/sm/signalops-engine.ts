@@ -1,5 +1,6 @@
 import { completeText } from "@/lib/ai";
 import { cleanJsonResponse } from "@/lib/json-sanitize";
+import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
 import type { SMClient, SMCreativeRequest, SMSignalOpsOutput } from "@/types/sm";
 
@@ -51,7 +52,10 @@ async function callSignalOpsModel(
       ? `\n\nRETRY ${attempt}: Your previous direction scored below ${LIONS_SCORE_THRESHOLD}/10 on Lions quality. Rewrite with a sharper insight bridge, a braver headline option, and more specific visual direction.`
       : "";
 
+  const format = getFormat(request.creative_format);
+  const formatContext = format.signalops_context;
   const lensPhilosophy = getLensPhilosophy(request.creative_lens);
+  const contextBlock = [formatContext, lensPhilosophy].filter(Boolean).join("\n\n---\n\n");
 
   const systemPrompt = `You are SignalOps — the creative intelligence engine of a world-class brand agency.
 You operate with the rigour of a Cannes Lions jury combined with the instinct of a senior creative director.
@@ -103,7 +107,7 @@ After generating your direction, you will score it on four dimensions used by Ca
 - Brave (1–10): Does it take a creative risk? Could a conservative client refuse it? Bravery requires tension.
 - Crafted (1–10): Is the execution concept tight, specific, and visually clear? Vague direction scores below 5.
 Be honest. If your overall score is below 6, rewrite the direction before returning it.
-${lensPhilosophy ? `\n---\n${lensPhilosophy}\n---` : ""}
+${contextBlock ? `\n---\n${contextBlock}\n---` : ""}
 
 OUTPUT RULES:
 - Every word should be specific and actionable, not generic. "Warm sunrise tones" beats "make it feel warm".
@@ -120,6 +124,11 @@ ${briefContext}
 
 BEHAVIOURAL ECONOMICS MENU (pre-matched to brief goal "${request.goal ?? "awareness"}"):
 ${beMenu}
+${
+  format.copy_constraints.note
+    ? `\nCOPY CONSTRAINTS: ${format.copy_constraints.note}\nMax headline: ${format.copy_constraints.max_headline_words} words. Max body: ${format.copy_constraints.max_body_words} words.`
+    : ""
+}
 
 Generate a complete SignalOps creative direction in this exact JSON structure:
 

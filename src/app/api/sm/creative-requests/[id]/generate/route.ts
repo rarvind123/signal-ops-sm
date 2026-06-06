@@ -5,13 +5,16 @@ import {
   generateCopyForPlatform,
   isValidPlatformAssetCombo,
 } from "@/lib/sm/asset-generator";
+import { getFormat } from "@/lib/sm/creative-formats";
 import { saveSmGeneratedImage } from "@/lib/sm/file-storage";
 import {
   generateMarketingImageBytes,
   getAspectRatio,
   logSmImageError,
+  type FluxAspectRatio,
 } from "@/lib/sm/image-gen";
 import { smRouteHandler } from "@/lib/sm/api-auth";
+import { generateTVScript } from "@/lib/sm/tv-script";
 import {
   createGeneratedAsset,
   getClient,
@@ -58,6 +61,7 @@ export async function POST(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "SignalOps output not found" }, { status: 400 });
     }
 
+    const format = getFormat(request.creative_format);
     const headline =
       signalops.headlines[headline_index]?.text ??
       signalops.headlines[0]?.text ??
@@ -68,14 +72,14 @@ export async function POST(req: Request, context: RouteContext) {
 
     for (const platform of targetPlatforms) {
       for (const assetType of asset_types) {
-        if (isValidPlatformAssetCombo(platform, assetType)) {
+        if (isValidPlatformAssetCombo(platform, assetType) || format.output_type === "text") {
           combos.push({ platform, assetType });
         }
       }
     }
 
     if (combos.length === 0) {
-      throw new Error("No valid platform × asset_type combinations.");
+      combos.push({ platform: "instagram", assetType: "post" });
     }
 
     const limited = combos.slice(0, MAX_COMBOS_PER_CALL);
@@ -93,6 +97,18 @@ export async function POST(req: Request, context: RouteContext) {
       });
 
       try {
+        if (format.output_type === "text") {
+          const script = await generateTVScript(client, signalops, request, headline);
+          const done = await updateGeneratedAsset(pending.id, {
+            copy: script,
+            headline,
+            status: "done",
+            error_message: "",
+          });
+          assets.push(done);
+          continue;
+        }
+
         const prompt = buildImageGenerationPrompt(
           client,
           signalops,
@@ -101,24 +117,31 @@ export async function POST(req: Request, context: RouteContext) {
           headline
         );
 
-        const aspectRatio = getAspectRatio(platform, assetType);
+        const aspectRatio: FluxAspectRatio =
+          format.default_aspect_ratio ?? getAspectRatio(platform, assetType);
         const bytes = await generateMarketingImageBytes(prompt, aspectRatio);
         const saved = await saveSmGeneratedImage(pending.id, bytes, ".jpg");
 
-        const copy = await generateCopyForPlatform(
-          client,
-          signalops,
-          platform,
-          defaultGoalLabel(request.goal),
-          headline
-        );
+        let caption = "";
+        let cta = "Learn More";
+        if (format.copy_constraints.max_body_words > 0) {
+          const copy = await generateCopyForPlatform(
+            client,
+            signalops,
+            platform,
+            defaultGoalLabel(request.goal),
+            headline
+          );
+          caption = copy.caption;
+          cta = copy.cta;
+        }
 
         const done = await updateGeneratedAsset(pending.id, {
           storage_url: saved.publicUrl,
           generation_prompt: prompt,
           headline,
-          copy: copy.caption,
-          cta: copy.cta,
+          copy: caption,
+          cta,
           status: "done",
           error_message: "",
         });

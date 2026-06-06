@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
 import type {
   SMClient,
+  SMCreativeFormat,
   SMCreativeLens,
   SMGoal,
   SMPlatform,
@@ -29,11 +30,14 @@ const PLATFORMS: { key: SMPlatform; label: string }[] = [
 
 export default function CreativeBriefForm({
   client,
+  activeFormat,
   onSubmit,
 }: {
   client: SMClient;
+  activeFormat: SMCreativeFormat;
   onSubmit: (request: SMCreativeRequest) => Promise<void>;
 }) {
+  const isSocial = activeFormat === "social_media";
   const [brief, setBrief] = useState("");
   const [goal, setGoal] = useState<SMGoal>("awareness");
   const [creativeLens, setCreativeLens] = useState<SMCreativeLens>("signalops");
@@ -49,7 +53,7 @@ export default function CreativeBriefForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!brief.trim() || platforms.length === 0) return;
+    if (!brief.trim() || (isSocial && platforms.length === 0)) return;
     setLoading(true);
     setError(null);
     try {
@@ -62,9 +66,10 @@ export default function CreativeBriefForm({
           client_id: client.id,
           brief_text: brief,
           goal,
-          platforms,
+          platforms: isSocial ? platforms : ["instagram"],
           uploaded_image_urls: uploadedUrls,
           creative_lens: creativeLens,
+          creative_format: activeFormat,
         }),
       });
       const request = (await res.json()) as SMCreativeRequest & { error?: string };
@@ -153,25 +158,27 @@ export default function CreativeBriefForm({
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-zinc-400">Platforms</label>
-        <div className="flex flex-wrap gap-2">
-          {PLATFORMS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => togglePlatform(p.key)}
-              className={`rounded-lg border px-3 py-1.5 text-xs ${
-                platforms.includes(p.key)
-                  ? "border-blue-500 bg-blue-500/10 text-blue-300"
-                  : "border-zinc-700 text-zinc-400"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+      {isSocial && (
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-zinc-400">Platforms</label>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => togglePlatform(p.key)}
+                className={`rounded-lg border px-3 py-1.5 text-xs ${
+                  platforms.includes(p.key)
+                    ? "border-blue-500 bg-blue-500/10 text-blue-300"
+                    : "border-zinc-700 text-zinc-400"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <ImageUploader
         clientId={client.id}
@@ -182,7 +189,7 @@ export default function CreativeBriefForm({
 
       <button
         type="submit"
-        disabled={loading || !brief.trim() || platforms.length === 0}
+        disabled={loading || !brief.trim() || (isSocial && platforms.length === 0)}
         className="rounded bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
       >
         {loading ? "Analyzing with SignalOps..." : "✦ Run SignalOps →"}

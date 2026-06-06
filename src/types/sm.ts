@@ -23,6 +23,14 @@ export type SMGoal =
 
 export type SMAssetType = "post" | "story" | "reel_cover" | "banner";
 
+export type SMCreativeFormat =
+  | "social_media"
+  | "print_ad"
+  | "outdoor"
+  | "tv_script"
+  | "social_video"
+  | "pitch_deck";
+
 export type SMCreativeLens =
   | "signalops"
   | "human_truth"
@@ -67,6 +75,7 @@ export interface SMCreativeRequest {
   platforms: SMPlatform[];
   goal?: SMGoal;
   uploaded_image_urls: string[];
+  creative_format?: SMCreativeFormat;
   creative_lens?: SMCreativeLens;
   status: "pending" | "processing" | "done" | "failed";
   created_at: string;

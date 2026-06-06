@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import { createCreativeRequest } from "@/lib/sm/store";
-import type { SMCreativeLens, SMGoal, SMPlatform } from "@/types/sm";
+import type { SMCreativeFormat, SMCreativeLens, SMGoal, SMPlatform } from "@/types/sm";
+
+const VALID_FORMATS: SMCreativeFormat[] = [
+  "social_media",
+  "print_ad",
+  "outdoor",
+  "tv_script",
+  "social_video",
+  "pitch_deck",
+];
 
 const VALID_LENSES: SMCreativeLens[] = [
   "signalops",
@@ -35,12 +44,19 @@ export async function POST(req: Request) {
         ? (body.creative_lens as SMCreativeLens)
         : "signalops";
 
+    const creative_format =
+      typeof body.creative_format === "string" &&
+      VALID_FORMATS.includes(body.creative_format as SMCreativeFormat)
+        ? (body.creative_format as SMCreativeFormat)
+        : "social_media";
+
     const request = await createCreativeRequest({
       client_id,
       brief_text,
       platforms,
       goal,
       uploaded_image_urls,
+      creative_format,
       creative_lens,
     });
 

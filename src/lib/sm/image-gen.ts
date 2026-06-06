@@ -7,7 +7,7 @@ import type { SMAssetType, SMPlatform } from "@/types/sm";
 const FLUX_MODEL = "black-forest-labs/flux-1.1-pro";
 const BUCKET = "sm-assets";
 
-export type FluxAspectRatio = "1:1" | "9:16" | "16:9" | "4:5";
+export type FluxAspectRatio = "1:1" | "9:16" | "16:9" | "4:5" | "3:4";
 export type AspectRatio = FluxAspectRatio;
 
 type FileOutputLike = {

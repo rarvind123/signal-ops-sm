@@ -39,8 +39,10 @@ export default function AssetCard({
       .catch(() => {});
   }, [client.id, logoUrl]);
 
+  const isTextOnly =
+    localAsset.status === "done" && !localAsset.storage_url && Boolean(localAsset.copy);
   const platformLabel = localAsset.platform.charAt(0).toUpperCase() + localAsset.platform.slice(1);
-  const typeLabel = localAsset.asset_type.replace("_", " ");
+  const typeLabel = isTextOnly ? "TV Script" : localAsset.asset_type.replace("_", " ");
 
   async function handleRedo() {
     setRegenerating(true);
@@ -56,6 +58,17 @@ export default function AssetCard({
   }
 
   async function handleDownload() {
+    if (isTextOnly && localAsset.copy) {
+      const blob = new Blob([localAsset.copy], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${client.name}-tv-script-30s.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
     const res = await fetch(`/api/sm/assets/${localAsset.id}/download`);
     if (!res.ok) return;
     const blob = await res.blob();
@@ -69,7 +82,17 @@ export default function AssetCard({
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800/60">
-      <div className="relative aspect-square overflow-hidden bg-zinc-900">
+      <div
+        className={`relative overflow-hidden bg-zinc-900 ${
+          isTextOnly ? "min-h-[400px]" : "aspect-square"
+        }`}
+      >
+        {isTextOnly && (
+          <div className="max-h-[400px] overflow-y-auto whitespace-pre-wrap bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
+            {localAsset.copy}
+          </div>
+        )}
+
         {localAsset.status === "done" && localAsset.storage_url && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -131,14 +154,14 @@ export default function AssetCard({
           <p className="text-sm font-medium text-white">&ldquo;{localAsset.headline}&rdquo;</p>
         </div>
       )}
-      {localAsset.copy && (
+      {localAsset.copy && !isTextOnly && (
         <div className="px-3 pb-2 pt-1">
           <p className="line-clamp-3 text-xs leading-relaxed text-zinc-400">{localAsset.copy}</p>
         </div>
       )}
 
       <div className="mt-auto flex flex-col gap-1.5 px-3 pb-3 pt-1">
-        {showRedoInput && (
+        {showRedoInput && !isTextOnly && (
           <div className="flex gap-1.5">
             <input
               autoFocus
@@ -174,29 +197,33 @@ export default function AssetCard({
           >
             ↓ Download
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (!showRedoInput) {
-                setShowRedoInput(true);
-              } else if (redoDirection.trim()) {
-                void handleRedo();
-              } else {
-                setShowRedoInput(false);
-              }
-            }}
-            disabled={regenerating || localAsset.status === "generating"}
-            className="flex-1 rounded border border-zinc-600 px-2 py-1.5 text-xs text-zinc-300 hover:border-zinc-400 hover:text-white disabled:opacity-40"
-          >
-            {regenerating ? "…" : "↻ Redo"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowPublish(true)}
-            className="flex-1 rounded border border-violet-500/30 bg-violet-600/20 px-2 py-1.5 text-xs text-violet-300 hover:bg-violet-600/30"
-          >
-            ↑ Publish
-          </button>
+          {!isTextOnly && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!showRedoInput) {
+                  setShowRedoInput(true);
+                } else if (redoDirection.trim()) {
+                  void handleRedo();
+                } else {
+                  setShowRedoInput(false);
+                }
+              }}
+              disabled={regenerating || localAsset.status === "generating"}
+              className="flex-1 rounded border border-zinc-600 px-2 py-1.5 text-xs text-zinc-300 hover:border-zinc-400 hover:text-white disabled:opacity-40"
+            >
+              {regenerating ? "…" : "↻ Redo"}
+            </button>
+          )}
+          {!isTextOnly && (
+            <button
+              type="button"
+              onClick={() => setShowPublish(true)}
+              className="flex-1 rounded border border-violet-500/30 bg-violet-600/20 px-2 py-1.5 text-xs text-violet-300 hover:bg-violet-600/30"
+            >
+              ↑ Publish
+            </button>
+          )}
         </div>
       </div>
 
