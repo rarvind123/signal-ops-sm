@@ -16,6 +16,34 @@ export type CalendarItemRaw = {
   suggested_day: string;
 };
 
+const CALENDAR_WRAPPER_KEYS = [
+  "calendar_items",
+  "items",
+  "posts",
+  "calendar",
+  "data_list",
+  "data",
+] as const;
+
+function unwrapCalendarItems(raw: unknown): CalendarItemRaw[] {
+  if (Array.isArray(raw)) return raw as CalendarItemRaw[];
+  if (!raw || typeof raw !== "object") return [];
+
+  const obj = raw as Record<string, unknown>;
+  for (const key of CALENDAR_WRAPPER_KEYS) {
+    const value = obj[key];
+    if (Array.isArray(value) && value.length > 0) {
+      return value as CalendarItemRaw[];
+    }
+  }
+
+  if (typeof obj.post_number === "number") {
+    return [obj as CalendarItemRaw];
+  }
+
+  return [];
+}
+
 export async function generateCampaignCalendar(
   client: SMClient,
   campaign: SMCampaign,
@@ -52,29 +80,38 @@ ${JSON.stringify(strategy.content_mix, null, 2)}
 
 Generate exactly ${totalPosts} calendar items that collectively use the content mix above (total must match exactly).
 
-Return as JSON array:
-[
-  {
-    "post_number": 1,
-    "week_number": 1,
-    "format": "reel",
-    "pillar": "Problem Awareness",
-    "story_phase": "Awareness",
-    "strategic_purpose": "Open the campaign by making the audience feel the problem we solve — before any product mention",
-    "suggested_day": "Tuesday"
-  }
-]
+Return as a JSON object with a "calendar_items" array:
+{
+  "calendar_items": [
+    {
+      "post_number": 1,
+      "week_number": 1,
+      "format": "reel",
+      "pillar": "Problem Awareness",
+      "story_phase": "Awareness",
+      "strategic_purpose": "Open the campaign by making the audience feel the problem we solve — before any product mention",
+      "suggested_day": "Tuesday"
+    }
+  ]
+}
 
-Return ONLY valid JSON array. No markdown.`;
+Return ONLY valid JSON. No markdown.`;
 
-  const result = await completeJson<CalendarItemRaw[]>(
+  const result = await completeJson<Record<string, unknown>>(
     systemPrompt,
     userPrompt,
     "claude-sonnet-4-6",
     { maxTokens: 6000, temperature: 0.6 }
   );
 
-  return Array.isArray(result) ? result : [];
+  const items = unwrapCalendarItems(result);
+  if (items.length === 0) {
+    throw new Error(
+      "Calendar planner returned no posts — please retry. If this persists, check OPENROUTER_API_KEY."
+    );
+  }
+
+  return items;
 }
 
 export function deriveSuggestedDate(

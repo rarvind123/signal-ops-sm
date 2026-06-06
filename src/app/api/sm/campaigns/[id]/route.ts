@@ -23,7 +23,14 @@ export async function GET(req: Request, context: RouteContext) {
       getCampaignStrategy(id),
       getCalendarItems(id),
     ]);
-    return { campaign, strategy, calendar_count: calendar.length };
+
+    let resolvedCampaign = campaign;
+    if (campaign.status === "calendar_ready" && calendar.length === 0) {
+      const healed = await updateCampaign(id, { status: "strategy_ready" });
+      if (healed) resolvedCampaign = healed;
+    }
+
+    return { campaign: resolvedCampaign, strategy, calendar_count: calendar.length };
   });
 }
 
