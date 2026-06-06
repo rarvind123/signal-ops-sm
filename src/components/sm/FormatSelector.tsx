@@ -3,20 +3,22 @@
 import Image from "next/image";
 import { useState } from "react";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
-import { btnPrimary, field, label, sectionTitle } from "@/lib/sm/ui";
+import { btnGhost, btnPrimary, field, label, sectionTitle } from "@/lib/sm/ui";
 import type { SMCreativeFormat } from "@/types/sm";
 
 export default function FormatSelector({
   onSelect,
+  onBack,
 }: {
   onSelect: (format: SMCreativeFormat) => void;
+  onBack?: () => void;
 }) {
   const [selected, setSelected] = useState<SMCreativeFormat>("social_media");
   const selectedFormat = CREATIVE_FORMATS.find((f) => f.id === selected);
 
   return (
     <div className="flex min-h-[72vh] flex-col">
-      <header className="mb-16">
+      <header className="mb-16 flex items-start justify-between gap-4">
         <Image
           src="/inventious-logo.png"
           alt="inventious"
@@ -25,6 +27,11 @@ export default function FormatSelector({
           className="h-8 w-auto object-contain object-left sm:h-9"
           priority
         />
+        {onBack && (
+          <button type="button" onClick={onBack} className={btnGhost}>
+            Back
+          </button>
+        )}
       </header>
 
       <div className="flex flex-1 flex-col justify-center gap-10">

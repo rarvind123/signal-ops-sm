@@ -31,9 +31,9 @@ export default function ModePicker({ onSelect }: { onSelect: (mode: SMMode) => v
             onClick={() => onSelect("single_post")}
             className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
           >
-            <p className="text-sm font-medium text-zinc-100">A single post</p>
+            <p className="text-sm font-medium text-zinc-100">Social media creatives</p>
             <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-              One creative, one brief, generated now.
+              Print, outdoor, TV script, and more — pick your format next.
             </p>
           </button>
           <button

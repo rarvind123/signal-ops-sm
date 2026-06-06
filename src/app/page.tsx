@@ -38,12 +38,13 @@ function SMStepIndicator({
   onStepClick: (step: SMStep) => void;
 }) {
   const steps: { key: SMStep; label: string }[] = [
+    { key: "format", label: "Format" },
     { key: "brand", label: "Brand" },
     { key: "brief", label: "Brief" },
     { key: "signalops", label: "Strategy" },
     { key: "assets", label: "Creatives" },
   ];
-  const stepOrder: SMStep[] = ["brand", "brief", "signalops", "assets"];
+  const stepOrder: SMStep[] = ["format", "brand", "brief", "signalops", "assets"];
   const currentIndex = stepOrder.indexOf(current);
 
   return (
@@ -168,7 +169,7 @@ export default function Home() {
           </header>
         )}
 
-        {mode === "single_post" && step !== "format" && (
+        {mode === "single_post" && (
           <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
         )}
 
@@ -199,6 +200,10 @@ export default function Home() {
 
         {mode === "single_post" && step === "format" && (
           <FormatSelector
+            onBack={() => {
+              setMode(null);
+              setStep("format");
+            }}
             onSelect={(format) => {
               setActiveFormat(format);
               setStep("brand");
