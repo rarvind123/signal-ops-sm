@@ -5,6 +5,7 @@ import type {
   SMGoal,
   SMPlatform,
   SMSignalOpsOutput,
+  SMVisualApproachMode,
 } from "@/types/sm";
 
 export const PLATFORM_SPECS: Record<
@@ -97,6 +98,37 @@ const UNIVERSAL_EXCLUSIONS = [
   "no logos in the generated image",
   "no brand marks",
 ].join(", ");
+
+export function buildBriefImagePrompt(
+  sceneDescription: string,
+  visualApproachMode: SMVisualApproachMode = "concept_first",
+  platform: SMPlatform = "instagram"
+): string {
+  const modeInstructions =
+    VISUAL_APPROACH_INSTRUCTIONS[visualApproachMode] ??
+    VISUAL_APPROACH_INSTRUCTIONS.concept_first;
+
+  const compositionNote =
+    platform === "linkedin"
+      ? "wide landscape composition, professional setting"
+      : "bold central subject, clear negative space at bottom third";
+
+  const parts = [
+    sceneDescription,
+    compositionNote,
+    modeInstructions,
+    "ultra high quality commercial photography",
+    "sharp focus",
+    "professional studio or location lighting",
+    "8k resolution",
+    "premium advertising aesthetic",
+    UNIVERSAL_EXCLUSIONS,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return parts.replace(/\s+/g, " ").trim().slice(0, 3800);
+}
 
 export function buildImageGenerationPrompt(
   _client: SMClient,

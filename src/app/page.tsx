@@ -1,24 +1,34 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type {
   SMClient,
+  SMCampaign,
   SMCreativeFormat,
   SMCreativeRequest,
   SMGeneratedAsset,
   SMSignalOpsOutput,
 } from "@/types/sm";
 import BrandProfileForm from "@/components/sm/BrandProfileForm";
+import CampaignBriefForm from "@/components/sm/CampaignBriefForm";
 import ClientSelector from "@/components/sm/ClientSelector";
 import CreativeBriefForm from "@/components/sm/CreativeBriefForm";
 import CreativePreviewGrid from "@/components/sm/CreativePreviewGrid";
 import FormatSelector from "@/components/sm/FormatSelector";
+import ModePicker, { type SMMode } from "@/components/sm/ModePicker";
 import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 import { btnGhost } from "@/lib/sm/ui";
 
-type SMStep = "format" | "brand" | "brief" | "signalops" | "assets";
+type SMStep =
+  | "format"
+  | "brand"
+  | "brief"
+  | "campaign_brief"
+  | "signalops"
+  | "assets";
 
 function SMStepIndicator({
   current,
@@ -66,6 +76,8 @@ function SMStepIndicator({
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [mode, setMode] = useState<SMMode | null>(null);
   const [step, setStep] = useState<SMStep>("format");
   const [activeFormat, setActiveFormat] = useState<SMCreativeFormat>("social_media");
   const [showCreateForm, setShowCreateForm] = useState(true);
@@ -79,6 +91,7 @@ export default function Home() {
   const formatMeta = CREATIVE_FORMATS.find((f) => f.id === activeFormat);
 
   function handleStartOver() {
+    setMode(null);
     setStep("format");
     setActiveFormat("social_media");
     setActiveClient(null);
@@ -87,6 +100,10 @@ export default function Home() {
     setGeneratedAssets([]);
     setError(null);
     setShowCreateForm(true);
+  }
+
+  function goToBriefStep() {
+    setStep(mode === "campaign" ? "campaign_brief" : "brief");
   }
 
   function handleNewBrief() {
@@ -130,7 +147,7 @@ export default function Home() {
   return (
     <div className="min-h-screen px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
       <div className="mx-auto flex max-w-2xl flex-col gap-10">
-        {step !== "format" && (
+        {mode !== null && step !== "format" && (
           <header className="flex items-start justify-between gap-6">
             <div>
               <Image
@@ -141,7 +158,9 @@ export default function Home() {
                 className="h-8 w-auto object-contain object-left"
                 priority
               />
-              <p className="mt-2 text-sm text-zinc-500">{formatMeta?.label}</p>
+              <p className="mt-2 text-sm text-zinc-500">
+                {mode === "campaign" ? "Campaign" : formatMeta?.label}
+              </p>
             </div>
             <button type="button" onClick={handleStartOver} className={btnGhost}>
               Start over
@@ -149,7 +168,7 @@ export default function Home() {
           </header>
         )}
 
-        {step !== "format" && (
+        {mode === "single_post" && step !== "format" && (
           <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
         )}
 
@@ -169,7 +188,16 @@ export default function Home() {
           </div>
         )}
 
-        {step === "format" && (
+        {mode === null && (
+          <ModePicker
+            onSelect={(selected) => {
+              setMode(selected);
+              setStep(selected === "single_post" ? "format" : "brand");
+            }}
+          />
+        )}
+
+        {mode === "single_post" && step === "format" && (
           <FormatSelector
             onSelect={(format) => {
               setActiveFormat(format);
@@ -178,13 +206,13 @@ export default function Home() {
           />
         )}
 
-        {step === "brand" && (
+        {mode !== null && step === "brand" && (
           <div className="flex flex-col gap-10">
             <ClientSelector
               onSelect={(client) => {
                 setActiveClient(client);
                 setShowCreateForm(false);
-                setStep("brief");
+                goToBriefStep();
               }}
               onCreate={() => setShowCreateForm(true)}
             />
@@ -196,14 +224,23 @@ export default function Home() {
                 onSave={(client) => {
                   setActiveClient(client);
                   setShowCreateForm(false);
-                  setStep("brief");
+                  goToBriefStep();
                 }}
               />
             )}
           </div>
         )}
 
-        {step === "brief" && activeClient && (
+        {step === "campaign_brief" && activeClient && mode === "campaign" && (
+          <CampaignBriefForm
+            client={activeClient}
+            onSubmit={(campaign: SMCampaign) => {
+              router.push(`/campaign/${campaign.id}/strategy`);
+            }}
+          />
+        )}
+
+        {step === "brief" && activeClient && mode === "single_post" && (
           <CreativeBriefForm
             client={activeClient}
             activeFormat={activeFormat}

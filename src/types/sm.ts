@@ -192,3 +192,115 @@ export interface SMPublishJob {
   error_message?: string;
   created_at: string;
 }
+
+export type SMCampaignObjective =
+  | "awareness"
+  | "engagement"
+  | "conversion"
+  | "launch"
+  | "retention"
+  | "event";
+
+export type SMContentFormat =
+  | "static"
+  | "carousel"
+  | "reel"
+  | "reel_comic"
+  | "meme"
+  | "testimonial"
+  | "offer";
+
+export type SMCampaignStatus =
+  | "drafting"
+  | "strategy_ready"
+  | "calendar_ready"
+  | "executing"
+  | "complete";
+
+export interface SMCampaign {
+  id: string;
+  client_id: string;
+  name: string;
+  objective?: SMCampaignObjective;
+  duration_days: number;
+  product_service?: string;
+  key_message?: string;
+  offer?: string;
+  target_audience: Record<string, unknown>;
+  platforms: SMPlatform[];
+  mandatory_ctas: string[];
+  additional_notes?: string;
+  status: SMCampaignStatus;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface SMContentPillar {
+  name: string;
+  description: string;
+  percentage: number;
+  post_types: SMContentFormat[];
+}
+
+export interface SMStoryArcPhase {
+  phase: string;
+  week_range: string;
+  description: string;
+  emotional_tone: string;
+}
+
+export interface SMCampaignStrategy {
+  id: string;
+  campaign_id: string;
+  narrative_theme: string;
+  campaign_tagline: string;
+  story_arc: SMStoryArcPhase[];
+  content_pillars: SMContentPillar[];
+  content_mix: Partial<Record<SMContentFormat, number>>;
+  strategic_notes: string;
+  platform_notes: Partial<Record<SMPlatform, string>>;
+  created_at: string;
+}
+
+export interface SMCampaignCalendarItem {
+  id: string;
+  campaign_id: string;
+  strategy_id?: string;
+  post_number: number;
+  week_number: number;
+  format: SMContentFormat;
+  pillar?: string;
+  story_phase?: string;
+  strategic_purpose?: string;
+  suggested_date?: string;
+  status: "brief_pending" | "brief_ready" | "generating" | "done";
+  created_at: string;
+}
+
+export interface SMBriefSlide {
+  slide?: number;
+  element?: string;
+  label?: string;
+  content: string;
+}
+
+export interface SMCreativeBrief {
+  id: string;
+  calendar_item_id: string;
+  campaign_id: string;
+  post_number: number;
+  format: SMContentFormat;
+  pillar?: string;
+  objective: string;
+  hook: string;
+  structure: SMBriefSlide[];
+  creative_direction: string;
+  caption_direction: string;
+  cta: string;
+  hashtag_suggestions: string[];
+  visual_approach_mode?: SMVisualApproachMode;
+  scene_description?: string;
+  status: "pending" | "generating" | "done";
+  generated_asset_id?: string;
+  created_at: string;
+}

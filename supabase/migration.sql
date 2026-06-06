@@ -114,3 +114,76 @@ CREATE INDEX idx_sm_signalops_request ON sm_signalops_outputs(request_id);
 ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS creative_lens TEXT DEFAULT 'signalops';
 ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS creative_format TEXT DEFAULT 'social_media';
 ALTER TABLE sm_signalops_outputs ADD COLUMN IF NOT EXISTS visual_approach JSONB DEFAULT '{}';
+
+-- Campaign orchestration
+CREATE TABLE IF NOT EXISTS sm_campaigns (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id        UUID REFERENCES sm_clients(id) ON DELETE CASCADE,
+  name             TEXT NOT NULL,
+  objective        TEXT CHECK (objective IN ('awareness','engagement','conversion','launch','retention','event')),
+  duration_days    INT DEFAULT 30,
+  product_service  TEXT,
+  key_message      TEXT,
+  offer            TEXT,
+  target_audience  JSONB DEFAULT '{}',
+  platforms        JSONB DEFAULT '[]',
+  mandatory_ctas   JSONB DEFAULT '[]',
+  additional_notes TEXT,
+  status           TEXT DEFAULT 'drafting',
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sm_campaign_strategies (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id      UUID REFERENCES sm_campaigns(id) ON DELETE CASCADE,
+  narrative_theme  TEXT,
+  campaign_tagline TEXT,
+  story_arc        JSONB DEFAULT '[]',
+  content_pillars  JSONB DEFAULT '[]',
+  content_mix      JSONB DEFAULT '{}',
+  strategic_notes  TEXT,
+  platform_notes   JSONB DEFAULT '{}',
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sm_campaign_calendar (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id       UUID REFERENCES sm_campaigns(id) ON DELETE CASCADE,
+  strategy_id       UUID REFERENCES sm_campaign_strategies(id),
+  post_number       INT NOT NULL,
+  week_number       INT NOT NULL,
+  format            TEXT NOT NULL,
+  pillar            TEXT,
+  story_phase       TEXT,
+  strategic_purpose TEXT,
+  suggested_date    DATE,
+  status            TEXT DEFAULT 'brief_pending',
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sm_creative_briefs (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  calendar_item_id    UUID REFERENCES sm_campaign_calendar(id) ON DELETE CASCADE,
+  campaign_id         UUID REFERENCES sm_campaigns(id),
+  post_number         INT,
+  format              TEXT,
+  pillar              TEXT,
+  objective           TEXT,
+  hook                TEXT,
+  structure           JSONB DEFAULT '[]',
+  creative_direction  TEXT,
+  caption_direction   TEXT,
+  cta                 TEXT,
+  hashtag_suggestions JSONB DEFAULT '[]',
+  visual_approach_mode TEXT,
+  scene_description   TEXT,
+  status              TEXT DEFAULT 'pending',
+  generated_asset_id  UUID REFERENCES sm_generated_assets(id),
+  created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sm_campaigns_client ON sm_campaigns(client_id);
+CREATE INDEX IF NOT EXISTS idx_sm_calendar_campaign ON sm_campaign_calendar(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sm_briefs_campaign ON sm_creative_briefs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sm_briefs_calendar ON sm_creative_briefs(calendar_item_id);
