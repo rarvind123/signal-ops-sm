@@ -77,11 +77,11 @@ export default function Home() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <header className="border-b border-zinc-800/80 pb-6">
           <Image
-            src="/signalops-logo.png"
-            alt="Logo"
-            width={500}
-            height={500}
-            className="h-14 w-auto object-contain object-left"
+            src="/inventious-logo.png"
+            alt="inventious"
+            width={378}
+            height={118}
+            className="h-10 w-auto object-contain object-left sm:h-12"
             priority
           />
         </header>
