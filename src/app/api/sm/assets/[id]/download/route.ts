@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
 import { readSmFile, relativePathFromPublicUrl } from "@/lib/sm/file-storage";
+import { compositeLogoOntoImage } from "@/lib/sm/logo-composite";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import { getClient, getCreativeRequest, getGeneratedAsset } from "@/lib/sm/store";
 
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+async function loadAssetBytes(storageUrl: string): Promise<Buffer> {
+  const relativePath = relativePathFromPublicUrl(storageUrl);
+  if (relativePath) {
+    return readSmFile(relativePath);
+  }
+  if (storageUrl.startsWith("http")) {
+    const res = await fetch(storageUrl);
+    if (!res.ok) throw new Error("Failed to fetch asset");
+    return Buffer.from(await res.arrayBuffer());
+  }
+  throw new Error("Invalid asset storage URL");
+}
 
 export async function GET(req: Request, context: RouteContext) {
   return smRouteHandler(req, async () => {
@@ -15,22 +29,25 @@ export async function GET(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
 
-    const relativePath = relativePathFromPublicUrl(asset.storage_url);
-    if (!relativePath) {
-      return NextResponse.json({ error: "Invalid asset storage URL" }, { status: 404 });
-    }
+    let imageBuffer = await loadAssetBytes(asset.storage_url);
 
     const request = await getCreativeRequest(asset.request_id);
     const client = request ? await getClient(request.client_id) : null;
-    const clientName = (client?.name ?? "brand").replace(/[^a-zA-Z0-9_-]+/g, "-");
-    const ext = relativePath.toLowerCase().endsWith(".jpg") ? "jpg" : "png";
-    const contentType = ext === "jpg" ? "image/jpeg" : "image/png";
-    const filename = `${clientName}-${asset.platform}-${asset.asset_type}.${ext}`;
 
-    const bytes = await readSmFile(relativePath);
-    return new NextResponse(new Uint8Array(bytes), {
+    try {
+      if (client?.logo_url) {
+        imageBuffer = await compositeLogoOntoImage(imageBuffer, client.logo_url, "top-right");
+      }
+    } catch (e) {
+      console.warn("[download] Logo composite failed, serving without logo:", e);
+    }
+
+    const clientName = (client?.name ?? "brand").replace(/[^a-zA-Z0-9_-]+/g, "-");
+    const filename = `${clientName}-${asset.platform}-${asset.asset_type}.jpg`;
+
+    return new NextResponse(new Uint8Array(imageBuffer), {
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": "image/jpeg",
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });

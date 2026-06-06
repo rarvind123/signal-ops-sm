@@ -37,6 +37,7 @@ export interface SMClient {
   tone?: SMTone;
   brand_colors: Array<{ hex: string; label: string }>;
   social_handles: Partial<Record<SMPlatform, string>>;
+  logo_url?: string;
   created_at: string;
   updated_at: string;
 }

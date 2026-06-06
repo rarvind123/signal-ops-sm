@@ -23,7 +23,9 @@ export default function BrandProfileForm({
   const [audienceLocation, setAudienceLocation] = useState(
     initial?.target_audience?.location ?? ""
   );
-  const [savedClientId, setSavedClientId] = useState(initial?.id);
+  const [savedClient, setSavedClient] = useState<SMClient | null>(
+    initial?.id ? (initial as SMClient) : null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,8 +50,7 @@ export default function BrandProfileForm({
       });
       const client = (await res.json()) as SMClient & { error?: string };
       if (!res.ok) throw new Error(client.error ?? "Save failed");
-      setSavedClientId(client.id);
-      onSave(client);
+      setSavedClient(client);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -131,17 +132,35 @@ export default function BrandProfileForm({
         />
       </div>
 
-      <LogoUploader clientId={savedClientId} />
+      {savedClient && (
+        <LogoUploader
+          clientId={savedClient.id}
+          onUploaded={(url) => setSavedClient((prev) => (prev ? { ...prev, logo_url: url } : prev))}
+        />
+      )}
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={loading || !name}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
-      >
-        {loading ? "Saving..." : "Save Brand Profile →"}
-      </button>
+      {!savedClient ? (
+        <button
+          type="submit"
+          disabled={loading || !name}
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        >
+          {loading ? "Saving..." : "Save Brand Profile"}
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-emerald-400">Brand saved. Upload a logo (optional), then continue.</p>
+          <button
+            type="button"
+            onClick={() => onSave(savedClient)}
+            className="rounded bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+          >
+            Continue to Brief →
+          </button>
+        </div>
+      )}
     </form>
   );
 }

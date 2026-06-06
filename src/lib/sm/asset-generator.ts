@@ -50,7 +50,7 @@ export function buildImageGenerationPrompt(
   _assetType: SMAssetType,
   _headline: string
 ): string {
-  return `professional marketing photograph, ${signalops.visual_direction}, ${signalops.color_recommendation}, brand tone ${client.tone ?? "professional"}, clean composition with negative space in lower third for text overlay, high-end advertising aesthetic, no visible text or watermarks, photorealistic commercial photography style, ${signalops.theme}, ultra high quality, sharp focus, 8k, studio lighting`
+  return `professional marketing photograph, ${signalops.visual_direction}, ${signalops.color_recommendation}, brand tone ${client.tone ?? "professional"}, clean composition with clear space in the lower third for headline overlay, high-end advertising aesthetic, photorealistic commercial photography style, ${signalops.theme}, ultra high quality, sharp focus, 8k, studio lighting, no text in image, no logos, no watermarks, no brand marks`
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 3800);

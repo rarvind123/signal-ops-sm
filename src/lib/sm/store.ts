@@ -26,6 +26,7 @@ function mapClient(row: Record<string, unknown>): SMClient {
     tone: row.tone as SMClient["tone"],
     brand_colors: (row.brand_colors as SMClient["brand_colors"]) ?? [],
     social_handles: (row.social_handles as SMClient["social_handles"]) ?? {},
+    logo_url: row.logo_url ? String(row.logo_url) : undefined,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at ?? row.created_at),
   };

@@ -8,6 +8,7 @@ CREATE TABLE sm_clients (
   tone            TEXT,
   brand_colors    JSONB DEFAULT '[]',
   social_handles  JSONB DEFAULT '{}',
+  logo_url        TEXT,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );

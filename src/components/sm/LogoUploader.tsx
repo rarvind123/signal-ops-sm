@@ -4,8 +4,10 @@ import { useRef, useState } from "react";
 
 export default function LogoUploader({
   clientId,
+  onUploaded,
 }: {
   clientId?: string;
+  onUploaded?: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -27,9 +29,15 @@ export default function LogoUploader({
         method: "POST",
         body: formData,
       });
-      const json = (await res.json()) as { storage_url?: string; error?: string };
+      const json = (await res.json()) as {
+        storage_url?: string;
+        logo_url?: string;
+        error?: string;
+      };
       if (!res.ok) throw new Error(json.error ?? "Upload failed");
-      setPreviewUrl(json.storage_url ?? null);
+      const url = json.logo_url ?? json.storage_url ?? null;
+      setPreviewUrl(url);
+      if (url) onUploaded?.(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {

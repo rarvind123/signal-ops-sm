@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import { saveSmUpload } from "@/lib/sm/file-storage";
-import { createBrandAsset, getClient } from "@/lib/sm/store";
+import { createBrandAsset, getClient, updateClient } from "@/lib/sm/store";
 
 export const runtime = "nodejs";
 
@@ -34,6 +34,10 @@ export async function POST(req: Request, context: RouteContext) {
       metadata: saved.metadata,
     });
 
-    return asset;
+    if (type === "logo") {
+      await updateClient(clientId, { logo_url: saved.publicUrl });
+    }
+
+    return { ...asset, logo_url: type === "logo" ? saved.publicUrl : undefined };
   });
 }

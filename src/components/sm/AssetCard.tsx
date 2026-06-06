@@ -26,20 +26,14 @@ export default function AssetCard({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${client.name}-${asset.platform}-${asset.asset_type}.png`;
+    a.download = `${client.name}-${asset.platform}-${asset.asset_type}.jpg`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800/60">
-      <div className="relative flex aspect-square items-center justify-center bg-zinc-900">
-        {asset.status === "generating" && (
-          <div className="flex flex-col items-center gap-2 text-zinc-500">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
-            <span className="text-xs">Generating...</span>
-          </div>
-        )}
+      <div className="relative aspect-square overflow-hidden bg-zinc-900">
         {asset.status === "done" && asset.storage_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -48,8 +42,27 @@ export default function AssetCard({
             className="h-full w-full object-cover"
           />
         )}
+
+        {client.logo_url && asset.status === "done" && (
+          <div className="absolute right-3 top-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={client.logo_url}
+              alt={client.name}
+              className="h-8 w-auto max-w-[120px] object-contain drop-shadow-lg"
+            />
+          </div>
+        )}
+
+        {asset.status === "generating" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-500">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+            <span className="text-xs">Generating...</span>
+          </div>
+        )}
+
         {asset.status === "failed" && (
-          <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
             <p className="text-sm font-medium text-red-400">Generation failed</p>
             {asset.error_message && (
               <p className="max-w-[200px] text-xs leading-relaxed text-zinc-500">
@@ -69,6 +82,7 @@ export default function AssetCard({
             </button>
           </div>
         )}
+
         <div className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">
           {platformLabel} · {typeLabel}
         </div>
