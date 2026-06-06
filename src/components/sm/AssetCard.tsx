@@ -78,13 +78,17 @@ export default function AssetCard({
               alt={`${platformLabel} ${typeLabel}`}
               className="h-full w-full object-cover"
             />
-            {logoUrl && (
-              <div className="absolute right-3 top-3 rounded bg-black/20 p-1 backdrop-blur-sm">
+            {logoUrl && localAsset.status === "done" && (
+              <div className="absolute right-3 top-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={logoUrl}
                   alt={client.name}
-                  className="h-7 w-auto max-w-[100px] object-contain drop-shadow"
+                  className="h-10 w-auto max-w-[130px] object-contain"
+                  style={{
+                    filter:
+                      "drop-shadow(0 0 3px rgba(255,255,255,0.95)) drop-shadow(0 0 7px rgba(0,0,0,0.85))",
+                  }}
                 />
               </div>
             )}
