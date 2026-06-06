@@ -131,10 +131,10 @@ export async function generateAndStoreImage(
   assetId: string
 ): Promise<string> {
   const bytes = await generateMarketingImageBytes(prompt, aspectRatio);
-  const path = `generated/${assetId}.jpg`;
+  const path = `generated/${assetId}-${Date.now()}.jpg`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, bytes, {
     contentType: "image/jpeg",
-    upsert: true,
+    upsert: false,
   });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);

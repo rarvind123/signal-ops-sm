@@ -52,10 +52,11 @@ export async function saveSmGeneratedImage(
   bytes: Buffer,
   ext = ".jpg"
 ): Promise<{ relativePath: string; publicUrl: string }> {
-  const relativePath = `generated/${sanitizeSegment(assetId)}${ext}`;
+  const timestamp = Date.now();
+  const relativePath = `generated/${sanitizeSegment(assetId)}-${timestamp}${ext}`;
   const { error } = await supabase.storage.from(BUCKET).upload(relativePath, bytes, {
     contentType: ext === ".jpg" ? "image/jpeg" : "image/png",
-    upsert: true,
+    upsert: false,
   });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
   return { relativePath, publicUrl: getPublicUrl(relativePath) };

@@ -141,7 +141,7 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
     "sensitivity_flags": ["Any cultural, religious, social, or regional sensitivity that must be considered — empty array if none"]
   },
 
-  "visual_direction": "3–5 sentences. Specific composition, mood, lighting, colour approach, and use of any uploaded images. No vague adjectives — name actual colours, actual framing choices, actual visual metaphors.",
+  "visual_direction": "Describe the SCENE in concrete visual terms that an image generation model can render directly. Name: the main subject/object, its position, lighting direction, background description, color treatment, and mood. Do NOT use abstract words like 'aspirational' or 'premium' — name specific visual elements instead. Example: 'A single vintage leather football resting on cracked dry earth, warm amber side-lighting from the left, dusty ochre background, shallow depth of field, the ball shows wear and age — it has history'.",
 
   "headlines": [
     {

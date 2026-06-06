@@ -46,14 +46,43 @@ export const PLATFORM_SPECS: Record<
 export function buildImageGenerationPrompt(
   client: SMClient,
   signalops: SMSignalOpsOutput,
-  _platform: SMPlatform,
-  _assetType: SMAssetType,
+  platform: SMPlatform,
+  assetType: SMAssetType,
   _headline: string
 ): string {
-  return `professional marketing photograph, ${signalops.visual_direction}, ${signalops.color_recommendation}, brand tone ${client.tone ?? "professional"}, clean composition with clear space in the lower third for headline overlay, high-end advertising aesthetic, photorealistic commercial photography style, ${signalops.theme}, ultra high quality, sharp focus, 8k, studio lighting, no text in image, no logos, no watermarks, no brand marks`
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 3800);
+  const tension = signalops.insight_bridge?.creative_tension?.trim();
+  const visualDir = signalops.visual_direction?.trim();
+  const colorRec = signalops.color_recommendation?.trim();
+  const theme = signalops.theme?.trim();
+  const tone = client.tone ?? "professional";
+
+  const compositionNote =
+    assetType === "story" || assetType === "reel_cover"
+      ? "vertical portrait composition, subject centered with breathing room top and bottom"
+      : platform === "linkedin"
+        ? "wide landscape composition, professional setting, corporate aesthetic"
+        : "square composition, bold central subject, clean negative space at bottom third for text";
+
+  const parts = [
+    tension ? `Concept: ${tension}` : theme,
+    visualDir,
+    `Color palette: ${colorRec || "neutral professional tones"}`,
+    `Brand tone: ${tone}`,
+    compositionNote,
+    "ultra high quality commercial photography",
+    "sharp focus, professional studio lighting",
+    "clean background, premium advertising aesthetic",
+    "8k resolution",
+    "no text in image",
+    "no logos",
+    "no watermarks",
+    "no visible brand marks",
+    "no people unless central to the concept",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return parts.replace(/\s+/g, " ").trim().slice(0, 3800);
 }
 
 export async function generateCopyForPlatform(

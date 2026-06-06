@@ -224,9 +224,14 @@ export default function Home() {
             onRegenerate={async (assetId) => {
               const res = await fetch(`/api/sm/assets/${assetId}/regenerate`, {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
               });
               const updated = (await res.json()) as SMGeneratedAsset & { error?: string };
-              if (!res.ok) return;
+              if (!res.ok) {
+                console.error("[Redo] Failed:", updated.error);
+                return;
+              }
               setGeneratedAssets((prev) =>
                 prev.map((a) => (a.id === assetId ? updated : a))
               );
