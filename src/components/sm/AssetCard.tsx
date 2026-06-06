@@ -108,10 +108,10 @@ export default function AssetCard({
                 <img
                   src={logoUrl}
                   alt={client.name}
-                  className="h-10 w-auto max-w-[130px] object-contain"
+                  className="h-12 w-auto max-w-[150px] object-contain"
                   style={{
                     filter:
-                      "drop-shadow(0 0 3px rgba(255,255,255,0.95)) drop-shadow(0 0 7px rgba(0,0,0,0.85))",
+                      "drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 12px rgba(0,0,0,1)) drop-shadow(0 0 2px rgba(255,255,255,0.9))",
                   }}
                 />
               </div>

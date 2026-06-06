@@ -82,14 +82,20 @@ export function buildImageGenerationPrompt(
     .join(", ");
 
   const exclusions = [
+    "absolutely no text of any kind in the image",
+    "no numbers",
+    "no digits",
+    "no dates",
+    "no years",
+    "no words written on any surface",
+    "no chalkboard writing",
+    "no signs with text",
+    "no labels",
+    "no captions",
     "no product packaging",
-    "no product tins",
-    "no bottles",
-    "no containers",
+    "no product tins or bottles",
     "no pack shots",
-    "no product labels",
-    "no text in image",
-    "no logos",
+    "no logos in the generated image",
     "no watermarks",
     "no brand marks",
   ].join(", ");
