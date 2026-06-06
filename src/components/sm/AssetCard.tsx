@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getTypography } from "@/lib/sm/typography";
 import { btnSecondary, field } from "@/lib/sm/ui";
 import type { SMClient, SMGeneratedAsset } from "@/types/sm";
 import PublishModal from "./PublishModal";
@@ -21,6 +22,7 @@ export default function AssetCard({
   const [refreshKey, setRefreshKey] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(client.logo_url ?? null);
   const [localAsset, setLocalAsset] = useState(asset);
+  const [showTextOverlay, setShowTextOverlay] = useState(true);
 
   useEffect(() => {
     setLocalAsset(asset);
@@ -84,7 +86,7 @@ export default function AssetCard({
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-zinc-800/80 bg-zinc-900/30">
       <div
-        className={`relative overflow-hidden bg-zinc-950 ${
+        className={`@container relative overflow-hidden bg-zinc-950 ${
           isTextOnly ? "min-h-[400px]" : "aspect-square"
         }`}
       >
@@ -103,19 +105,38 @@ export default function AssetCard({
               className="h-full w-full object-cover"
             />
             {logoUrl && localAsset.status === "done" && (
-              <div className="absolute right-3 top-3">
+              <div className="absolute right-3 top-3 rounded-lg bg-white/80 backdrop-blur-sm px-2 py-1.5 shadow-md">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={logoUrl}
                   alt={client.name}
-                  className="h-12 w-auto max-w-[150px] object-contain"
-                  style={{
-                    filter:
-                      "drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 12px rgba(0,0,0,1)) drop-shadow(0 0 2px rgba(255,255,255,0.9))",
-                  }}
+                  className="h-8 w-auto max-w-[110px] object-contain"
                 />
               </div>
             )}
+            {showTextOverlay && localAsset.headline && (() => {
+              const typo = getTypography(client.tone);
+              return (
+                <div className="absolute bottom-0 left-0 right-0">
+                  <div className="absolute bottom-0 left-0 right-0 h-2/5 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="relative px-4 pb-4 pt-8">
+                    <p
+                      style={{
+                        fontFamily: `'${typo.fontFamily}', sans-serif`,
+                        fontWeight: typo.fontWeight,
+                        letterSpacing: typo.letterSpacing,
+                        textTransform: typo.textTransform,
+                        lineHeight: typo.lineHeight,
+                        fontSize: "clamp(13px, 3.5cqi, 22px)",
+                      }}
+                      className="text-white drop-shadow-sm"
+                    >
+                      {localAsset.headline}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
 
@@ -148,6 +169,17 @@ export default function AssetCard({
         <div className="absolute left-2 top-2 rounded bg-black/50 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
           {platformLabel} · {typeLabel}
         </div>
+
+        {localAsset.status === "done" && localAsset.storage_url && localAsset.headline && (
+          <button
+            type="button"
+            onClick={() => setShowTextOverlay((prev) => !prev)}
+            className="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-0.5 text-xs text-white"
+            title={showTextOverlay ? "Hide text overlay" : "Show text overlay"}
+          >
+            {showTextOverlay ? "T" : "T̶"}
+          </button>
+        )}
       </div>
 
       {localAsset.headline && (

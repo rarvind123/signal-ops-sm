@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readSmFile, relativePathFromPublicUrl } from "@/lib/sm/file-storage";
 import { compositeLogoOntoImage } from "@/lib/sm/logo-composite";
+import { compositeTextOntoImage } from "@/lib/sm/text-composite";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import {
   getClient,
@@ -46,6 +47,18 @@ export async function GET(req: Request, context: RouteContext) {
       }
     } catch (e) {
       console.warn("[download] Logo composite failed, serving without logo:", e);
+    }
+
+    if (asset.headline) {
+      try {
+        imageBuffer = await compositeTextOntoImage(
+          imageBuffer,
+          asset.headline,
+          client?.tone
+        );
+      } catch (e) {
+        console.warn("[download] Text composite failed, serving without text:", e);
+      }
     }
 
     const clientName = (client?.name ?? "brand").replace(/[^a-zA-Z0-9_-]+/g, "-");
