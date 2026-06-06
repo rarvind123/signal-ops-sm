@@ -51,6 +51,7 @@ function mapCreativeRequest(row: Record<string, unknown>): SMCreativeRequest {
     platforms: (row.platforms as SMCreativeRequest["platforms"]) ?? [],
     goal: row.goal as SMCreativeRequest["goal"],
     uploaded_image_urls: (row.uploaded_image_urls as string[]) ?? [],
+    creative_lens: (row.creative_lens as SMCreativeRequest["creative_lens"]) ?? "signalops",
     status: row.status as SMCreativeRequest["status"],
     created_at: String(row.created_at),
   };
@@ -263,6 +264,7 @@ export async function createCreativeRequest(
       platforms: input.platforms ?? [],
       goal: input.goal ?? null,
       uploaded_image_urls: input.uploaded_image_urls ?? [],
+      creative_lens: input.creative_lens ?? "signalops",
       status: "pending",
     })
     .select("*")

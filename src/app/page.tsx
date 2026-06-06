@@ -198,6 +198,7 @@ export default function Home() {
         {step === "signalops" && signalOpsOutput && (
           <SignalOpsInsightsCard
             output={signalOpsOutput}
+            lens={activeRequest?.creative_lens}
             onApprove={async (headlineIndex) => {
               if (!activeRequest) return;
               setError(null);

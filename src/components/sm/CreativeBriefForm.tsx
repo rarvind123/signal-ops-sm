@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { SMClient, SMGoal, SMPlatform, SMCreativeRequest } from "@/types/sm";
+import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
+import type {
+  SMClient,
+  SMCreativeLens,
+  SMGoal,
+  SMPlatform,
+  SMCreativeRequest,
+} from "@/types/sm";
 import ImageUploader from "./ImageUploader";
 
 const GOALS: { key: SMGoal; label: string; emoji: string }[] = [
@@ -29,6 +36,7 @@ export default function CreativeBriefForm({
 }) {
   const [brief, setBrief] = useState("");
   const [goal, setGoal] = useState<SMGoal>("awareness");
+  const [creativeLens, setCreativeLens] = useState<SMCreativeLens>("signalops");
   const [platforms, setPlatforms] = useState<SMPlatform[]>(["instagram"]);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,6 +64,7 @@ export default function CreativeBriefForm({
           goal,
           platforms,
           uploaded_image_urls: uploadedUrls,
+          creative_lens: creativeLens,
         }),
       });
       const request = (await res.json()) as SMCreativeRequest & { error?: string };
@@ -107,6 +116,41 @@ export default function CreativeBriefForm({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-zinc-400">Creative Approach</label>
+          <span className="text-xs text-zinc-600">— optional, SignalOps default if not selected</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {CREATIVE_LENSES.map((lens) => (
+            <button
+              key={lens.id}
+              type="button"
+              onClick={() => setCreativeLens(lens.id)}
+              className={`rounded-lg border px-3 py-2.5 text-left transition-all ${
+                creativeLens === lens.id
+                  ? "border-amber-500/60 bg-amber-500/10"
+                  : "border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <p
+                className={`text-xs font-medium ${
+                  creativeLens === lens.id ? "text-amber-300" : "text-zinc-300"
+                }`}
+              >
+                {lens.name}
+              </p>
+              <p className="mt-0.5 text-xs leading-tight text-zinc-500">{lens.tagline}</p>
+            </button>
+          ))}
+        </div>
+        {creativeLens !== "signalops" && (
+          <p className="rounded border border-zinc-700/50 bg-zinc-800/40 px-3 py-2 text-xs text-zinc-500">
+            {CREATIVE_LENSES.find((l) => l.id === creativeLens)?.description}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

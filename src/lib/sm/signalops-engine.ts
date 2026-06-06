@@ -1,5 +1,6 @@
 import { completeText } from "@/lib/ai";
 import { cleanJsonResponse } from "@/lib/json-sanitize";
+import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
 import type { SMClient, SMCreativeRequest, SMSignalOpsOutput } from "@/types/sm";
 
 type SignalOpsPayload = Omit<SMSignalOpsOutput, "id" | "request_id" | "created_at">;
@@ -49,6 +50,8 @@ async function callSignalOpsModel(
     attempt > 0
       ? `\n\nRETRY ${attempt}: Your previous direction scored below ${LIONS_SCORE_THRESHOLD}/10 on Lions quality. Rewrite with a sharper insight bridge, a braver headline option, and more specific visual direction.`
       : "";
+
+  const lensPhilosophy = getLensPhilosophy(request.creative_lens);
 
   const systemPrompt = `You are SignalOps — the creative intelligence engine of a world-class brand agency.
 You operate with the rigour of a Cannes Lions jury combined with the instinct of a senior creative director.
@@ -100,6 +103,7 @@ After generating your direction, you will score it on four dimensions used by Ca
 - Brave (1–10): Does it take a creative risk? Could a conservative client refuse it? Bravery requires tension.
 - Crafted (1–10): Is the execution concept tight, specific, and visually clear? Vague direction scores below 5.
 Be honest. If your overall score is below 6, rewrite the direction before returning it.
+${lensPhilosophy ? `\n---\n${lensPhilosophy}\n---` : ""}
 
 OUTPUT RULES:
 - Every word should be specific and actionable, not generic. "Warm sunrise tones" beats "make it feel warm".

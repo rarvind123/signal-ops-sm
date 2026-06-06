@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { SMSignalOpsOutput } from "@/types/sm";
+import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
+import type { SMCreativeLens, SMSignalOpsOutput } from "@/types/sm";
 
 export default function SignalOpsInsightsCard({
   output,
+  lens,
   onApprove,
   onEdit,
   onChangeBrand,
 }: {
   output: SMSignalOpsOutput;
+  lens?: SMCreativeLens;
   onApprove: (headlineIndex: number) => Promise<void>;
   onEdit: () => void;
   onChangeBrand?: () => void;
@@ -21,9 +24,16 @@ export default function SignalOpsInsightsCard({
     <div className="flex max-w-2xl flex-col gap-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">✦ SignalOps Creative Direction</h2>
-        <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-400">
-          Strategic Brief Ready
-        </span>
+        <div className="flex items-center gap-2">
+          {lens && lens !== "signalops" && (
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-400">
+              {CREATIVE_LENSES.find((l) => l.id === lens)?.name}
+            </span>
+          )}
+          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-400">
+            Strategic Brief Ready
+          </span>
+        </div>
       </div>
 
       {output.insight_bridge && (
