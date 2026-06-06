@@ -7,10 +7,12 @@ export default function SignalOpsInsightsCard({
   output,
   onApprove,
   onEdit,
+  onChangeBrand,
 }: {
   output: SMSignalOpsOutput;
   onApprove: (headlineIndex: number) => Promise<void>;
   onEdit: () => void;
+  onChangeBrand?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [selectedHeadline, setSelectedHeadline] = useState(0);
@@ -208,7 +210,7 @@ export default function SignalOpsInsightsCard({
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           type="button"
           onClick={onEdit}
@@ -216,6 +218,15 @@ export default function SignalOpsInsightsCard({
         >
           ← Edit Brief
         </button>
+        {onChangeBrand && (
+          <button
+            type="button"
+            onClick={onChangeBrand}
+            className="rounded border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-500 hover:text-white"
+          >
+            ← Change Brand
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {

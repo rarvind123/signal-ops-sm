@@ -16,27 +16,47 @@ import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
 
 type SMStep = "brand" | "brief" | "signalops" | "assets";
 
-function SMStepIndicator({ current }: { current: SMStep }) {
+function SMStepIndicator({
+  current,
+  onStepClick,
+}: {
+  current: SMStep;
+  onStepClick: (step: SMStep) => void;
+}) {
   const steps: { key: SMStep; label: string }[] = [
     { key: "brand", label: "Brand" },
     { key: "brief", label: "Brief" },
     { key: "signalops", label: "Strategy" },
     { key: "assets", label: "Creatives" },
   ];
+  const stepOrder: SMStep[] = ["brand", "brief", "signalops", "assets"];
+  const currentIndex = stepOrder.indexOf(current);
+
   return (
     <div className="flex items-center gap-2">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-2">
-          <span
-            className={`text-sm font-medium ${
-              current === s.key ? "text-white" : "text-zinc-500"
-            }`}
-          >
-            {i + 1}. {s.label}
-          </span>
-          {i < steps.length - 1 && <span className="text-zinc-700">→</span>}
-        </div>
-      ))}
+      {steps.map((s, i) => {
+        const isCompleted = i < currentIndex;
+        const isCurrent = s.key === current;
+        return (
+          <div key={s.key} className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => isCompleted && onStepClick(s.key)}
+              disabled={!isCompleted}
+              className={`text-sm font-medium transition-colors ${
+                isCurrent
+                  ? "text-white"
+                  : isCompleted
+                    ? "cursor-pointer text-zinc-400 underline underline-offset-2 hover:text-white"
+                    : "cursor-default text-zinc-600"
+              }`}
+            >
+              {i + 1}. {s.label}
+            </button>
+            {i < steps.length - 1 && <span className="text-zinc-700">→</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -50,6 +70,24 @@ export default function Home() {
   const [generatedAssets, setGeneratedAssets] = useState<SMGeneratedAsset[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [signalopsLoading, setSignalopsLoading] = useState(false);
+
+  function handleStartOver() {
+    setStep("brand");
+    setActiveClient(null);
+    setActiveRequest(null);
+    setSignalOpsOutput(null);
+    setGeneratedAssets([]);
+    setError(null);
+    setShowCreateForm(true);
+  }
+
+  function handleNewBrief() {
+    setStep("brief");
+    setGeneratedAssets([]);
+    setSignalOpsOutput(null);
+    setActiveRequest(null);
+    setError(null);
+  }
 
   async function runSignalOps(request: SMCreativeRequest) {
     setActiveRequest(request);
@@ -76,17 +114,28 @@ export default function Home() {
     <div className="min-h-screen bg-[#060608] px-6 py-10 text-zinc-200">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <header className="border-b border-zinc-800/80 pb-6">
-          <Image
-            src="/inventious-logo.png"
-            alt="inventious"
-            width={378}
-            height={118}
-            className="h-10 w-auto object-contain object-left sm:h-12"
-            priority
-          />
+          <div className="flex items-center justify-between">
+            <Image
+              src="/inventious-logo.png"
+              alt="inventious"
+              width={378}
+              height={118}
+              className="h-10 w-auto object-contain object-left sm:h-12"
+              priority
+            />
+            {step !== "brand" && (
+              <button
+                type="button"
+                onClick={handleStartOver}
+                className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                ← Start over
+              </button>
+            )}
+          </div>
         </header>
 
-        <SMStepIndicator current={step} />
+        <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
         {error && (
           <div className="flex items-start justify-between gap-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <span>⚠ {error}</span>
@@ -164,6 +213,7 @@ export default function Home() {
               setStep("assets");
             }}
             onEdit={() => setStep("brief")}
+            onChangeBrand={handleStartOver}
           />
         )}
 
@@ -181,12 +231,8 @@ export default function Home() {
                 prev.map((a) => (a.id === assetId ? updated : a))
               );
             }}
-            onStartOver={() => {
-              setStep("brief");
-              setGeneratedAssets([]);
-              setSignalOpsOutput(null);
-              setActiveRequest(null);
-            }}
+            onNewBrief={handleNewBrief}
+            onChangeBrand={handleStartOver}
           />
         )}
       </div>
