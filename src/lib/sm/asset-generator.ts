@@ -43,64 +43,95 @@ export const PLATFORM_SPECS: Record<
   },
 };
 
+const VISUAL_APPROACH_INSTRUCTIONS: Record<string, string> = {
+  concept_first: [
+    "absolutely no product visible in the image",
+    "no product packaging or containers",
+    "the brand is communicated entirely through the scene and metaphor",
+    "the image should make sense as a standalone scene",
+    "no brand marks or logos rendered in the image",
+  ].join(", "),
+
+  product_transformed: [
+    "the product appears but in a conceptual, impossible, or unexpected way",
+    "the product is reimagined as something else or placed in an impossible context",
+    "high-end surrealist commercial photography",
+    "the transformation should feel both surprising and inevitable",
+  ].join(", "),
+
+  product_hero: [
+    "the product is the primary subject of the image",
+    "dramatic product photography, the environment serves the product",
+    "high-end commercial photography quality",
+    "the product occupies at least 40% of the frame",
+    "beautiful lighting that makes the product look premium",
+  ].join(", "),
+
+  effects_visible: [
+    "absolutely no product visible",
+    "show the human emotional or physical effect of using the brand",
+    "the scene shows a person or environment transformed by the brand's benefit",
+    "authentic, unposed, emotionally true",
+    "the viewer should feel the benefit before they understand the brand",
+  ].join(", "),
+
+  visual_tension: [
+    "create a visual that combines two contradictory or incompatible elements",
+    "the impossibility or contradiction should be immediately visible",
+    "no product unless it is part of the tension",
+    "clean, minimal composition — the tension is the entire point",
+    "the image should stop a viewer and demand a second look",
+  ].join(", "),
+};
+
+const UNIVERSAL_EXCLUSIONS = [
+  "absolutely no text of any kind",
+  "no numbers",
+  "no digits",
+  "no dates or years",
+  "no words written on any surface",
+  "no chalkboard writing",
+  "no signs with text",
+  "no labels with text",
+  "no watermarks",
+  "no logos in the generated image",
+  "no brand marks",
+].join(", ");
+
 export function buildImageGenerationPrompt(
-  client: SMClient,
+  _client: SMClient,
   signalops: SMSignalOpsOutput,
   platform: SMPlatform,
   assetType: SMAssetType,
   _headline: string
 ): string {
-  const tension = signalops.insight_bridge?.creative_tension?.trim();
-  const visualDir = signalops.visual_direction?.trim();
-  const colorRec = signalops.color_recommendation?.trim();
-  const theme = signalops.theme?.trim();
-  const tone = client.tone ?? "professional";
+  const approach = signalops.visual_approach;
+  const modeInstructions =
+    VISUAL_APPROACH_INSTRUCTIONS[approach?.mode ?? "concept_first"];
 
   const compositionNote =
     assetType === "story" || assetType === "reel_cover"
-      ? "vertical portrait composition, subject centered with breathing room top and bottom"
+      ? "vertical portrait composition, subject centered"
       : platform === "linkedin"
-        ? "wide landscape composition, professional setting, corporate aesthetic"
-        : "square composition, bold central subject, clean negative space at bottom third for text";
+        ? "wide landscape composition, professional setting"
+        : "bold central subject, clear negative space at bottom third";
 
-  const categoryContext = client.usp?.trim() || client.tagline?.trim() || tone;
-
-  const mainPrompt = [
-    tension ? `Concept: ${tension}` : theme,
-    visualDir,
-    `Color palette: ${colorRec || "neutral professional tones"}`,
-    `Brand tone: ${tone}`,
-    categoryContext ? `Category context: ${categoryContext}` : null,
+  const parts = [
+    approach?.scene_description || signalops.visual_direction,
+    signalops.color_recommendation,
     compositionNote,
+    modeInstructions,
     "ultra high quality commercial photography",
-    "sharp focus, professional studio lighting",
-    "clean background, premium advertising aesthetic",
+    "sharp focus",
+    "professional studio or location lighting",
     "8k resolution",
-    "no people unless central to the concept",
+    "premium advertising aesthetic",
+    UNIVERSAL_EXCLUSIONS,
   ]
     .filter(Boolean)
     .join(", ");
 
-  const exclusions = [
-    "absolutely no text of any kind in the image",
-    "no numbers",
-    "no digits",
-    "no dates",
-    "no years",
-    "no words written on any surface",
-    "no chalkboard writing",
-    "no signs with text",
-    "no labels",
-    "no captions",
-    "no product packaging",
-    "no product tins or bottles",
-    "no pack shots",
-    "no logos in the generated image",
-    "no watermarks",
-    "no brand marks",
-  ].join(", ");
-
-  return `${mainPrompt}, ${exclusions}`.replace(/\s+/g, " ").trim().slice(0, 3800);
+  return parts.replace(/\s+/g, " ").trim().slice(0, 3800);
 }
 
 export async function generateCopyForPlatform(

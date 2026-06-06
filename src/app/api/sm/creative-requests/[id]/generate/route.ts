@@ -23,7 +23,7 @@ import {
   updateCreativeRequest,
   updateGeneratedAsset,
 } from "@/lib/sm/store";
-import type { SMAssetType, SMPlatform } from "@/types/sm";
+import type { SMAssetType, SMPlatform, SMVisualApproachMode } from "@/types/sm";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -43,13 +43,16 @@ export async function POST(req: Request, context: RouteContext) {
       ? (body.asset_types as SMAssetType[])
       : ["post"];
     const headline_index = Number(body.headline_index ?? 0);
+    const visualApproachOverride = body.visual_approach_override as
+      | SMVisualApproachMode
+      | undefined;
 
     const request = await getCreativeRequest(requestId);
     if (!request) {
       return NextResponse.json({ error: "Request not found" }, { status: 404 });
     }
 
-    const [client, signalops] = await Promise.all([
+    const [client, signalopsRow] = await Promise.all([
       getClient(request.client_id),
       getSignalOpsOutput(requestId),
     ]);
@@ -57,8 +60,22 @@ export async function POST(req: Request, context: RouteContext) {
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
-    if (!signalops) {
+    if (!signalopsRow) {
       return NextResponse.json({ error: "SignalOps output not found" }, { status: 400 });
+    }
+
+    let signalops = signalopsRow;
+    if (visualApproachOverride && signalops.visual_approach) {
+      signalops = {
+        ...signalops,
+        visual_approach: {
+          ...signalops.visual_approach,
+          mode: visualApproachOverride,
+          product_visible: ["product_hero", "product_transformed"].includes(
+            visualApproachOverride
+          ),
+        },
+      };
     }
 
     const format = getFormat(request.creative_format);

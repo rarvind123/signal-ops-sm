@@ -115,11 +115,27 @@ export interface SMLionsScore {
   improvement_note: string;
 }
 
+export type SMVisualApproachMode =
+  | "concept_first"
+  | "product_transformed"
+  | "product_hero"
+  | "effects_visible"
+  | "visual_tension";
+
+export interface SMVisualApproach {
+  mode: SMVisualApproachMode;
+  rationale: string;
+  scene_description: string;
+  product_visible: boolean;
+  brave_score: number;
+}
+
 export interface SMSignalOpsOutput {
   id: string;
   request_id: string;
   theme: string;
   visual_direction: string;
+  visual_approach: SMVisualApproach;
   headlines: SMSignalOpsHeadline[];
   color_recommendation: string;
   creative_notes: string;

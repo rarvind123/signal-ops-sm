@@ -2,7 +2,13 @@ import { completeText } from "@/lib/ai";
 import { cleanJsonResponse } from "@/lib/json-sanitize";
 import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
-import type { SMClient, SMCreativeRequest, SMSignalOpsOutput } from "@/types/sm";
+import type {
+  SMClient,
+  SMCreativeRequest,
+  SMSignalOpsOutput,
+  SMVisualApproach,
+  SMVisualApproachMode,
+} from "@/types/sm";
 
 type SignalOpsPayload = Omit<SMSignalOpsOutput, "id" | "request_id" | "created_at">;
 
@@ -60,7 +66,7 @@ async function callSignalOpsModel(
   const systemPrompt = `You are SignalOps — the creative intelligence engine of a world-class brand agency.
 You operate with the rigour of a Cannes Lions jury combined with the instinct of a senior creative director.
 
-Your philosophy has four pillars (sourced from Cannes Lions):
+Your philosophy has five pillars (sourced from Cannes Lions):
 
 PILLAR 1 — THE INSIGHT BRIDGE
 Before writing any creative direction, you must articulate:
@@ -107,6 +113,55 @@ After generating your direction, you will score it on four dimensions used by Ca
 - Brave (1–10): Does it take a creative risk? Could a conservative client refuse it? Bravery requires tension.
 - Crafted (1–10): Is the execution concept tight, specific, and visually clear? Vague direction scores below 5.
 Be honest. If your overall score is below 6, rewrite the direction before returning it.
+
+PILLAR 5 — VISUAL APPROACH (The Execution Decision)
+
+The most important creative decision after the insight is: how should the image be constructed?
+Most advertising defaults to showing the product. Most award-winning advertising does not.
+
+You must decide which of these 5 visual execution modes is right for this brand + brief:
+
+MODE 1 — CONCEPT FIRST (No product appears)
+When to use: The brand's benefit is intangible — strength, protection, connection, freedom, change.
+The visual communicates the core truth through metaphor or human scenario alone.
+The product is completely absent. The viewer earns the brand connection themselves.
+This is the mode that wins Grand Prix awards.
+Fevicol buses, WWF cigarette animals, Amnesty barbed wire imagery.
+BRAVE SCORE: 8-10. Most clients resist this mode. It is usually correct.
+
+MODE 2 — PRODUCT TRANSFORMED (Product appears but impossibly reimagined)
+When to use: The product's physical form has creative potential — it can become something else.
+The product appears but in an unexpected, impossible, or conceptual way.
+Absolut bottle as a city skyline. Heinz bottle as a giant tomato.
+BRAVE SCORE: 6-8.
+
+MODE 3 — PRODUCT HERO (Product is the dramatic subject)
+When to use: The product's appearance IS the communication. Food, beauty, tech, automotive.
+The product is shot dramatically, with the environment serving it.
+Used when showing the product proves the claim.
+Burger King Moldy Whopper. Apple product photography.
+BRAVE SCORE: 2-5. Lowest creative risk. Often the correct choice for tangible products.
+
+MODE 4 — EFFECTS VISIBLE (Product absent, consequences shown)
+When to use: The emotional or physical effect of the brand is more powerful than the brand itself.
+A coffee brand showing sharp, alive eyes at 6am. A car brand showing a genuine smile of freedom.
+The product is never seen. Its impact on a human is shown instead.
+BRAVE SCORE: 5-7.
+
+MODE 5 — VISUAL TENSION (Two incompatible things forced together)
+When to use: Any category. The highest creative ambition.
+Something impossible or contradictory that creates cognitive dissonance, resolved through the brand.
+A knife made of butter. A fire extinguisher shaped like a flame. A chess piece bonded to its square.
+BRAVE SCORE: 9-10. The work that divides opinion and wins awards.
+
+DECISION RULES:
+1. DEFAULT BIAS: Always consider CONCEPT FIRST or VISUAL TENSION before defaulting to PRODUCT HERO.
+   If the brand's USP is intangible (bonds, protection, freshness, energy, trust), PRODUCT HERO is usually the wrong choice.
+2. If the brief involves a cultural moment, newsjacking, or an emotional occasion — CONCEPT FIRST or VISUAL TENSION.
+3. Only choose PRODUCT HERO if: the product's visual is itself the proof of the claim, or the brief explicitly requires product visibility (e.g. a launch, a new variant).
+4. Rate the brave_score honestly — if it's below 5, the mode is safe. Ask: would a conservative client accept this immediately? If yes, score ≤4.
+
+Your output must include a CONCRETE scene_description: exactly what an image generation model should render, in specific physical terms. Not abstract ("show the bond"). Specific ("two pencils standing on a wooden desk, tips barely touching, warm amber light, clear chalkboard background with no writing").
 ${contextBlock ? `\n---\n${contextBlock}\n---` : ""}
 
 OUTPUT RULES:
@@ -155,6 +210,14 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
   },
 
   "visual_direction": "Describe the SCENE in concrete visual terms that an image generation model can render directly. Name: the main subject/object, its position, lighting direction, background description, color treatment, and mood. Do NOT use abstract words like 'aspirational' or 'premium' — name specific visual elements instead. Example: 'A single vintage leather football resting on cracked dry earth, warm amber side-lighting from the left, dusty ochre background, shallow depth of field, the ball shows wear and age — it has history'.",
+
+  "visual_approach": {
+    "mode": "concept_first | product_transformed | product_hero | effects_visible | visual_tension",
+    "rationale": "Why this mode is right for this brand and this specific brief — what about the brand's truth or the brief's goal makes this mode the correct choice",
+    "scene_description": "Exactly what to generate: specific subjects, their positions, lighting direction, background details, mood, composition. Concrete enough that a director could brief a photographer from this alone. No abstract adjectives.",
+    "product_visible": false,
+    "brave_score": 8
+  },
 
   "headlines": [
     {
@@ -302,6 +365,7 @@ function normalizeSignalOpsOutput(parsed: RawSignalOpsPayload): SignalOpsPayload
         : [],
     },
     visual_direction: parsed.visual_direction ?? "",
+    visual_approach: normalizeVisualApproach(parsed.visual_approach, parsed.visual_direction),
     headlines: Array.isArray(parsed.headlines)
       ? parsed.headlines.map((h) => ({
           text: h.text ?? "",
@@ -320,6 +384,38 @@ function normalizeSignalOpsOutput(parsed: RawSignalOpsPayload): SignalOpsPayload
       overall,
       improvement_note: parsed.lions_score?.improvement_note ?? "",
     },
+  };
+}
+
+const VALID_VISUAL_APPROACH_MODES: SMVisualApproachMode[] = [
+  "concept_first",
+  "product_transformed",
+  "product_hero",
+  "effects_visible",
+  "visual_tension",
+];
+
+function normalizeVisualApproach(
+  raw: Partial<SMVisualApproach> | undefined,
+  visualDirection?: string
+): SMVisualApproach {
+  const mode = VALID_VISUAL_APPROACH_MODES.includes(raw?.mode as SMVisualApproachMode)
+    ? (raw!.mode as SMVisualApproachMode)
+    : "concept_first";
+
+  return {
+    mode,
+    rationale: raw?.rationale?.trim() ?? "",
+    scene_description:
+      raw?.scene_description?.trim() || visualDirection?.trim() || "",
+    product_visible:
+      typeof raw?.product_visible === "boolean"
+        ? raw.product_visible
+        : ["product_hero", "product_transformed"].includes(mode),
+    brave_score:
+      typeof raw?.brave_score === "number"
+        ? Math.min(10, Math.max(1, Math.round(raw.brave_score)))
+        : 5,
   };
 }
 

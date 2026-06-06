@@ -9,8 +9,17 @@ import type {
   SMGeneratedAsset,
   SMPublishJob,
   SMSignalOpsOutput,
+  SMVisualApproach,
   SMSocialAccount,
 } from "@/types/sm";
+
+const DEFAULT_VISUAL_APPROACH: SMVisualApproach = {
+  mode: "concept_first",
+  rationale: "",
+  scene_description: "",
+  product_visible: false,
+  brave_score: 5,
+};
 
 function throwIfError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
@@ -94,6 +103,7 @@ function mapSignalOpsOutput(row: Record<string, unknown>): SMSignalOpsOutput {
       overall: 0,
       improvement_note: "",
     },
+    visual_approach: (row.visual_approach as SMVisualApproach) ?? DEFAULT_VISUAL_APPROACH,
     created_at: String(row.created_at),
   };
 }
@@ -331,6 +341,7 @@ export async function saveSignalOpsOutput(
       be_trigger: input.be_trigger,
       cultural_resonance: input.cultural_resonance,
       lions_score: input.lions_score,
+      visual_approach: input.visual_approach ?? DEFAULT_VISUAL_APPROACH,
     })
     .select("*")
     .single();

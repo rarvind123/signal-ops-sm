@@ -217,7 +217,7 @@ export default function Home() {
           <SignalOpsInsightsCard
             output={signalOpsOutput}
             lens={activeRequest?.creative_lens}
-            onApprove={async (headlineIndex) => {
+            onApprove={async (headlineIndex, visualApproachOverride) => {
               if (!activeRequest) return;
               setError(null);
               const res = await fetch(
@@ -229,6 +229,7 @@ export default function Home() {
                     platforms: activeRequest.platforms,
                     asset_types: ["post"],
                     headline_index: headlineIndex,
+                    visual_approach_override: visualApproachOverride,
                   }),
                 }
               );

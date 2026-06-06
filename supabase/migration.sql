@@ -51,6 +51,7 @@ CREATE TABLE sm_signalops_outputs (
   be_trigger           JSONB DEFAULT '{}',
   cultural_resonance   JSONB DEFAULT '{}',
   lions_score          JSONB DEFAULT '{}',
+  visual_approach      JSONB DEFAULT '{}',
   created_at           TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -112,3 +113,4 @@ CREATE INDEX idx_sm_signalops_request ON sm_signalops_outputs(request_id);
 -- Existing deployments: add creative_lens if table already exists
 ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS creative_lens TEXT DEFAULT 'signalops';
 ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS creative_format TEXT DEFAULT 'social_media';
+ALTER TABLE sm_signalops_outputs ADD COLUMN IF NOT EXISTS visual_approach JSONB DEFAULT '{}';
