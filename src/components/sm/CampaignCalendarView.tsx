@@ -9,6 +9,7 @@ export default function CampaignCalendarView({
   onGenerateBriefs,
   onGenerateCreatives,
   briefsLoading,
+  briefsProgress,
   creativesLoading,
   creativesProgress,
   hasBriefs,
@@ -18,6 +19,7 @@ export default function CampaignCalendarView({
   onGenerateBriefs?: () => void;
   onGenerateCreatives?: () => void;
   briefsLoading?: boolean;
+  briefsProgress?: { current: number; total: number };
   creativesLoading?: boolean;
   creativesProgress?: { current: number; total: number };
   hasBriefs?: boolean;
@@ -89,7 +91,11 @@ export default function CampaignCalendarView({
             disabled={briefsLoading || creativesLoading}
             className={`${btnPrimary} w-fit`}
           >
-            {briefsLoading ? "Writing briefs…" : "Generate all briefs"}
+            {briefsLoading && briefsProgress
+              ? `Writing briefs… ${briefsProgress.current}/${briefsProgress.total}`
+              : briefsLoading
+                ? "Writing briefs…"
+                : "Generate all briefs"}
           </button>
         )}
         {onGenerateCreatives && (
@@ -97,7 +103,7 @@ export default function CampaignCalendarView({
             type="button"
             onClick={onGenerateCreatives}
             disabled={briefsLoading || creativesLoading}
-            className={`${hasBriefs ? btnPrimary : btnSecondary} w-fit`}
+            className={`${hasBriefs && !briefsLoading ? btnPrimary : btnSecondary} w-fit`}
           >
             {creativesLoading && creativesProgress
               ? `Generating creatives… ${creativesProgress.current}/${creativesProgress.total}`

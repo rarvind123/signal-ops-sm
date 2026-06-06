@@ -755,6 +755,35 @@ export async function saveCreativeBrief(
   return mapCreativeBrief(row as Record<string, unknown>);
 }
 
+export async function updateCreativeBrief(
+  id: string,
+  data: Omit<SMCreativeBrief, "id" | "calendar_item_id" | "campaign_id" | "created_at">
+): Promise<SMCreativeBrief> {
+  const { data: row, error } = await supabase
+    .from("sm_creative_briefs")
+    .update({
+      post_number: data.post_number,
+      format: data.format,
+      pillar: data.pillar ?? null,
+      objective: data.objective,
+      hook: data.hook,
+      structure: data.structure ?? [],
+      creative_direction: data.creative_direction,
+      caption_direction: data.caption_direction,
+      cta: data.cta,
+      hashtag_suggestions: data.hashtag_suggestions ?? [],
+      visual_approach_mode: data.visual_approach_mode ?? null,
+      scene_description: data.scene_description ?? null,
+      status: data.status ?? "pending",
+      generated_asset_id: data.generated_asset_id ?? null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  throwIfError(error);
+  return mapCreativeBrief(row as Record<string, unknown>);
+}
+
 export async function getCreativeBrief(id: string): Promise<SMCreativeBrief | null> {
   const { data, error } = await supabase
     .from("sm_creative_briefs")

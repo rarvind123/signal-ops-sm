@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import CampaignCalendarView from "@/components/sm/CampaignCalendarView";
 import CampaignNav from "@/components/sm/CampaignNav";
+import { readApiJson } from "@/lib/sm/api-client";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
 import type {
   SMCampaign,
@@ -25,6 +26,9 @@ export default function CampaignCalendarPage() {
   const [briefsLoading, setBriefsLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [creativesLoading, setCreativesLoading] = useState(false);
+  const [briefsProgress, setBriefsProgress] = useState<{ current: number; total: number } | null>(
+    null
+  );
   const [creativesProgress, setCreativesProgress] = useState<{ current: number; total: number } | null>(
     null
   );
@@ -79,21 +83,46 @@ export default function CampaignCalendarPage() {
     }
   }
 
-  async function ensureBriefs() {
-    if (hasBriefs) return briefs;
-    const res = await fetch(`/api/sm/campaigns/${id}/briefs`, { method: "POST" });
-    const json = (await res.json()) as { briefs?: SMCreativeBrief[]; error?: string };
-    if (!res.ok) throw new Error(json.error ?? "Brief generation failed");
-    const created = json.briefs ?? [];
-    setBriefs(created);
-    return created;
+  async function ensureAllBriefs() {
+    let current = [...briefs];
+    const totalNeeded = items.length;
+    let attempts = 0;
+    const maxAttempts = Math.max(totalNeeded * 2, 5);
+
+    while (
+      (current.length < totalNeeded || current.some((b) => !b.scene_description?.trim())) &&
+      attempts < maxAttempts
+    ) {
+      attempts += 1;
+      const readyCount = current.filter((b) => b.scene_description?.trim()).length;
+      setBriefsProgress({ current: readyCount, total: totalNeeded });
+
+      const res = await fetch(`/api/sm/campaigns/${id}/briefs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ max_items: 1 }),
+      });
+      const json = await readApiJson<{ briefs?: SMCreativeBrief[]; error?: string }>(res);
+      if (!res.ok) throw new Error(json.error ?? "Brief generation failed");
+
+      const next = json.briefs ?? [];
+      if (next.length === 0) break;
+      if (next.length === current.length && current.every((b) => b.scene_description?.trim())) {
+        break;
+      }
+      current = next;
+      setBriefs(next);
+    }
+
+    setBriefsProgress(null);
+    return current;
   }
 
   async function handleGenerateBriefs() {
     setBriefsLoading(true);
     setError(null);
     try {
-      await ensureBriefs();
+      await ensureAllBriefs();
       router.push(`/campaign/${id}/briefs`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Brief generation failed");
@@ -107,8 +136,19 @@ export default function CampaignCalendarPage() {
     setError(null);
     setCreativesProgress(null);
     try {
-      const currentBriefs = await ensureBriefs();
-      const pending = currentBriefs.filter((b) => b.status !== "done");
+      setBriefsLoading(true);
+      const currentBriefs = await ensureAllBriefs();
+      setBriefsLoading(false);
+      const incomplete = currentBriefs.filter((b) => !b.scene_description?.trim());
+      if (incomplete.length > 0) {
+        throw new Error(
+          `${incomplete.length} brief(s) are still missing scene descriptions — click Generate all briefs first, then retry.`
+        );
+      }
+
+      const pending = currentBriefs
+        .filter((b) => b.status !== "done")
+        .sort((a, b) => a.post_number - b.post_number);
       if (pending.length === 0) {
         router.push(`/campaign/${id}/briefs`);
         return;
@@ -120,10 +160,16 @@ export default function CampaignCalendarPage() {
       for (let i = 0; i < pending.length; i += 1) {
         const brief = pending[i];
         setCreativesProgress({ current: i, total: pending.length });
-        const res = await fetch(`/api/sm/briefs/${brief.id}/generate`, { method: "POST" });
-        if (!res.ok) {
-          const json = (await res.json()) as { error?: string };
-          failures.push(`Post #${brief.post_number}: ${json.error ?? "failed"}`);
+        try {
+          const res = await fetch(`/api/sm/briefs/${brief.id}/generate`, { method: "POST" });
+          const json = await readApiJson<{ error?: string }>(res);
+          if (!res.ok) {
+            failures.push(`Post #${brief.post_number}: ${json.error ?? "failed"}`);
+          }
+        } catch (e) {
+          failures.push(
+            `Post #${brief.post_number}: ${e instanceof Error ? e.message : "failed"}`
+          );
         }
         setCreativesProgress({ current: i + 1, total: pending.length });
       }
@@ -142,6 +188,8 @@ export default function CampaignCalendarPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Creative generation failed");
     } finally {
+      setBriefsLoading(false);
+      setBriefsProgress(null);
       setCreativesLoading(false);
       setCreativesProgress(null);
     }
@@ -213,6 +261,7 @@ export default function CampaignCalendarPage() {
             onGenerateBriefs={() => void handleGenerateBriefs()}
             onGenerateCreatives={() => void handleGenerateCreatives()}
             briefsLoading={briefsLoading}
+            briefsProgress={briefsProgress ?? undefined}
             creativesLoading={creativesLoading}
             creativesProgress={creativesProgress ?? undefined}
             hasBriefs={hasBriefs}

@@ -10,6 +10,7 @@ import {
   saveCreativeBrief,
   updateCalendarItemStatus,
   updateCampaign,
+  updateCreativeBrief,
 } from "@/lib/sm/store";
 
 export const runtime = "nodejs";
@@ -27,6 +28,7 @@ export async function GET(req: Request, context: RouteContext) {
 export async function POST(req: Request, context: RouteContext) {
   return smRouteHandler(req, async () => {
     const { id } = await context.params;
+    const body = (await req.json().catch(() => ({}))) as { max_items?: number };
     const campaign = await getCampaign(id);
     if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
@@ -48,12 +50,23 @@ export async function POST(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Calendar empty — generate calendar first" }, { status: 400 });
     }
 
-    const briefs = [];
-    for (const item of calendarItems) {
+    const existingBriefs = await getCampaignBriefs(id);
+    const itemsToBrief = calendarItems.filter((item) => {
+      const existing = existingBriefs.find((brief) => brief.calendar_item_id === item.id);
+      return !existing || !existing.scene_description?.trim();
+    });
+
+    if (itemsToBrief.length === 0) {
+      return { briefs: existingBriefs, count: existingBriefs.length };
+    }
+
+    const maxItems = Math.max(1, Math.min(Number(body.max_items) || itemsToBrief.length, 3));
+    const batch = itemsToBrief.slice(0, maxItems);
+    const briefs = [...existingBriefs];
+
+    for (const item of batch) {
       const briefData = await generateCreativeBrief(client, campaign, strategy, item);
-      const saved = await saveCreativeBrief({
-        calendar_item_id: item.id,
-        campaign_id: id,
+      const payload = {
         post_number: briefData.post_number,
         format: briefData.format,
         pillar: briefData.pillar,
@@ -66,10 +79,22 @@ export async function POST(req: Request, context: RouteContext) {
         hashtag_suggestions: briefData.hashtag_suggestions ?? [],
         visual_approach_mode: briefData.visual_approach_mode,
         scene_description: briefData.scene_description,
-        status: "pending",
-      });
+        status: "pending" as const,
+      };
+
+      const existing = existingBriefs.find((brief) => brief.calendar_item_id === item.id);
+      const saved = existing
+        ? await updateCreativeBrief(existing.id, payload)
+        : await saveCreativeBrief({
+            calendar_item_id: item.id,
+            campaign_id: id,
+            ...payload,
+          });
+
       await updateCalendarItemStatus(item.id, "brief_ready");
-      briefs.push(saved);
+      const idx = briefs.findIndex((brief) => brief.id === saved.id);
+      if (idx >= 0) briefs[idx] = saved;
+      else briefs.push(saved);
     }
 
     await updateCampaign(id, { status: "executing" });
