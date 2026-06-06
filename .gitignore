@@ -44,3 +44,4 @@ telemetry.json
 *.log
 logs/
 .env*.local
+supabase/.temp/
