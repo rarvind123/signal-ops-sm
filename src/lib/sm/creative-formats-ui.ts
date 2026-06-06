@@ -19,7 +19,7 @@ export const CREATIVE_FORMATS: CreativeFormatOption[] = [
   },
   {
     id: "print_ad",
-    label: "Print Ad",
+    label: "Print Ads",
     description: "Newspaper, magazine, or poster. Craft-first. Built to last on paper.",
     icon: "🗞️",
     available: true,
@@ -33,7 +33,7 @@ export const CREATIVE_FORMATS: CreativeFormatOption[] = [
   },
   {
     id: "tv_script",
-    label: "TV Script",
+    label: "TV Ads",
     description: "30 or 60 second scripts with scene direction, dialogue, and SFX notes.",
     icon: "🎬",
     available: true,
