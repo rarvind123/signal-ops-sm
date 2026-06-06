@@ -5,7 +5,24 @@ import type {
   SMCampaignStrategy,
   SMClient,
   SMContentFormat,
+  SMContentPillar,
+  SMStoryArcPhase,
 } from "@/types/sm";
+
+const STRATEGY_WRAPPER_KEYS = [
+  "strategy",
+  "campaign_strategy",
+  "data",
+  "output",
+  "result",
+] as const;
+
+type RawStrategy = Partial<
+  Omit<SMCampaignStrategy, "id" | "campaign_id" | "created_at">
+> & {
+  story_arc?: Partial<SMStoryArcPhase>[];
+  content_pillars?: Partial<SMContentPillar>[];
+};
 
 const BASELINE_MIX: Record<SMCampaignObjective, Record<SMContentFormat, number>> = {
   awareness: { static: 4, carousel: 4, reel: 10, reel_comic: 2, meme: 3, testimonial: 1, offer: 0 },
@@ -106,10 +123,67 @@ Generate a complete campaign strategy:
 
 Return ONLY valid JSON.`;
 
-  return completeJson<Omit<SMCampaignStrategy, "id" | "campaign_id" | "created_at">>(
+  const raw = await completeJson<RawStrategy & Record<string, unknown>>(
     systemPrompt,
     userPrompt,
     "claude-sonnet-4-6",
     { maxTokens: 4000, temperature: 0.7 }
   );
+
+  const normalized = normalizeCampaignStrategyOutput(unwrapStrategyPayload(raw));
+  if (!normalized.narrative_theme.trim()) {
+    throw new Error(
+      "SignalOps returned an empty campaign strategy — please retry. If this persists, check OPENROUTER_API_KEY on Vercel."
+    );
+  }
+
+  return normalized;
+}
+
+function unwrapStrategyPayload(raw: Record<string, unknown>): RawStrategy {
+  if (typeof raw.narrative_theme === "string" && raw.narrative_theme.trim()) {
+    return raw as RawStrategy;
+  }
+
+  for (const key of STRATEGY_WRAPPER_KEYS) {
+    const wrapped = raw[key];
+    if (wrapped && typeof wrapped === "object" && !Array.isArray(wrapped)) {
+      const candidate = wrapped as RawStrategy;
+      if (candidate.narrative_theme?.trim()) {
+        return candidate;
+      }
+    }
+  }
+
+  return raw as RawStrategy;
+}
+
+function normalizeCampaignStrategyOutput(
+  parsed: RawStrategy
+): Omit<SMCampaignStrategy, "id" | "campaign_id" | "created_at"> {
+  return {
+    narrative_theme: parsed.narrative_theme?.trim() ?? "",
+    campaign_tagline: parsed.campaign_tagline?.trim() ?? "",
+    story_arc: Array.isArray(parsed.story_arc)
+      ? parsed.story_arc.map((phase) => ({
+          phase: phase.phase?.trim() ?? "",
+          week_range: phase.week_range?.trim() ?? "",
+          description: phase.description?.trim() ?? "",
+          emotional_tone: phase.emotional_tone?.trim() ?? "",
+        }))
+      : [],
+    content_pillars: Array.isArray(parsed.content_pillars)
+      ? parsed.content_pillars.map((pillar) => ({
+          name: pillar.name?.trim() ?? "",
+          description: pillar.description?.trim() ?? "",
+          percentage: Number(pillar.percentage ?? 0),
+          post_types: Array.isArray(pillar.post_types)
+            ? (pillar.post_types as SMContentFormat[])
+            : [],
+        }))
+      : [],
+    content_mix: (parsed.content_mix as Partial<Record<SMContentFormat, number>>) ?? {},
+    strategic_notes: parsed.strategic_notes?.trim() ?? "",
+    platform_notes: parsed.platform_notes ?? {},
+  };
 }

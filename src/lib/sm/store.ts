@@ -659,11 +659,19 @@ export async function getCampaignStrategy(
     .from("sm_campaign_strategies")
     .select("*")
     .eq("campaign_id", campaignId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
   throwIfError(error);
-  return data ? mapCampaignStrategy(data as Record<string, unknown>) : null;
+  const rows = data ?? [];
+  if (rows.length === 0) return null;
+
+  const withContent = rows.find((row) => {
+    const theme = (row as Record<string, unknown>).narrative_theme;
+    return typeof theme === "string" && theme.trim().length > 0;
+  });
+
+  return mapCampaignStrategy(
+    (withContent ?? rows[0]) as Record<string, unknown>
+  );
 }
 
 export async function bulkCreateCalendarItems(

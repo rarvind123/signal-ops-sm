@@ -87,7 +87,7 @@ export default function CampaignStrategyCard({
       )}
 
       <div className="flex gap-3">
-        {!hasCalendar && (
+        {!hasCalendar && strategy.narrative_theme?.trim() && (
           <button
             type="button"
             onClick={onGenerateCalendar}

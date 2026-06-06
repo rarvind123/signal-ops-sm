@@ -86,9 +86,17 @@ export default function CampaignBriefForm({
       const strategyRes = await fetch(`/api/sm/campaigns/${campaign.id}/strategy`, {
         method: "POST",
       });
-      const strategyJson = (await strategyRes.json()) as { error?: string };
+      const strategyJson = (await strategyRes.json()) as {
+        error?: string;
+        narrative_theme?: string;
+      };
       if (!strategyRes.ok) {
         throw new Error(strategyJson.error ?? "Strategy generation failed");
+      }
+      if (!strategyJson.narrative_theme?.trim()) {
+        throw new Error(
+          "Strategy generation returned empty — please try again. Your campaign was saved."
+        );
       }
 
       onSubmit(campaign);

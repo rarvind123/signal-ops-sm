@@ -6,8 +6,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CampaignNav from "@/components/sm/CampaignNav";
 import CampaignStrategyCard from "@/components/sm/CampaignStrategyCard";
-import { sectionTitle } from "@/lib/sm/ui";
+import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
 import type { SMCampaign, SMCampaignStrategy } from "@/types/sm";
+
+function isStrategyEmpty(strategy: SMCampaignStrategy): boolean {
+  return (
+    !strategy.narrative_theme?.trim() &&
+    strategy.story_arc.length === 0 &&
+    strategy.content_pillars.length === 0 &&
+    Object.keys(strategy.content_mix).length === 0
+  );
+}
 
 export default function CampaignStrategyPage() {
   const params = useParams();
@@ -17,6 +26,8 @@ export default function CampaignStrategyPage() {
   const [strategy, setStrategy] = useState<SMCampaignStrategy | null>(null);
   const [calendarCount, setCalendarCount] = useState(0);
   const [calendarLoading, setCalendarLoading] = useState(false);
+  const [regenerateLoading, setRegenerateLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +50,24 @@ export default function CampaignStrategyPage() {
       setLoading(false);
     })();
   }, [id]);
+
+  async function handleRegenerateStrategy() {
+    setRegenerateLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/sm/campaigns/${id}/strategy`, { method: "POST" });
+      const json = (await res.json()) as SMCampaignStrategy & { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Strategy generation failed");
+      if (isStrategyEmpty(json)) {
+        throw new Error("Strategy came back empty — please try again.");
+      }
+      setStrategy(json);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Strategy generation failed");
+    } finally {
+      setRegenerateLoading(false);
+    }
+  }
 
   async function handleGenerateCalendar() {
     setCalendarLoading(true);
@@ -78,6 +107,30 @@ export default function CampaignStrategyPage() {
         </header>
         <CampaignNav campaignId={id} />
         <h1 className={sectionTitle}>{campaign?.name ?? "Campaign"} strategy</h1>
+
+        {error && (
+          <p className="rounded-lg border border-red-500/10 bg-red-500/5 px-4 py-3 text-sm text-red-400/90">
+            {error}
+          </p>
+        )}
+
+        {isStrategyEmpty(strategy) && (
+          <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-4 py-4">
+            <p className="text-sm text-amber-200/90">
+              Strategy generation didn&apos;t return content — this can happen if the AI call
+              failed silently. Regenerate to try again.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleRegenerateStrategy()}
+              disabled={regenerateLoading}
+              className={`${btnPrimary} mt-3`}
+            >
+              {regenerateLoading ? "Regenerating…" : "Regenerate strategy"}
+            </button>
+          </div>
+        )}
+
         <CampaignStrategyCard
           strategy={strategy}
           onGenerateCalendar={() => void handleGenerateCalendar()}
