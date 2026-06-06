@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { btnGhost, label, sectionTitle } from "@/lib/sm/ui";
 import type { SMClient } from "@/types/sm";
 
 export default function ClientSelector({
@@ -26,44 +27,41 @@ export default function ClientSelector({
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">Loading brands…</p>;
+    return <p className="text-sm text-zinc-600">Loading…</p>;
   }
 
   if (clients.length === 0) {
     return (
       <p className="text-sm text-zinc-500">
-        No brand profiles yet. Create one below.
+        No brands yet. Create one below.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-zinc-300">Existing brands</h2>
-        <button
-          type="button"
-          onClick={onCreate}
-          className="text-xs text-violet-400 hover:text-violet-300"
-        >
-          + New brand
+        <h2 className={sectionTitle}>Select brand</h2>
+        <button type="button" onClick={onCreate} className={btnGhost}>
+          New brand
         </button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="flex flex-col gap-1">
         {clients.map((client) => (
           <button
             key={client.id}
             type="button"
             onClick={() => onSelect(client)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-3 text-left hover:border-violet-500/40"
+            className="rounded-lg border border-transparent px-3 py-3 text-left transition-colors hover:border-zinc-800 hover:bg-zinc-900/40"
           >
-            <p className="text-sm font-medium text-white">{client.name}</p>
+            <p className="text-sm font-medium text-zinc-100">{client.name}</p>
             {client.tagline && (
-              <p className="mt-1 text-xs text-zinc-500 line-clamp-1">{client.tagline}</p>
+              <p className="mt-0.5 text-xs text-zinc-500 line-clamp-1">{client.tagline}</p>
             )}
           </button>
         ))}
       </div>
+      <p className={label}>Or create a new profile</p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { label } from "@/lib/sm/ui";
 
 export default function LogoUploader({
   clientId,
@@ -47,20 +48,20 @@ export default function LogoUploader({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm text-zinc-400">Logo</label>
+      <span className={label}>Logo</span>
       <div
         role="button"
         tabIndex={0}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
-        className="flex h-28 cursor-pointer items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 hover:border-zinc-500"
+        className="flex h-24 cursor-pointer items-center justify-center rounded-lg border border-dashed border-zinc-800 bg-zinc-900/20 transition-colors hover:border-zinc-700"
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="Logo preview" className="max-h-24 max-w-full object-contain" />
+          <img src={previewUrl} alt="Logo preview" className="max-h-20 max-w-full object-contain" />
         ) : (
-          <span className="text-xs text-zinc-500">
-            {uploading ? "Uploading…" : "Drop logo or click to upload"}
+          <span className="text-xs text-zinc-600">
+            {uploading ? "Uploading…" : "Click to upload"}
           </span>
         )}
       </div>
@@ -75,9 +76,9 @@ export default function LogoUploader({
         }}
       />
       {!clientId && (
-        <p className="text-xs text-zinc-600">Logo upload unlocks after first save.</p>
+        <p className="text-xs text-zinc-700">Available after saving the brand.</p>
       )}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-400/90">{error}</p>}
     </div>
   );
 }

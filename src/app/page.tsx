@@ -16,6 +16,7 @@ import CreativePreviewGrid from "@/components/sm/CreativePreviewGrid";
 import FormatSelector from "@/components/sm/FormatSelector";
 import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
+import { btnGhost } from "@/lib/sm/ui";
 
 type SMStep = "format" | "brand" | "brief" | "signalops" | "assets";
 
@@ -36,31 +37,31 @@ function SMStepIndicator({
   const currentIndex = stepOrder.indexOf(current);
 
   return (
-    <div className="flex items-center gap-2">
+    <nav className="flex items-center gap-1 text-xs">
       {steps.map((s, i) => {
         const isCompleted = i < currentIndex;
         const isCurrent = s.key === current;
         return (
-          <div key={s.key} className="flex items-center gap-2">
+          <span key={s.key} className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => isCompleted && onStepClick(s.key)}
               disabled={!isCompleted}
-              className={`text-sm font-medium transition-colors ${
+              className={`px-2 py-1 transition-colors ${
                 isCurrent
-                  ? "text-white"
+                  ? "text-zinc-100"
                   : isCompleted
-                    ? "cursor-pointer text-zinc-400 underline underline-offset-2 hover:text-white"
-                    : "cursor-default text-zinc-600"
+                    ? "cursor-pointer text-zinc-500 hover:text-zinc-300"
+                    : "cursor-default text-zinc-700"
               }`}
             >
-              {i + 1}. {s.label}
+              {s.label}
             </button>
-            {i < steps.length - 1 && <span className="text-zinc-700">→</span>}
-          </div>
+            {i < steps.length - 1 && <span className="text-zinc-800">/</span>}
+          </span>
         );
       })}
-    </div>
+    </nav>
   );
 }
 
@@ -127,55 +128,42 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060608] px-6 py-10 text-zinc-200">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="min-h-screen px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
+      <div className="mx-auto flex max-w-2xl flex-col gap-10">
         {step !== "format" && (
-          <header className="mb-2 border-b border-zinc-800/60 pb-5">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <Image
-                  src="/inventious-logo.png"
-                  alt="inventious"
-                  width={378}
-                  height={118}
-                  className="h-9 w-auto object-contain object-left"
-                  priority
-                />
-                <p className="mt-1 text-xs text-zinc-600">
-                  SignalOps → {formatMeta?.label ?? "Creative Engine"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleStartOver}
-                className="text-xs text-zinc-600 hover:text-zinc-400"
-              >
-                ← Start over
-              </button>
+          <header className="flex items-start justify-between gap-6">
+            <div>
+              <Image
+                src="/inventious-logo.png"
+                alt="inventious"
+                width={378}
+                height={118}
+                className="h-8 w-auto object-contain object-left"
+                priority
+              />
+              <p className="mt-2 text-sm text-zinc-500">{formatMeta?.label}</p>
             </div>
+            <button type="button" onClick={handleStartOver} className={btnGhost}>
+              Start over
+            </button>
           </header>
         )}
 
         {step !== "format" && (
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
-              {formatMeta?.icon} {formatMeta?.label}
-            </span>
-            <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
-          </div>
+          <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
         )}
 
         {error && (
-          <div className="flex items-start justify-between gap-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            <span>⚠ {error}</span>
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-red-500/10 bg-red-500/5 px-4 py-3 text-sm text-red-400/90">
+            <span>{error}</span>
             {activeRequest && (
               <button
                 type="button"
                 disabled={signalopsLoading}
                 onClick={() => void runSignalOps(activeRequest)}
-                className="shrink-0 rounded border border-red-500/30 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                className="shrink-0 text-xs text-red-400/80 hover:text-red-300 disabled:opacity-50"
               >
-                {signalopsLoading ? "…" : "↻ Retry"}
+                {signalopsLoading ? "…" : "Retry"}
               </button>
             )}
           </div>
@@ -191,7 +179,7 @@ export default function Home() {
         )}
 
         {step === "brand" && (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-10">
             <ClientSelector
               onSelect={(client) => {
                 setActiveClient(client);

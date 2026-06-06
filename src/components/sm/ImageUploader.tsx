@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { btnSecondary, label } from "@/lib/sm/ui";
 
 export default function ImageUploader({
   clientId,
@@ -43,13 +44,13 @@ export default function ImageUploader({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm text-zinc-400">Reference images (optional)</label>
+      <span className={label}>Reference images</span>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+        className={`${btnSecondary} w-fit text-xs`}
       >
-        {uploading ? "Uploading…" : "+ Attach images"}
+        {uploading ? "Uploading…" : "Attach images"}
       </button>
       <input
         ref={inputRef}
@@ -60,9 +61,9 @@ export default function ImageUploader({
         onChange={(e) => void handleFiles(e.target.files)}
       />
       {urls.length > 0 && (
-        <p className="text-xs text-zinc-500">{urls.length} image(s) attached</p>
+        <p className="text-xs text-zinc-600">{urls.length} attached</p>
       )}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-400/90">{error}</p>}
     </div>
   );
 }

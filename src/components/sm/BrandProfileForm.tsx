@@ -1,6 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import {
+  btnPrimary,
+  chip,
+  chipActive,
+  field,
+  label,
+  sectionTitle,
+} from "@/lib/sm/ui";
 import type { SMClient, SMTone } from "@/types/sm";
 import LogoUploader from "./LogoUploader";
 
@@ -61,60 +69,68 @@ export default function BrandProfileForm({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="flex max-w-xl flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">Brand Profile</h2>
+    <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-6">
+      <h2 className={sectionTitle}>Brand profile</h2>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-zinc-400">Brand Name *</label>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="brand-name" className={label}>
+          Name
+        </label>
         <input
+          id="brand-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+          className={field}
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-zinc-400">Tagline</label>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="tagline" className={label}>
+          Tagline
+        </label>
         <input
+          id="tagline"
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
-          className="rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+          className={field}
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-zinc-400">USP / What makes you different</label>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="usp" className={label}>
+          What makes you different
+        </label>
         <textarea
+          id="usp"
           value={usp}
           onChange={(e) => setUsp(e.target.value)}
           rows={2}
-          className="resize-none rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+          className={`${field} resize-none`}
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-zinc-400">Target location</label>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="location" className={label}>
+          Target location
+        </label>
         <input
+          id="location"
           value={audienceLocation}
           onChange={(e) => setAudienceLocation(e.target.value)}
-          className="rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+          className={field}
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-zinc-400">Tone</label>
+      <div className="flex flex-col gap-2">
+        <span className={label}>Tone</span>
         <div className="flex flex-wrap gap-2">
           {TONES.map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTone(t)}
-              className={`rounded-full border px-3 py-1 text-xs ${
-                tone === t
-                  ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                  : "border-zinc-700 text-zinc-400"
-              }`}
+              className={`${chip} capitalize ${tone === t ? chipActive : "hover:border-zinc-700"}`}
             >
               {t}
             </button>
@@ -122,15 +138,18 @@ export default function BrandProfileForm({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-zinc-400">Primary color</label>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="primary-color" className={label}>
+          Primary color
+        </label>
         <input
+          id="primary-color"
           type="color"
           value={colors[0]?.hex ?? "#000000"}
           onChange={(e) =>
             setColors([{ hex: e.target.value, label: "primary" }, ...colors.slice(1)])
           }
-          className="h-10 w-20 cursor-pointer rounded border border-zinc-700 bg-zinc-800"
+          className="h-9 w-16 cursor-pointer rounded-lg border border-zinc-800 bg-transparent"
         />
       </div>
 
@@ -144,29 +163,29 @@ export default function BrandProfileForm({
         />
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400/90">{error}</p>}
 
       {!savedClient ? (
         <button
           type="submit"
           disabled={loading || !name}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+          className={`${btnPrimary} w-fit`}
         >
-          {loading ? "Saving..." : "Save Brand Profile"}
+          {loading ? "Saving…" : "Save brand"}
         </button>
       ) : (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm text-emerald-400">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-zinc-500">
             {initial?.id
-              ? "Upload or replace the logo (optional), then continue."
-              : "Brand saved. Upload a logo (optional), then continue."}
+              ? "Upload or replace the logo, then continue."
+              : "Brand saved. Add a logo if you like, then continue."}
           </p>
           <button
             type="button"
             onClick={() => onSave(savedClient)}
-            className="rounded bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+            className={`${btnPrimary} w-fit`}
           >
-            Continue to Brief →
+            Continue
           </button>
         </div>
       )}

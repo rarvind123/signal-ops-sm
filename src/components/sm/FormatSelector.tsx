@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
+import { btnPrimary, field, label, sectionTitle } from "@/lib/sm/ui";
 import type { SMCreativeFormat } from "@/types/sm";
 
 export default function FormatSelector({
@@ -10,58 +12,72 @@ export default function FormatSelector({
   onSelect: (format: SMCreativeFormat) => void;
 }) {
   const [selected, setSelected] = useState<SMCreativeFormat>("social_media");
+  const selectedFormat = CREATIVE_FORMATS.find((f) => f.id === selected);
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10">
-      <div className="text-center">
-        <p className="mb-3 text-sm uppercase tracking-widest text-zinc-500">
-          ✦ SignalOps Creative Engine
-        </p>
-        <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-          I want to create
-        </h1>
-      </div>
+    <div className="flex min-h-[72vh] flex-col">
+      <header className="mb-16">
+        <Image
+          src="/inventious-logo.png"
+          alt="inventious"
+          width={378}
+          height={118}
+          className="h-8 w-auto object-contain object-left sm:h-9"
+          priority
+        />
+      </header>
 
-      <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3">
-        {CREATIVE_FORMATS.map((format) => (
-          <button
-            key={format.id}
-            type="button"
-            disabled={!format.available}
-            onClick={() => format.available && setSelected(format.id)}
-            className={`relative rounded-xl border px-4 py-4 text-left transition-all ${
-              !format.available
-                ? "cursor-not-allowed border-zinc-800 opacity-40"
-                : selected === format.id
-                  ? "border-violet-500 bg-violet-500/10"
-                  : "cursor-pointer border-zinc-700 hover:border-zinc-500"
-            }`}
-          >
-            <span className="mb-2 block text-2xl">{format.icon}</span>
-            <p
-              className={`text-sm font-medium ${
-                selected === format.id ? "text-white" : "text-zinc-300"
-              }`}
+      <div className="flex flex-1 flex-col justify-center gap-10">
+        <div className="max-w-md">
+          <p className={`${label} mb-3`}>SignalOps</p>
+          <h1 className={`${sectionTitle} text-3xl sm:text-4xl`}>I want to create</h1>
+        </div>
+
+        <div className="flex max-w-md flex-col gap-2">
+          <label htmlFor="creative-format" className={label}>
+            Format
+          </label>
+          <div className="relative">
+            <select
+              id="creative-format"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
+              className={`${field} pr-10`}
             >
-              {format.label}
+              {CREATIVE_FORMATS.map((format) => (
+                <option
+                  key={format.id}
+                  value={format.id}
+                  disabled={!format.available}
+                  className="bg-zinc-950"
+                >
+                  {format.label}
+                  {!format.available && format.comingSoonLabel
+                    ? ` (${format.comingSoonLabel})`
+                    : ""}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600">
+              ▾
+            </span>
+          </div>
+          {selectedFormat && (
+            <p className="pt-1 text-sm leading-relaxed text-zinc-500">
+              {selectedFormat.description}
             </p>
-            <p className="mt-0.5 text-xs leading-snug text-zinc-500">{format.description}</p>
-            {!format.available && format.comingSoonLabel && (
-              <span className="absolute right-2 top-2 rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-600">
-                {format.comingSoonLabel}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+          )}
+        </div>
 
-      <button
-        type="button"
-        onClick={() => onSelect(selected)}
-        className="rounded-xl bg-violet-600 px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-      >
-        Continue with {CREATIVE_FORMATS.find((f) => f.id === selected)?.label} →
-      </button>
+        <button
+          type="button"
+          onClick={() => onSelect(selected)}
+          disabled={!selectedFormat?.available}
+          className={`${btnPrimary} w-fit`}
+        >
+          Continue
+        </button>
+      </div>
     </div>
   );
 }
