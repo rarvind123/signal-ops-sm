@@ -4,7 +4,7 @@ import { getReplicate, isReplicateConfigured } from "@/lib/replicate";
 import { supabase } from "@/lib/supabase";
 import type { SMAssetType, SMPlatform } from "@/types/sm";
 
-const FLUX_MODEL = "black-forest-labs/flux-schnell";
+const FLUX_MODEL = "black-forest-labs/flux-1.1-pro";
 const BUCKET = "sm-assets";
 
 export type FluxAspectRatio = "1:1" | "9:16" | "16:9" | "4:5";
@@ -126,8 +126,8 @@ export async function generateMarketingImageBytes(
       aspect_ratio: aspectRatio,
       output_format: "jpg",
       output_quality: 90,
-      num_inference_steps: 4,
-      go_fast: true,
+      safety_tolerance: 2,
+      prompt_upsampling: true,
     },
   });
 
