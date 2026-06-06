@@ -4,7 +4,7 @@ import { getReplicate, isReplicateConfigured } from "@/lib/replicate";
 import { supabase } from "@/lib/supabase";
 import type { SMAssetType, SMPlatform } from "@/types/sm";
 
-const FLUX_MODEL = "black-forest-labs/flux-1.1-pro";
+const FLUX_MODEL = "black-forest-labs/flux-schnell";
 const BUCKET = "sm-assets";
 
 export type FluxAspectRatio = "1:1" | "9:16" | "16:9" | "4:5";
@@ -69,6 +69,15 @@ export function formatSmImageError(error: unknown): string {
 
   const message = err.message || "Unknown error";
   const status = err.status ?? err.statusCode ?? err.response?.status ?? null;
+
+  if (
+    status === 402 ||
+    message.includes("Insufficient credit") ||
+    message.includes("Payment Required")
+  ) {
+    return "Image generation unavailable: Replicate account has insufficient credit. Add billing at https://replicate.com/account/billing, wait a few minutes, then retry.";
+  }
+
   return status ? `${message} (HTTP ${status})` : message;
 }
 
@@ -117,8 +126,8 @@ export async function generateMarketingImageBytes(
       aspect_ratio: aspectRatio,
       output_format: "jpg",
       output_quality: 90,
-      safety_tolerance: 2,
-      prompt_upsampling: true,
+      num_inference_steps: 4,
+      go_fast: true,
     },
   });
 
