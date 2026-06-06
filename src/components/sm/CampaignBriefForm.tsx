@@ -89,6 +89,8 @@ export default function CampaignBriefForm({
       const strategyJson = (await strategyRes.json()) as {
         error?: string;
         narrative_theme?: string;
+        story_arc?: { description?: string }[];
+        content_mix?: Record<string, number>;
       };
       if (!strategyRes.ok) {
         throw new Error(strategyJson.error ?? "Strategy generation failed");
@@ -96,6 +98,21 @@ export default function CampaignBriefForm({
       if (!strategyJson.narrative_theme?.trim()) {
         throw new Error(
           "Strategy generation returned empty — please try again. Your campaign was saved."
+        );
+      }
+      const mixTotal = Object.values(strategyJson.content_mix ?? {}).reduce(
+        (sum, count) => sum + (count ?? 0),
+        0
+      );
+      if (
+        (strategyJson.story_arc?.length ?? 0) < 2 ||
+        mixTotal === 0 ||
+        strategyJson.story_arc?.some((phase) =>
+          phase.description?.includes('"phase"')
+        )
+      ) {
+        throw new Error(
+          "Strategy generation returned malformed data — open the strategy page and regenerate. Your campaign was saved."
         );
       }
 

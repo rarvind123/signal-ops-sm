@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normalizeCampaignStrategyOutput } from "@/lib/sm/campaign-strategy-utils";
 import { supabase } from "@/lib/supabase";
 import type {
   SMAssetVersion,
@@ -173,9 +174,7 @@ function mapCampaign(row: Record<string, unknown>): SMCampaign {
 }
 
 function mapCampaignStrategy(row: Record<string, unknown>): SMCampaignStrategy {
-  return {
-    id: String(row.id),
-    campaign_id: String(row.campaign_id),
+  const normalized = normalizeCampaignStrategyOutput({
     narrative_theme: String(row.narrative_theme ?? ""),
     campaign_tagline: String(row.campaign_tagline ?? ""),
     story_arc: (row.story_arc as SMCampaignStrategy["story_arc"]) ?? [],
@@ -183,6 +182,12 @@ function mapCampaignStrategy(row: Record<string, unknown>): SMCampaignStrategy {
     content_mix: (row.content_mix as SMCampaignStrategy["content_mix"]) ?? {},
     strategic_notes: String(row.strategic_notes ?? ""),
     platform_notes: (row.platform_notes as SMCampaignStrategy["platform_notes"]) ?? {},
+  });
+
+  return {
+    id: String(row.id),
+    campaign_id: String(row.campaign_id),
+    ...normalized,
     created_at: String(row.created_at),
   };
 }

@@ -1,12 +1,17 @@
 import { completeJson } from "@/lib/ai";
+import {
+  contentMixTotal,
+  isStrategyCorrupted,
+  normalizeCampaignStrategyOutput,
+  salvageCorruptedRawStrategy,
+  type RawCampaignStrategy,
+} from "@/lib/sm/campaign-strategy-utils";
 import type {
   SMCampaign,
   SMCampaignObjective,
   SMCampaignStrategy,
   SMClient,
   SMContentFormat,
-  SMContentPillar,
-  SMStoryArcPhase,
 } from "@/types/sm";
 
 const STRATEGY_WRAPPER_KEYS = [
@@ -17,12 +22,7 @@ const STRATEGY_WRAPPER_KEYS = [
   "result",
 ] as const;
 
-type RawStrategy = Partial<
-  Omit<SMCampaignStrategy, "id" | "campaign_id" | "created_at">
-> & {
-  story_arc?: Partial<SMStoryArcPhase>[];
-  content_pillars?: Partial<SMContentPillar>[];
-};
+const MAX_STRATEGY_ATTEMPTS = 3;
 
 const BASELINE_MIX: Record<SMCampaignObjective, Record<SMContentFormat, number>> = {
   awareness: { static: 4, carousel: 4, reel: 10, reel_comic: 2, meme: 3, testimonial: 1, offer: 0 },
@@ -60,6 +60,8 @@ OUTPUT RULES:
 - Be specific, not generic. "Summer Isn't Waiting" beats "Summer Sale Campaign"
 - Each pillar must have a distinct strategic purpose, not just a topic label
 - The story arc must feel like it has momentum — each phase should create appetite for the next
+- In story_arc descriptions, never use double-quote characters inside text. Use single quotes for any quoted dialogue.
+- Keep each story_arc description under 350 words.
 - Return ONLY valid JSON.`;
 
   const userPrompt = `
@@ -123,67 +125,51 @@ Generate a complete campaign strategy:
 
 Return ONLY valid JSON.`;
 
-  const raw = await completeJson<RawStrategy & Record<string, unknown>>(
-    systemPrompt,
-    userPrompt,
-    "claude-sonnet-4-6",
-    { maxTokens: 4000, temperature: 0.7 }
-  );
+  for (let attempt = 0; attempt < MAX_STRATEGY_ATTEMPTS; attempt += 1) {
+    const retryNote =
+      attempt > 0
+        ? `\n\nRETRY ${attempt}: Previous output was malformed or incomplete. Return clean JSON with 3–5 story_arc phases, 4–5 content_pillars, and a content_mix that totals approximately ${totalPosts} posts. No double quotes inside description strings.`
+        : "";
 
-  const normalized = normalizeCampaignStrategyOutput(unwrapStrategyPayload(raw));
-  if (!normalized.narrative_theme.trim()) {
-    throw new Error(
-      "SignalOps returned an empty campaign strategy — please retry. If this persists, check OPENROUTER_API_KEY on Vercel."
+    const raw = await completeJson<RawCampaignStrategy & Record<string, unknown>>(
+      systemPrompt,
+      userPrompt + retryNote,
+      "claude-sonnet-4-6",
+      { maxTokens: 6000, temperature: 0.7 }
     );
+
+    const payload = salvageCorruptedRawStrategy(unwrapStrategyPayload(raw));
+    const normalized = normalizeCampaignStrategyOutput(payload);
+
+    if (
+      normalized.narrative_theme.trim() &&
+      !isStrategyCorrupted(payload) &&
+      normalized.story_arc.length >= 2 &&
+      contentMixTotal(normalized.content_mix) > 0
+    ) {
+      return normalized;
+    }
   }
 
-  return normalized;
+  throw new Error(
+    "Strategy generation returned malformed data — please retry. If this persists, check OPENROUTER_API_KEY on Vercel."
+  );
 }
 
-function unwrapStrategyPayload(raw: Record<string, unknown>): RawStrategy {
+function unwrapStrategyPayload(raw: Record<string, unknown>): RawCampaignStrategy {
   if (typeof raw.narrative_theme === "string" && raw.narrative_theme.trim()) {
-    return raw as RawStrategy;
+    return raw as RawCampaignStrategy;
   }
 
   for (const key of STRATEGY_WRAPPER_KEYS) {
     const wrapped = raw[key];
     if (wrapped && typeof wrapped === "object" && !Array.isArray(wrapped)) {
-      const candidate = wrapped as RawStrategy;
+      const candidate = wrapped as RawCampaignStrategy;
       if (candidate.narrative_theme?.trim()) {
         return candidate;
       }
     }
   }
 
-  return raw as RawStrategy;
-}
-
-function normalizeCampaignStrategyOutput(
-  parsed: RawStrategy
-): Omit<SMCampaignStrategy, "id" | "campaign_id" | "created_at"> {
-  return {
-    narrative_theme: parsed.narrative_theme?.trim() ?? "",
-    campaign_tagline: parsed.campaign_tagline?.trim() ?? "",
-    story_arc: Array.isArray(parsed.story_arc)
-      ? parsed.story_arc.map((phase) => ({
-          phase: phase.phase?.trim() ?? "",
-          week_range: phase.week_range?.trim() ?? "",
-          description: phase.description?.trim() ?? "",
-          emotional_tone: phase.emotional_tone?.trim() ?? "",
-        }))
-      : [],
-    content_pillars: Array.isArray(parsed.content_pillars)
-      ? parsed.content_pillars.map((pillar) => ({
-          name: pillar.name?.trim() ?? "",
-          description: pillar.description?.trim() ?? "",
-          percentage: Number(pillar.percentage ?? 0),
-          post_types: Array.isArray(pillar.post_types)
-            ? (pillar.post_types as SMContentFormat[])
-            : [],
-        }))
-      : [],
-    content_mix: (parsed.content_mix as Partial<Record<SMContentFormat, number>>) ?? {},
-    strategic_notes: parsed.strategic_notes?.trim() ?? "",
-    platform_notes: parsed.platform_notes ?? {},
-  };
+  return raw as RawCampaignStrategy;
 }

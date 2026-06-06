@@ -7,6 +7,10 @@ import { useEffect, useState } from "react";
 import CampaignNav from "@/components/sm/CampaignNav";
 import CampaignStrategyCard from "@/components/sm/CampaignStrategyCard";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
+import {
+  contentMixTotal,
+  isStrategyCorrupted,
+} from "@/lib/sm/campaign-strategy-utils";
 import type { SMCampaign, SMCampaignStrategy } from "@/types/sm";
 
 function isStrategyEmpty(strategy: SMCampaignStrategy): boolean {
@@ -15,6 +19,14 @@ function isStrategyEmpty(strategy: SMCampaignStrategy): boolean {
     strategy.story_arc.length === 0 &&
     strategy.content_pillars.length === 0 &&
     Object.keys(strategy.content_mix).length === 0
+  );
+}
+
+function isStrategyBroken(strategy: SMCampaignStrategy): boolean {
+  return (
+    isStrategyCorrupted(strategy) ||
+    (Boolean(strategy.narrative_theme?.trim()) &&
+      (strategy.story_arc.length < 2 || contentMixTotal(strategy.content_mix) === 0))
   );
 }
 
@@ -117,11 +129,13 @@ export default function CampaignStrategyPage() {
           </p>
         )}
 
-        {isStrategyEmpty(strategy) && (
+        {(isStrategyEmpty(strategy) || isStrategyBroken(strategy)) && (
           <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-4 py-4">
             <p className="text-sm text-amber-200/90">
-              Strategy generation didn&apos;t return content — this can happen if the AI call
-              failed silently. Regenerate to try again.
+              {isStrategyEmpty(strategy)
+                ? "Strategy generation didn't return content — this can happen if the AI call failed silently."
+                : "Strategy data looks malformed (raw JSON in story arc or missing content mix)."}
+              {" "}Regenerate to try again.
             </p>
             <button
               type="button"
@@ -139,6 +153,7 @@ export default function CampaignStrategyPage() {
           onGenerateCalendar={() => void handleGenerateCalendar()}
           calendarLoading={calendarLoading}
           hasCalendar={calendarCount > 0}
+          canGenerateCalendar={!isStrategyBroken(strategy)}
         />
         {calendarCount > 0 && (
           <Link

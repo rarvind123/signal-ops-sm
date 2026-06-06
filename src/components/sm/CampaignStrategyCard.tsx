@@ -8,11 +8,13 @@ export default function CampaignStrategyCard({
   onGenerateCalendar,
   calendarLoading,
   hasCalendar,
+  canGenerateCalendar = true,
 }: {
   strategy: SMCampaignStrategy;
   onGenerateCalendar: () => void;
   calendarLoading?: boolean;
   hasCalendar?: boolean;
+  canGenerateCalendar?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -87,7 +89,7 @@ export default function CampaignStrategyCard({
       )}
 
       <div className="flex gap-3">
-        {!hasCalendar && strategy.narrative_theme?.trim() && (
+        {!hasCalendar && canGenerateCalendar && strategy.narrative_theme?.trim() && (
           <button
             type="button"
             onClick={onGenerateCalendar}
