@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { readSmFile, relativePathFromPublicUrl } from "@/lib/sm/file-storage";
 import { compositeLogoOntoImage } from "@/lib/sm/logo-composite";
 import { smRouteHandler } from "@/lib/sm/api-auth";
-import { getClient, getCreativeRequest, getGeneratedAsset } from "@/lib/sm/store";
+import {
+  getClient,
+  getClientLogoUrl,
+  getCreativeRequest,
+  getGeneratedAsset,
+} from "@/lib/sm/store";
 
 export const runtime = "nodejs";
 
@@ -35,8 +40,9 @@ export async function GET(req: Request, context: RouteContext) {
     const client = request ? await getClient(request.client_id) : null;
 
     try {
-      if (client?.logo_url) {
-        imageBuffer = await compositeLogoOntoImage(imageBuffer, client.logo_url, "top-right");
+      const logoUrl = client ? await getClientLogoUrl(client.id) : null;
+      if (logoUrl) {
+        imageBuffer = await compositeLogoOntoImage(imageBuffer, logoUrl, "top-right");
       }
     } catch (e) {
       console.warn("[download] Logo composite failed, serving without logo:", e);

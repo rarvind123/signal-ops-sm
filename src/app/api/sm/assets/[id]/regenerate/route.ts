@@ -60,8 +60,7 @@ export async function POST(req: Request, context: RouteContext) {
       signalops.headlines[0]?.text ||
       client.name;
 
-    const prompt =
-      (typeof body.generation_prompt === "string" && body.generation_prompt.trim()) ||
+    const basePrompt =
       asset.generation_prompt ||
       buildImageGenerationPrompt(
         client,
@@ -70,6 +69,17 @@ export async function POST(req: Request, context: RouteContext) {
         asset.asset_type,
         headline
       );
+
+    const userDirection =
+      typeof body.direction === "string" && body.direction.trim()
+        ? body.direction.trim()
+        : null;
+
+    const prompt =
+      (typeof body.generation_prompt === "string" && body.generation_prompt.trim()) ||
+      (userDirection
+        ? `${userDirection}. ${basePrompt}`.slice(0, 3800)
+        : basePrompt);
 
     await updateGeneratedAsset(id, { status: "generating", error_message: "" });
 

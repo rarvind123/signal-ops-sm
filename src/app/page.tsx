@@ -89,6 +89,15 @@ export default function Home() {
     setError(null);
   }
 
+  async function refreshActiveClient() {
+    if (!activeClient) return;
+    const res = await fetch(`/api/sm/clients/${activeClient.id}`);
+    if (res.ok) {
+      const updated = (await res.json()) as SMClient;
+      setActiveClient(updated);
+    }
+  }
+
   async function runSignalOps(request: SMCreativeRequest) {
     setActiveRequest(request);
     setError(null);
@@ -162,8 +171,11 @@ export default function Home() {
               }}
               onCreate={() => setShowCreateForm(true)}
             />
-            {showCreateForm && (
+            {(showCreateForm || activeClient) && (
               <BrandProfileForm
+                key={showCreateForm ? "new-brand" : (activeClient?.id ?? "new-brand")}
+                initial={showCreateForm ? undefined : (activeClient ?? undefined)}
+                onLogoUploaded={() => void refreshActiveClient()}
                 onSave={(client) => {
                   setActiveClient(client);
                   setShowCreateForm(false);
@@ -221,11 +233,11 @@ export default function Home() {
           <CreativePreviewGrid
             assets={generatedAssets}
             client={activeClient}
-            onRegenerate={async (assetId) => {
+            onRegenerate={async (assetId, direction) => {
               const res = await fetch(`/api/sm/assets/${assetId}/regenerate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ direction: direction || undefined }),
               });
               const updated = (await res.json()) as SMGeneratedAsset & { error?: string };
               if (!res.ok) {

@@ -12,7 +12,7 @@ export default function CreativePreviewGrid({
 }: {
   assets: SMGeneratedAsset[];
   client: SMClient;
-  onRegenerate: (id: string) => Promise<void>;
+  onRegenerate: (id: string, direction?: string) => Promise<void>;
   onNewBrief: () => void;
   onChangeBrand: () => void;
 }) {

@@ -63,26 +63,38 @@ export function buildImageGenerationPrompt(
         ? "wide landscape composition, professional setting, corporate aesthetic"
         : "square composition, bold central subject, clean negative space at bottom third for text";
 
-  const parts = [
+  const categoryContext = client.usp?.trim() || client.tagline?.trim() || tone;
+
+  const mainPrompt = [
     tension ? `Concept: ${tension}` : theme,
     visualDir,
     `Color palette: ${colorRec || "neutral professional tones"}`,
     `Brand tone: ${tone}`,
+    categoryContext ? `Category context: ${categoryContext}` : null,
     compositionNote,
     "ultra high quality commercial photography",
     "sharp focus, professional studio lighting",
     "clean background, premium advertising aesthetic",
     "8k resolution",
-    "no text in image",
-    "no logos",
-    "no watermarks",
-    "no visible brand marks",
     "no people unless central to the concept",
   ]
     .filter(Boolean)
     .join(", ");
 
-  return parts.replace(/\s+/g, " ").trim().slice(0, 3800);
+  const exclusions = [
+    "no product packaging",
+    "no product tins",
+    "no bottles",
+    "no containers",
+    "no pack shots",
+    "no product labels",
+    "no text in image",
+    "no logos",
+    "no watermarks",
+    "no brand marks",
+  ].join(", ");
+
+  return `${mainPrompt}, ${exclusions}`.replace(/\s+/g, " ").trim().slice(0, 3800);
 }
 
 export async function generateCopyForPlatform(

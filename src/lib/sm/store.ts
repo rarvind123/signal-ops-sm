@@ -209,6 +209,22 @@ export async function deleteClient(id: string): Promise<boolean> {
   return true;
 }
 
+export async function getClientLogoUrl(clientId: string): Promise<string | null> {
+  const client = await getClient(clientId);
+  if (client?.logo_url) return client.logo_url;
+
+  const { data, error } = await supabase
+    .from("sm_brand_assets")
+    .select("storage_url")
+    .eq("client_id", clientId)
+    .eq("type", "logo")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  throwIfError(error);
+  return data?.storage_url ? String(data.storage_url) : null;
+}
+
 export async function listBrandAssets(clientId: string): Promise<SMBrandAsset[]> {
   const { data, error } = await supabase
     .from("sm_brand_assets")

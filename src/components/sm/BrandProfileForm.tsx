@@ -8,9 +8,11 @@ const TONES: SMTone[] = ["bold", "warm", "premium", "playful", "professional", "
 
 export default function BrandProfileForm({
   onSave,
+  onLogoUploaded,
   initial,
 }: {
   onSave: (c: SMClient) => void;
+  onLogoUploaded?: () => void;
   initial?: Partial<SMClient>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -135,7 +137,10 @@ export default function BrandProfileForm({
       {savedClient && (
         <LogoUploader
           clientId={savedClient.id}
-          onUploaded={(url) => setSavedClient((prev) => (prev ? { ...prev, logo_url: url } : prev))}
+          onUploaded={(url) => {
+            setSavedClient((prev) => (prev ? { ...prev, logo_url: url } : prev));
+            onLogoUploaded?.();
+          }}
         />
       )}
 
@@ -151,7 +156,11 @@ export default function BrandProfileForm({
         </button>
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-emerald-400">Brand saved. Upload a logo (optional), then continue.</p>
+          <p className="text-sm text-emerald-400">
+            {initial?.id
+              ? "Upload or replace the logo (optional), then continue."
+              : "Brand saved. Upload a logo (optional), then continue."}
+          </p>
           <button
             type="button"
             onClick={() => onSave(savedClient)}

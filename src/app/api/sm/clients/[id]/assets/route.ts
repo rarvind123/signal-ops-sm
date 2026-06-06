@@ -35,7 +35,14 @@ export async function POST(req: Request, context: RouteContext) {
     });
 
     if (type === "logo") {
-      await updateClient(clientId, { logo_url: saved.publicUrl });
+      try {
+        await updateClient(clientId, { logo_url: saved.publicUrl });
+      } catch (err) {
+        console.warn(
+          "[asset upload] Could not update logo_url on client:",
+          err instanceof Error ? err.message : err
+        );
+      }
     }
 
     return { ...asset, logo_url: type === "logo" ? saved.publicUrl : undefined };

@@ -11,16 +11,33 @@ export default function AssetCard({
 }: {
   asset: SMGeneratedAsset;
   client: SMClient;
-  onRegenerate: (id: string) => Promise<void>;
+  onRegenerate: (id: string, direction?: string) => Promise<void>;
 }) {
   const [regenerating, setRegenerating] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
+  const [showRedoInput, setShowRedoInput] = useState(false);
+  const [redoDirection, setRedoDirection] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [logoUrl, setLogoUrl] = useState<string | null>(client.logo_url ?? null);
   const [localAsset, setLocalAsset] = useState(asset);
 
   useEffect(() => {
     setLocalAsset(asset);
   }, [asset]);
+
+  useEffect(() => {
+    if (client.logo_url) setLogoUrl(client.logo_url);
+  }, [client.logo_url]);
+
+  useEffect(() => {
+    if (logoUrl) return;
+    fetch(`/api/sm/clients/${client.id}/logo`)
+      .then((r) => r.json())
+      .then((data: { logo_url: string | null }) => {
+        if (data.logo_url) setLogoUrl(data.logo_url);
+      })
+      .catch(() => {});
+  }, [client.id, logoUrl]);
 
   const platformLabel = localAsset.platform.charAt(0).toUpperCase() + localAsset.platform.slice(1);
   const typeLabel = localAsset.asset_type.replace("_", " ");
@@ -29,8 +46,10 @@ export default function AssetCard({
     setRegenerating(true);
     setLocalAsset((prev) => ({ ...prev, status: "generating", error_message: undefined }));
     try {
-      await onRegenerate(localAsset.id);
+      await onRegenerate(localAsset.id, redoDirection.trim() || undefined);
       setRefreshKey((k) => k + 1);
+      setShowRedoInput(false);
+      setRedoDirection("");
     } finally {
       setRegenerating(false);
     }
@@ -59,13 +78,13 @@ export default function AssetCard({
               alt={`${platformLabel} ${typeLabel}`}
               className="h-full w-full object-cover"
             />
-            {client.logo_url && (
-              <div className="absolute right-3 top-3">
+            {logoUrl && (
+              <div className="absolute right-3 top-3 rounded bg-black/20 p-1 backdrop-blur-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={client.logo_url}
+                  src={logoUrl}
                   alt={client.name}
-                  className="h-8 w-auto max-w-[120px] object-contain drop-shadow-lg"
+                  className="h-7 w-auto max-w-[100px] object-contain drop-shadow"
                 />
               </div>
             )}
@@ -114,29 +133,67 @@ export default function AssetCard({
         </div>
       )}
 
-      <div className="mt-auto flex gap-2 px-3 pb-3 pt-1">
-        <button
-          type="button"
-          onClick={() => void handleDownload()}
-          className="flex-1 rounded border border-zinc-600 px-2 py-1.5 text-center text-xs text-zinc-300 hover:border-zinc-400 hover:text-white"
-        >
-          ↓ Download
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleRedo()}
-          disabled={regenerating || localAsset.status === "generating"}
-          className="flex-1 rounded border border-zinc-600 px-2 py-1.5 text-xs text-zinc-300 hover:border-zinc-400 hover:text-white disabled:opacity-40"
-        >
-          {regenerating ? "..." : "↻ Redo"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowPublish(true)}
-          className="flex-1 rounded border border-violet-500/30 bg-violet-600/20 px-2 py-1.5 text-xs text-violet-300 hover:bg-violet-600/30"
-        >
-          ↑ Publish
-        </button>
+      <div className="mt-auto flex flex-col gap-1.5 px-3 pb-3 pt-1">
+        {showRedoInput && (
+          <div className="flex gap-1.5">
+            <input
+              autoFocus
+              type="text"
+              value={redoDirection}
+              onChange={(e) => setRedoDirection(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !regenerating) void handleRedo();
+                if (e.key === "Escape") {
+                  setShowRedoInput(false);
+                  setRedoDirection("");
+                }
+              }}
+              placeholder="e.g. warmer tones, no chess pieces, outdoor setting..."
+              className="min-w-0 flex-1 rounded border border-violet-500/40 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-violet-400 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void handleRedo()}
+              disabled={regenerating}
+              className="shrink-0 rounded border border-violet-500/30 bg-violet-600/20 px-3 py-1.5 text-xs text-violet-300 hover:bg-violet-600/30 disabled:opacity-40"
+            >
+              {regenerating ? "…" : "↻"}
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            className="flex-1 rounded border border-zinc-600 px-2 py-1.5 text-center text-xs text-zinc-300 hover:border-zinc-400 hover:text-white"
+          >
+            ↓ Download
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!showRedoInput) {
+                setShowRedoInput(true);
+              } else if (redoDirection.trim()) {
+                void handleRedo();
+              } else {
+                setShowRedoInput(false);
+              }
+            }}
+            disabled={regenerating || localAsset.status === "generating"}
+            className="flex-1 rounded border border-zinc-600 px-2 py-1.5 text-xs text-zinc-300 hover:border-zinc-400 hover:text-white disabled:opacity-40"
+          >
+            {regenerating ? "…" : "↻ Redo"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPublish(true)}
+            className="flex-1 rounded border border-violet-500/30 bg-violet-600/20 px-2 py-1.5 text-xs text-violet-300 hover:bg-violet-600/30"
+          >
+            ↑ Publish
+          </button>
+        </div>
       </div>
 
       {showPublish && (
