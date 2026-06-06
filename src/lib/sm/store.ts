@@ -674,6 +674,16 @@ export async function getCampaignStrategy(
   );
 }
 
+export async function deleteCalendarItemsForCampaign(
+  campaignId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("sm_campaign_calendar")
+    .delete()
+    .eq("campaign_id", campaignId);
+  throwIfError(error);
+}
+
 export async function bulkCreateCalendarItems(
   items: Omit<SMCampaignCalendarItem, "id" | "created_at">[]
 ): Promise<SMCampaignCalendarItem[]> {

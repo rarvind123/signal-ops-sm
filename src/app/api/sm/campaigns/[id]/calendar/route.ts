@@ -6,6 +6,7 @@ import {
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import {
   bulkCreateCalendarItems,
+  deleteCalendarItemsForCampaign,
   getCalendarItems,
   getCampaign,
   getCampaignStrategy,
@@ -46,6 +47,13 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     const rawItems = await generateCampaignCalendar(client, campaign, strategy);
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      return NextResponse.json(
+        { error: "Calendar generation returned no posts — please try again." },
+        { status: 502 }
+      );
+    }
+
     const items = rawItems.map((item) => ({
       campaign_id: id,
       strategy_id: strategy.id,
@@ -63,7 +71,15 @@ export async function POST(req: Request, context: RouteContext) {
       status: "brief_pending" as const,
     }));
 
+    await deleteCalendarItemsForCampaign(id);
     const saved = await bulkCreateCalendarItems(items);
+    if (saved.length === 0) {
+      return NextResponse.json(
+        { error: "Failed to save calendar items — please try again." },
+        { status: 500 }
+      );
+    }
+
     await updateCampaign(id, { status: "calendar_ready" });
     return { items: saved, count: saved.length };
   });

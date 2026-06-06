@@ -71,11 +71,14 @@ export default function CampaignStrategyPage() {
 
   async function handleGenerateCalendar() {
     setCalendarLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/sm/campaigns/${id}/calendar`, { method: "POST" });
-      if (res.ok) {
-        router.push(`/campaign/${id}/calendar`);
-      }
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Calendar generation failed");
+      router.push(`/campaign/${id}/calendar`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Calendar generation failed");
     } finally {
       setCalendarLoading(false);
     }

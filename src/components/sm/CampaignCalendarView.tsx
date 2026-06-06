@@ -1,19 +1,27 @@
 "use client";
 
-import { btnPrimary } from "@/lib/sm/ui";
+import { btnPrimary, btnSecondary } from "@/lib/sm/ui";
 import { FORMAT_COLORS, formatLabel } from "@/lib/sm/content-format-ui";
 import type { SMCampaignCalendarItem } from "@/types/sm";
 
 export default function CampaignCalendarView({
   items,
   onGenerateBriefs,
+  onGenerateCreatives,
   briefsLoading,
+  creativesLoading,
+  creativesProgress,
   hasBriefs,
+  pendingCreatives,
 }: {
   items: SMCampaignCalendarItem[];
   onGenerateBriefs?: () => void;
+  onGenerateCreatives?: () => void;
   briefsLoading?: boolean;
+  creativesLoading?: boolean;
+  creativesProgress?: { current: number; total: number };
   hasBriefs?: boolean;
+  pendingCreatives?: number;
 }) {
   const byWeek = items.reduce(
     (acc, item) => {
@@ -73,16 +81,36 @@ export default function CampaignCalendarView({
           </div>
         ))}
 
-      {onGenerateBriefs && !hasBriefs && (
-        <button
-          type="button"
-          onClick={onGenerateBriefs}
-          disabled={briefsLoading}
-          className={`${btnPrimary} w-fit`}
-        >
-          {briefsLoading ? "Writing briefs…" : "Generate all briefs"}
-        </button>
-      )}
+      <div className="flex flex-wrap gap-3">
+        {onGenerateBriefs && !hasBriefs && (
+          <button
+            type="button"
+            onClick={onGenerateBriefs}
+            disabled={briefsLoading || creativesLoading}
+            className={`${btnPrimary} w-fit`}
+          >
+            {briefsLoading ? "Writing briefs…" : "Generate all briefs"}
+          </button>
+        )}
+        {onGenerateCreatives && (
+          <button
+            type="button"
+            onClick={onGenerateCreatives}
+            disabled={briefsLoading || creativesLoading}
+            className={`${hasBriefs ? btnPrimary : btnSecondary} w-fit`}
+          >
+            {creativesLoading && creativesProgress
+              ? `Generating creatives… ${creativesProgress.current}/${creativesProgress.total}`
+              : creativesLoading
+                ? "Generating creatives…"
+                : pendingCreatives === 0 && hasBriefs
+                  ? "All creatives generated"
+                  : hasBriefs
+                    ? `Generate creatives${pendingCreatives ? ` (${pendingCreatives})` : ""}`
+                    : "Generate all creatives"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
