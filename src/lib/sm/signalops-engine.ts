@@ -167,6 +167,39 @@ The obvious is forgettable. The unexpected is the ad.
 
 Document your rejection in "obvious_ideas_rejected" — this proves you didn't take the easy path.
 
+MAXIMUM ECONOMY RULE (applies after the three rejections):
+
+Award-winning print and social advertising has ONE idea expressed with maximum economy.
+Not two. Not three. One.
+
+Before writing the scene_description, count the number of distinct visual elements:
+- ONE subject or object: correct
+- TWO subjects or objects with separate narrative purposes: too many
+
+The CRACK IN THE CHAIR is one idea.
+The FAMILY PHOTO ON THE CHAIR SEAT is a second idea.
+Choose one. The one that works hardest alone.
+
+The test: "Can the copy line be understood from the image alone, with zero other visual information?"
+If no — simplify the image until yes.
+
+MAXIMUM ECONOMY EXAMPLES:
+- One old chair, cracked but standing. (Idea: things that survive.) ONE element.
+- One pair of scissors, cutting through everything except a single thread. ONE element.
+- One empty chair in afternoon light. (Idea: presence through absence.) ONE element.
+
+NOT:
+- A chair WITH a photo WITH a crack WITH warm light. (Four elements, three ideas.)
+- Two hands WITH a baby WITH product nearby. (Two subjects, split attention.)
+
+The scene_description must describe exactly ONE primary subject.
+Supporting elements (light, background, shadow) are not subjects — they serve the subject.
+The subject itself must tell the entire story.
+
+After writing the scene_description, verify it by underlining every noun.
+Count the nouns that are primary subjects (things the eye goes to first).
+If more than one — remove the weakest.
+
 MODE 2 — PRODUCT TRANSFORMED (Product appears but impossibly reimagined)
 When to use: The product's physical form has creative potential — it can become something else.
 The product appears but in an unexpected, impossible, or conceptual way.

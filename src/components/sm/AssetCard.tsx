@@ -362,16 +362,6 @@ export default function AssetCard({
           {platformLabel} · {typeLabel}
         </div>
 
-        {localAsset.status === "done" && localAsset.storage_url && localAsset.headline && (
-          <button
-            type="button"
-            onClick={() => setShowTextOverlay((prev) => !prev)}
-            className="absolute right-14 top-2 z-10 rounded bg-black/40 px-1.5 py-0.5 text-xs text-white/70 hover:bg-black/60"
-            title="Toggle headline overlay"
-          >
-            Aa
-          </button>
-        )}
       </div>
 
       {localAsset.headline && (
@@ -414,7 +404,24 @@ export default function AssetCard({
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {localAsset.status === "done" &&
+            localAsset.storage_url &&
+            localAsset.headline &&
+            !isTextOnly && (
+              <button
+                type="button"
+                onClick={() => setShowTextOverlay((prev) => !prev)}
+                className={`shrink-0 rounded border px-2 py-1.5 text-xs transition-colors ${
+                  showTextOverlay
+                    ? "border-zinc-600 text-zinc-400 hover:text-zinc-300"
+                    : "border-zinc-700 text-zinc-600 line-through hover:text-zinc-500"
+                }`}
+                title="Toggle headline overlay"
+              >
+                Tt
+              </button>
+            )}
           <button
             type="button"
             onClick={() => void handleDownload()}
