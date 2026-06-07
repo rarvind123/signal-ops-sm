@@ -2,6 +2,9 @@
 
 export const SIGNALOPS_TM = "SignalOps™";
 
+/** 80% grey — homepage primary text (replaces near-white) */
+export const HOME_TEXT_GREY = "text-[#cccccc]";
+
 export const label = "text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500";
 
 export const field =

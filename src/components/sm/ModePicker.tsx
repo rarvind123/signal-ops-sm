@@ -3,14 +3,20 @@
 import Image from "next/image";
 import { useState } from "react";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
-import { btnGhost, btnPrimary, field, label, SIGNALOPS_TM } from "@/lib/sm/ui";
+import {
+  btnGhost,
+  btnPrimary,
+  HOME_TEXT_GREY,
+  label,
+  SIGNALOPS_TM,
+} from "@/lib/sm/ui";
 import type { SMCreativeFormat } from "@/types/sm";
 
 export type SMMode = "single_post" | "campaign";
 
-const homeText = "text-zinc-300";
-const homeHeading = `text-base font-medium tracking-tight ${homeText}`;
-const homeField = `${field} ${homeText}`;
+const homeHeading = `text-base font-medium tracking-tight ${HOME_TEXT_GREY}`;
+const homeField =
+  "w-full rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-sm text-[#cccccc] placeholder:text-zinc-600 outline-none transition-colors focus:border-zinc-600 focus:bg-zinc-900/60";
 
 export default function ModePicker({
   onSelectFormat,
@@ -34,14 +40,14 @@ export default function ModePicker({
 
   if (showSocialChoice) {
     return (
-      <div className="flex min-h-[72vh] flex-col">
+      <div className={`flex min-h-[72vh] flex-col ${HOME_TEXT_GREY}`}>
         <header className="mb-16 flex items-start justify-between gap-4">
           <Image
             src="/inventious-logo.png"
             alt="inventious"
             width={378}
             height={118}
-            className="h-[2.3rem] w-auto object-contain object-left sm:h-[2.5875rem]"
+            className="h-[2.3rem] w-auto object-contain object-left opacity-80 sm:h-[2.5875rem]"
             priority
           />
           <button
@@ -66,7 +72,7 @@ export default function ModePicker({
               onClick={() => onSelectSocialMode("single_post")}
               className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
             >
-              <p className={`text-sm font-medium ${homeText}`}>Single social media creative</p>
+              <p className={`text-sm font-medium ${HOME_TEXT_GREY}`}>Single social media creative</p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 One post — strategy, visual, and copy for a single piece of content.
               </p>
@@ -76,7 +82,7 @@ export default function ModePicker({
               onClick={() => onSelectSocialMode("campaign")}
               className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
             >
-              <p className={`text-sm font-medium ${homeText}`}>Social media campaign</p>
+              <p className={`text-sm font-medium ${HOME_TEXT_GREY}`}>Social media campaign</p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 Full strategy, calendar, briefs, and creatives for 30+ posts.
               </p>
@@ -88,14 +94,14 @@ export default function ModePicker({
   }
 
   return (
-    <div className="flex min-h-[72vh] flex-col">
+    <div className={`flex min-h-[72vh] flex-col ${HOME_TEXT_GREY}`}>
       <header className="mb-16">
         <Image
           src="/inventious-logo.png"
           alt="inventious"
           width={378}
           height={118}
-          className="h-[2.3rem] w-auto object-contain object-left sm:h-[2.5875rem]"
+          className="h-[2.3rem] w-auto object-contain object-left opacity-80 sm:h-[2.5875rem]"
           priority
         />
       </header>
