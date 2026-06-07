@@ -159,6 +159,8 @@ function mapCreativeRequest(row: Record<string, unknown>): SMCreativeRequest {
     platforms: (row.platforms as SMCreativeRequest["platforms"]) ?? [],
     goal: row.goal as SMCreativeRequest["goal"],
     uploaded_image_urls: (row.uploaded_image_urls as string[]) ?? [],
+    must_include: row.must_include ? String(row.must_include) : undefined,
+    must_exclude: row.must_exclude ? String(row.must_exclude) : undefined,
     creative_format:
       (row.creative_format as SMCreativeRequest["creative_format"]) ?? "social_media",
     creative_lens: (row.creative_lens as SMCreativeRequest["creative_lens"]) ?? "signalops",
@@ -456,6 +458,8 @@ export async function createCreativeRequest(
       platforms: input.platforms ?? [],
       goal: input.goal ?? null,
       uploaded_image_urls: input.uploaded_image_urls ?? [],
+      must_include: input.must_include ?? null,
+      must_exclude: input.must_exclude ?? null,
       creative_format: input.creative_format ?? "social_media",
       creative_lens: input.creative_lens ?? "signalops",
       status: "pending",

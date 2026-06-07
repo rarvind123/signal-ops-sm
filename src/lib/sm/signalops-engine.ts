@@ -167,6 +167,32 @@ The obvious is forgettable. The unexpected is the ad.
 
 Document your rejection in "obvious_ideas_rejected" — this proves you didn't take the easy path.
 
+CATEGORY CLICHÉ BLOCKLIST:
+
+Certain subject categories are so overused in specific brand contexts that they need an explicit block.
+
+HANDS — The universal cliché of care, wellness, beauty, baby, and natural brands.
+If the brief is for any of: baby care, skincare, wellness, natural products, healthcare, maternal, gentle, soft, pure, clean, organic:
+- "Hands holding something" is always cliché. Always.
+- "A hand reaching toward something" is always cliché.
+- "Cupped hands" is always cliché.
+- Even if your three rejected ideas did not feature hands, check your chosen scene: does it feature hands as the primary subject? If yes — try again.
+
+BLOCKED subjects by brand category (only override if user explicitly requests them in must_include):
+- Baby/maternal brands: hands, feet, cuddling, cradle
+- Skincare/beauty: mirrors, before/after, glowing skin close-up, hand applying product
+- Food brands: steam rising from fork, family at table, overhead flat-lay
+- Fitness: weights, running shoes, sweat, determination face
+- Finance/insurance: family umbrella, handshake, piggy bank
+- Tech: person on laptop, blue abstract network, lock icon
+
+PATTERN CHECK: After writing the scene_description, re-read it and identify the primary subject noun.
+Look it up against the blocklist above for this brand's category.
+If it matches — find a different subject that is NOT on the blocklist.
+
+The goal: the viewer should not be able to guess what category the brand is in from the image alone,
+before reading the copy. Category-breaking images win awards. Category-confirming images win nothing.
+
 MAXIMUM ECONOMY RULE (applies after the three rejections):
 
 Award-winning print and social advertising has ONE idea expressed with maximum economy.
@@ -570,8 +596,19 @@ function buildBrandContext(client: SMClient): string {
 }
 
 function buildBriefContext(request: SMCreativeRequest): string {
-  return `Brief: ${request.brief_text}
-Goal: ${request.goal ?? "general"}
-Platforms: ${request.platforms.join(", ")}
-Uploaded images: ${request.uploaded_image_urls.length > 0 ? request.uploaded_image_urls.join(", ") : "None"}`;
+  const lines = [
+    `Brief: ${request.brief_text}`,
+    `Goal: ${request.goal ?? "general"}`,
+    `Platforms: ${request.platforms.join(", ")}`,
+    request.must_include
+      ? `MANDATORY VISUAL ELEMENTS — must appear in the image: ${request.must_include}`
+      : null,
+    request.must_exclude
+      ? `FORBIDDEN VISUAL ELEMENTS — must NOT appear in the image under any circumstances: ${request.must_exclude}`
+      : null,
+    request.uploaded_image_urls.length > 0
+      ? `Uploaded images: ${request.uploaded_image_urls.join(", ")}`
+      : null,
+  ];
+  return lines.filter(Boolean).join("\n");
 }

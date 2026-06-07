@@ -4,6 +4,7 @@ import type {
   SMClient,
   SMAssetType,
   SMCreativeFormat,
+  SMCreativeRequest,
   SMGoal,
   SMPlatform,
   SMSignalOpsOutput,
@@ -169,13 +170,29 @@ function colorContextForClient(client: SMClient, signalops: SMSignalOpsOutput): 
   return signalops.color_recommendation;
 }
 
+function visualConstraintsForRequest(
+  request?: Pick<SMCreativeRequest, "must_include" | "must_exclude">
+): string {
+  const excludeRule = request?.must_exclude
+    ? [request.must_exclude, "no hands (unless explicitly required above)"].join(", ")
+    : "no hands (unless explicitly required by the brief)";
+
+  return [
+    request?.must_include ? `MUST INCLUDE: ${request.must_include}` : null,
+    excludeRule,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
 export function buildImageGenerationPrompt(
   client: SMClient,
   signalops: SMSignalOpsOutput,
   platform: SMPlatform,
   assetType: SMAssetType,
   _headline: string,
-  creativeFormat?: SMCreativeFormat
+  creativeFormat?: SMCreativeFormat,
+  request?: Pick<SMCreativeRequest, "must_include" | "must_exclude">
 ): string {
   const approach = signalops.visual_approach;
   const modeInstructions =
@@ -199,6 +216,7 @@ export function buildImageGenerationPrompt(
     typographyZoneForFormat(creativeFormat),
     compositionNote,
     modeInstructions,
+    visualConstraintsForRequest(request),
     "ultra high quality",
     "sharp focus",
     "professional lighting",

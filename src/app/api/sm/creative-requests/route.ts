@@ -50,12 +50,23 @@ export async function POST(req: Request) {
         ? (body.creative_format as SMCreativeFormat)
         : "social_media";
 
+    const must_include =
+      typeof body.must_include === "string" && body.must_include.trim()
+        ? body.must_include.trim()
+        : undefined;
+    const must_exclude =
+      typeof body.must_exclude === "string" && body.must_exclude.trim()
+        ? body.must_exclude.trim()
+        : undefined;
+
     const request = await createCreativeRequest({
       client_id,
       brief_text,
       platforms,
       goal,
       uploaded_image_urls,
+      must_include,
+      must_exclude,
       creative_format,
       creative_lens,
     });

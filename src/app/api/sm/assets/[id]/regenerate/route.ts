@@ -68,7 +68,8 @@ export async function POST(req: Request, context: RouteContext) {
         asset.platform,
         asset.asset_type,
         headline,
-        request?.creative_format
+        request?.creative_format,
+        request ?? undefined
       );
 
     const userDirection =

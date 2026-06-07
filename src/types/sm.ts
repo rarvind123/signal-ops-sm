@@ -116,6 +116,8 @@ export interface SMCreativeRequest {
   platforms: SMPlatform[];
   goal?: SMGoal;
   uploaded_image_urls: string[];
+  must_include?: string;
+  must_exclude?: string;
   creative_format?: SMCreativeFormat;
   creative_lens?: SMCreativeLens;
   status: "pending" | "processing" | "done" | "failed";

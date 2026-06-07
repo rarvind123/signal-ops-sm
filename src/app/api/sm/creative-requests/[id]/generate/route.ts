@@ -132,7 +132,8 @@ export async function POST(req: Request, context: RouteContext) {
           platform,
           assetType,
           headline,
-          request.creative_format
+          request.creative_format,
+          request
         );
 
         const aspectRatio: FluxAspectRatio =

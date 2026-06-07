@@ -49,6 +49,8 @@ export default function CreativeBriefForm({
 }) {
   const isSocial = activeFormat === "social_media";
   const [brief, setBrief] = useState("");
+  const [mustInclude, setMustInclude] = useState("");
+  const [mustExclude, setMustExclude] = useState("");
   const [goal, setGoal] = useState<SMGoal>("awareness");
   const [creativeLens, setCreativeLens] = useState<SMCreativeLens>("signalops");
   const [platforms, setPlatforms] = useState<SMPlatform[]>(["instagram"]);
@@ -80,6 +82,8 @@ export default function CreativeBriefForm({
           goal,
           platforms: isSocial ? platforms : ["instagram"],
           uploaded_image_urls: uploadedUrls,
+          must_include: mustInclude.trim() || undefined,
+          must_exclude: mustExclude.trim() || undefined,
           creative_lens: creativeLens,
           creative_format: activeFormat,
         }),
@@ -114,6 +118,35 @@ export default function CreativeBriefForm({
           required
           className={`${field} resize-none`}
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="must-include" className={label}>
+            Must include <span className="normal-case tracking-normal text-zinc-600">(optional)</span>
+          </label>
+          <textarea
+            id="must-include"
+            value={mustInclude}
+            onChange={(e) => setMustInclude(e.target.value)}
+            placeholder="e.g. baby's face, forest background, product bottle, specific colour…"
+            rows={2}
+            className={`${field} resize-none`}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="must-exclude" className={label}>
+            Must not show <span className="normal-case tracking-normal text-zinc-600">(optional)</span>
+          </label>
+          <textarea
+            id="must-exclude"
+            value={mustExclude}
+            onChange={(e) => setMustExclude(e.target.value)}
+            placeholder="e.g. hands, people, stock photo feel, chess pieces, corporate look…"
+            rows={2}
+            className={`${field} resize-none`}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
