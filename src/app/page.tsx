@@ -20,8 +20,8 @@ import CreativePreviewGrid from "@/components/sm/CreativePreviewGrid";
 import ModePicker, { type SMMode } from "@/components/sm/ModePicker";
 import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
 import VisualApproachCard from "@/components/sm/VisualApproachCard";
+import AdminPanel from "@/components/sm/AdminPanel";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
-import { btnGhost } from "@/lib/sm/ui";
 
 type SMStep = "brand" | "brief" | "campaign_brief" | "signalops" | "assets";
 
@@ -84,8 +84,23 @@ export default function Home() {
   const [signalopsLoading, setSignalopsLoading] = useState(false);
   const [selectedHeadline, setSelectedHeadline] = useState(0);
   const [generateLoading, setGenerateLoading] = useState(false);
+  const [showAdminPrompt, setShowAdminPrompt] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState(false);
 
   const formatMeta = CREATIVE_FORMATS.find((f) => f.id === activeFormat);
+
+  function tryAdminLogin() {
+    if (adminPassword === "Mumbai") {
+      setShowAdmin(true);
+      setShowAdminPrompt(false);
+      setAdminPassword("");
+      setAdminError(false);
+    } else {
+      setAdminError(true);
+    }
+  }
 
   function handleStartOver() {
     setMode(null);
@@ -180,26 +195,88 @@ export default function Home() {
   return (
     <div className="min-h-screen px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
       <div className="mx-auto flex max-w-2xl flex-col gap-10">
-        {mode !== null && (
-          <header className="flex items-start justify-between gap-6">
-            <div>
-              <Image
-                src="/inventious-logo.png"
-                alt="inventious"
-                width={378}
-                height={118}
-                className="h-8 w-auto object-contain object-left"
-                priority
-              />
+        <header className="flex items-start justify-between gap-6">
+          <div>
+            <Image
+              src="/inventious-logo.png"
+              alt="inventious"
+              width={378}
+              height={118}
+              className="h-8 w-auto object-contain object-left"
+              priority
+            />
+            {mode !== null && (
               <p className="mt-2 text-sm text-zinc-500">
                 {mode === "campaign" ? "Social media campaign" : formatMeta?.label}
               </p>
-            </div>
-            <button type="button" onClick={handleStartOver} className={btnGhost}>
-              Start over
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            {mode !== null && step !== "brand" && (
+              <button
+                type="button"
+                onClick={handleStartOver}
+                className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+              >
+                ← Start over
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowAdminPrompt(true)}
+              className="text-xs text-zinc-700 transition-colors hover:text-zinc-500"
+            >
+              Admin
             </button>
-          </header>
+          </div>
+        </header>
+
+        {showAdminPrompt && !showAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="flex w-80 flex-col gap-4 rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
+              <h2 className="text-sm font-medium text-white">Admin access</h2>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") tryAdminLogin();
+                  if (e.key === "Escape") {
+                    setShowAdminPrompt(false);
+                    setAdminPassword("");
+                    setAdminError(false);
+                  }
+                }}
+                autoFocus
+                placeholder="Password"
+                className="rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-zinc-500 focus:outline-none"
+              />
+              {adminError && <p className="text-xs text-red-400">Incorrect password</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminPrompt(false);
+                    setAdminPassword("");
+                    setAdminError(false);
+                  }}
+                  className="flex-1 rounded border border-zinc-700 py-1.5 text-xs text-zinc-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={tryAdminLogin}
+                  className="flex-1 rounded bg-violet-600 py-1.5 text-xs text-white"
+                >
+                  Enter
+                </button>
+              </div>
+            </div>
+          </div>
         )}
+
+        {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
 
         {mode === "single_post" && (
           <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
