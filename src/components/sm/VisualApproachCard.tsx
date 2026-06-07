@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { APPROACH_LABELS } from "@/lib/sm/visual-approach-ui";
-import { btnPrimary, chip, chipActive, label } from "@/lib/sm/ui";
+import { btnPrimary, chip, chipActive, field, label } from "@/lib/sm/ui";
 import type { SMSignalOpsOutput, SMVisualApproachMode } from "@/types/sm";
 
 function Panel({
@@ -27,17 +27,68 @@ export default function VisualApproachCard({
   hasCreatives,
 }: {
   output: SMSignalOpsOutput;
-  onApprove: (visualApproachOverride?: SMVisualApproachMode) => Promise<void>;
+  onApprove: (
+    visualApproachOverride?: SMVisualApproachMode,
+    sceneDescriptionOverride?: string
+  ) => Promise<void>;
   loading?: boolean;
   hasCreatives?: boolean;
 }) {
   const recommendedMode = output.visual_approach?.mode ?? "concept_first";
+  const recommendedScene = output.visual_approach?.scene_description ?? "";
+
   const [selectedMode, setSelectedMode] = useState<SMVisualApproachMode>(recommendedMode);
+  const [modeSceneDescription, setModeSceneDescription] = useState(recommendedScene);
+  const [regeneratingScene, setRegeneratingScene] = useState(false);
+  const [customAngle, setCustomAngle] = useState("");
   const braveScore = output.visual_approach?.brave_score ?? 5;
 
   if (!output.visual_approach) return null;
 
   const isRecommended = selectedMode === recommendedMode;
+  const displayScene =
+    customAngle.trim() || modeSceneDescription || recommendedScene;
+
+  async function handleModeChange(mode: SMVisualApproachMode) {
+    setSelectedMode(mode);
+
+    if (mode === recommendedMode) {
+      setModeSceneDescription(recommendedScene);
+      return;
+    }
+
+    setRegeneratingScene(true);
+    try {
+      const res = await fetch(
+        `/api/sm/creative-requests/${output.request_id}/visual-approach`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, signalops_id: output.id }),
+        }
+      );
+      const data = (await res.json()) as { scene_description?: string; error?: string };
+      if (res.ok && data.scene_description) {
+        setModeSceneDescription(data.scene_description);
+      }
+    } catch (e) {
+      console.error("Scene regen failed:", e);
+    } finally {
+      setRegeneratingScene(false);
+    }
+  }
+
+  function handleApprove() {
+    const sceneOverride = customAngle.trim()
+      ? customAngle.trim()
+      : selectedMode !== recommendedMode
+        ? modeSceneDescription || undefined
+        : undefined;
+
+    const modeOverride = selectedMode !== recommendedMode ? selectedMode : undefined;
+
+    void onApprove(modeOverride, sceneOverride);
+  }
 
   return (
     <Panel title="Visual approach">
@@ -60,8 +111,9 @@ export default function VisualApproachCard({
           <button
             key={mode}
             type="button"
-            onClick={() => setSelectedMode(mode)}
-            className={`${chip} inline-flex items-center gap-1.5 ${
+            onClick={() => void handleModeChange(mode)}
+            disabled={regeneratingScene || loading}
+            className={`${chip} inline-flex items-center gap-1.5 disabled:opacity-50 ${
               selectedMode === mode ? chipActive : "hover:border-zinc-700"
             }`}
           >
@@ -79,7 +131,7 @@ export default function VisualApproachCard({
         <span className="text-zinc-600">Why: </span>
         {isRecommended
           ? output.visual_approach.rationale
-          : `Override — ${APPROACH_LABELS[selectedMode].description} Scene uses recommended direction until you regenerate strategy.`}
+          : `${APPROACH_LABELS[selectedMode].description} Scene regenerated for this mode.`}
       </p>
 
       {isRecommended && output.visual_approach.obvious_ideas_rejected?.length > 0 && (
@@ -97,24 +149,47 @@ export default function VisualApproachCard({
         </details>
       )}
 
-      {isRecommended && output.visual_approach.scene_description && (
-        <div className="mt-3 border-t border-zinc-800/80 pt-3">
-          <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-600">
-            Scene to generate
+      <div className="mt-3 rounded-lg border border-zinc-800/80 p-3">
+        <p className="mb-1.5 text-[10px] uppercase tracking-wider text-zinc-600">
+          Scene to generate
+          {regeneratingScene && (
+            <span className="ml-2 normal-case tracking-normal text-violet-400">
+              regenerating…
+            </span>
+          )}
+        </p>
+        {regeneratingScene ? (
+          <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800" />
+        ) : (
+          <p className="font-mono text-xs leading-relaxed text-zinc-400">{displayScene}</p>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-1.5">
+        <label htmlFor="custom-angle" className="text-xs text-zinc-500">
+          Your creative angle{" "}
+          <span className="text-zinc-700">— optional override</span>
+        </label>
+        <textarea
+          id="custom-angle"
+          value={customAngle}
+          onChange={(e) => setCustomAngle(e.target.value)}
+          placeholder="e.g. An old cracked chair, standing alone in afternoon light, no people, warm shadow on wall behind it…"
+          rows={3}
+          className={`${field} resize-none text-xs`}
+        />
+        {customAngle.trim() && (
+          <p className="text-xs text-amber-400/90">
+            Your direction will be used instead of the generated scene.
           </p>
-          <p className="font-mono text-xs leading-relaxed text-zinc-400">
-            {output.visual_approach.scene_description}
-          </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {!hasCreatives && (
         <button
           type="button"
-          onClick={() =>
-            void onApprove(isRecommended ? undefined : selectedMode)
-          }
-          disabled={loading}
+          onClick={handleApprove}
+          disabled={loading || regeneratingScene}
           className={`${btnPrimary} mt-4`}
         >
           {loading ? "Generating…" : "Approve & generate creatives"}

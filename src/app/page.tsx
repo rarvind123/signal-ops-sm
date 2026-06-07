@@ -113,7 +113,10 @@ export default function Home() {
     setError(null);
   }
 
-  async function generateCreatives(visualApproachOverride?: SMVisualApproachMode) {
+  async function generateCreatives(
+    visualApproachOverride?: SMVisualApproachMode,
+    sceneDescriptionOverride?: string
+  ) {
     if (!activeRequest) return;
     setError(null);
     setGenerateLoading(true);
@@ -126,6 +129,7 @@ export default function Home() {
           asset_types: ["post"],
           headline_index: selectedHeadline,
           visual_approach_override: visualApproachOverride,
+          scene_description_override: sceneDescriptionOverride,
         }),
       });
       const json = (await res.json()) as {

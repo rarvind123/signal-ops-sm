@@ -46,6 +46,11 @@ export async function POST(req: Request, context: RouteContext) {
     const visualApproachOverride = body.visual_approach_override as
       | SMVisualApproachMode
       | undefined;
+    const sceneDescriptionOverride =
+      typeof body.scene_description_override === "string" &&
+      body.scene_description_override.trim()
+        ? body.scene_description_override.trim()
+        : undefined;
 
     const request = await getCreativeRequest(requestId);
     if (!request) {
@@ -65,15 +70,16 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     let signalops = signalopsRow;
-    if (visualApproachOverride && signalops.visual_approach) {
+    if ((visualApproachOverride || sceneDescriptionOverride) && signalops.visual_approach) {
+      const mode = visualApproachOverride ?? signalops.visual_approach.mode;
       signalops = {
         ...signalops,
         visual_approach: {
           ...signalops.visual_approach,
-          mode: visualApproachOverride,
-          product_visible: ["product_hero", "product_transformed"].includes(
-            visualApproachOverride
-          ),
+          mode,
+          scene_description:
+            sceneDescriptionOverride ?? signalops.visual_approach.scene_description,
+          product_visible: ["product_hero", "product_transformed"].includes(mode),
         },
       };
     }
