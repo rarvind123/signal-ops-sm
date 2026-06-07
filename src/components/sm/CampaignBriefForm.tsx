@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   btnPrimary,
   chip,
@@ -52,7 +52,46 @@ export default function CampaignBriefForm({
   const [notes, setNotes] = useState("");
   const [platforms, setPlatforms] = useState<SMPlatform[]>(["instagram"]);
   const [loading, setLoading] = useState(false);
+  const [lastCampaignLoaded, setLastCampaignLoaded] = useState(false);
+  const [lastCampaign, setLastCampaign] = useState<SMCampaign | null>(null);
+  const [restoredFromLast, setRestoredFromLast] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!client.id || lastCampaignLoaded) return;
+
+    async function prefill() {
+      try {
+        const res = await fetch(`/api/sm/clients/${client.id}/last-campaign`);
+        if (!res.ok) return;
+        const last = (await res.json()) as SMCampaign | null;
+
+        if (last) {
+          setLastCampaign(last);
+          setRestoredFromLast(true);
+          if (last.objective) setObjective(last.objective);
+          if (last.duration_days) setDuration(last.duration_days);
+          if (last.product_service) setProductService(last.product_service);
+          if (last.key_message) setKeyMessage(last.key_message);
+          if (last.offer) setOffer(last.offer);
+          if (last.platforms?.length) setPlatforms(last.platforms);
+          if (last.additional_notes) setNotes(last.additional_notes);
+        } else if (client.social_handles) {
+          const activePlatforms = Object.keys(client.social_handles).filter(
+            (p) => client.social_handles[p as SMPlatform]
+          ) as SMPlatform[];
+          if (activePlatforms.length > 0) setPlatforms(activePlatforms);
+          if (client.usp) setKeyMessage(client.usp);
+        }
+      } catch {
+        // silently fail — form still works empty
+      } finally {
+        setLastCampaignLoaded(true);
+      }
+    }
+
+    void prefill();
+  }, [client.id, client.social_handles, client.usp, lastCampaignLoaded]);
 
   const togglePlatform = (p: SMPlatform) =>
     setPlatforms((prev) =>
@@ -129,6 +168,12 @@ export default function CampaignBriefForm({
       <div>
         <h2 className={sectionTitle}>Campaign brief</h2>
         <p className={`${sectionSub} mt-1`}>{client.name}</p>
+        {lastCampaignLoaded && restoredFromLast && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-zinc-600">
+            <span>↺</span>
+            Pre-filled from your last campaign — edit anything that&apos;s changed
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -140,7 +185,11 @@ export default function CampaignBriefForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          placeholder="e.g. Summer Sale 2026"
+          placeholder={
+            lastCampaign
+              ? `e.g. ${client.name} – New Campaign`
+              : "e.g. Summer Sale 2026"
+          }
           className={field}
         />
       </div>
