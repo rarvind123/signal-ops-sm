@@ -194,8 +194,9 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
-      <div className="mx-auto flex max-w-2xl flex-col gap-10">
+    <div className="flex min-h-screen flex-col bg-[#060608]">
+      <div className="flex-1 px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
+        <div className="mx-auto flex max-w-2xl flex-col gap-10">
         <header
           className={`flex items-start justify-between gap-6 ${mode === null ? "justify-end" : ""}`}
         >
@@ -413,7 +414,51 @@ export default function Home() {
             )}
           </div>
         )}
+        </div>
       </div>
+
+      <footer className="mt-auto border-t border-zinc-800/60 px-6 py-5">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/inventious-logo.png"
+              alt="inventious"
+              width={120}
+              height={40}
+              className="h-5 w-auto object-contain object-left opacity-60"
+            />
+            <span className="text-xs text-zinc-700">·</span>
+            <span className="text-xs text-zinc-600">SignalOps Creative Engine</span>
+          </div>
+
+          <nav className="flex items-center gap-5">
+            {[
+              {
+                label: "Feedback",
+                href: "mailto:hello@inventious.in?subject=SignalOps Feedback",
+              },
+              { label: "Support", href: "mailto:hello@inventious.in" },
+              { label: "Privacy", href: "#" },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+              <span className="text-xs text-zinc-600">All systems operational</span>
+            </div>
+            <span className="text-xs text-zinc-700">© 2026 Inventious</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
