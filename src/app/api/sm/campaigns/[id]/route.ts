@@ -4,6 +4,7 @@ import {
   getCalendarItems,
   getCampaign,
   getCampaignStrategy,
+  getClient,
   updateCampaign,
 } from "@/lib/sm/store";
 import type { SMCampaign } from "@/types/sm";
@@ -42,7 +43,13 @@ export async function GET(req: Request, context: RouteContext) {
       if (healed) resolvedCampaign = healed;
     }
 
-    return { campaign: resolvedCampaign, strategy, calendar_count: calendar.length };
+    const client = await getClient(resolvedCampaign.client_id);
+    return {
+      campaign: resolvedCampaign,
+      strategy,
+      calendar_count: calendar.length,
+      client,
+    };
   });
 }
 

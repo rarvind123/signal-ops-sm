@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import CampaignCalendarView from "@/components/sm/CampaignCalendarView";
 import CampaignNav from "@/components/sm/CampaignNav";
-import { readApiJson } from "@/lib/sm/api-client";
+import { parseBriefsResponse } from "@/lib/sm/briefs-api";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
 import type {
   SMCampaign,
@@ -17,31 +17,27 @@ import type {
 
 export default function CampaignCalendarPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
   const [campaign, setCampaign] = useState<SMCampaign | null>(null);
   const [strategy, setStrategy] = useState<SMCampaignStrategy | null>(null);
   const [items, setItems] = useState<SMCampaignCalendarItem[]>([]);
   const [briefs, setBriefs] = useState<SMCreativeBrief[]>([]);
-  const [briefsLoading, setBriefsLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
-  const [creativesLoading, setCreativesLoading] = useState(false);
-  const [briefsProgress, setBriefsProgress] = useState<{ current: number; total: number } | null>(
-    null
-  );
-  const [creativesProgress, setCreativesProgress] = useState<{ current: number; total: number } | null>(
-    null
-  );
+  const [batchRetrying, setBatchRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const hasBriefs = briefs.length > 0;
-  const pendingCreatives = briefs.filter((b) => b.status !== "done").length;
+  const briefsReady = briefs.filter((b) => b.scene_description?.trim()).length;
+  const batchRunning = items.length > 0 && briefsReady < items.length;
+  const approvedCount = briefs.filter((b) => b.approved === true).length;
+  const reviewedCount = briefs.filter(
+    (b) => b.approved !== null && b.approved !== undefined
+  ).length;
 
   const loadBriefs = useCallback(async () => {
     const res = await fetch(`/api/sm/campaigns/${id}/briefs`);
     if (res.ok) {
-      setBriefs((await res.json()) as SMCreativeBrief[]);
+      setBriefs(await parseBriefsResponse(res));
     }
     return res.ok;
   }, [id]);
@@ -68,6 +64,14 @@ export default function CampaignCalendarPage() {
     })();
   }, [id, loadBriefs]);
 
+  useEffect(() => {
+    if (!batchRunning) return;
+    const interval = setInterval(() => {
+      void loadBriefs();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [batchRunning, loadBriefs]);
+
   async function handleGenerateCalendar() {
     setCalendarLoading(true);
     setError(null);
@@ -76,6 +80,7 @@ export default function CampaignCalendarPage() {
       const json = (await res.json()) as { items?: SMCampaignCalendarItem[]; error?: string };
       if (!res.ok) throw new Error(json.error ?? "Calendar generation failed");
       setItems(json.items ?? []);
+      void loadBriefs();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Calendar generation failed");
     } finally {
@@ -83,115 +88,21 @@ export default function CampaignCalendarPage() {
     }
   }
 
-  async function ensureAllBriefs() {
-    let current = [...briefs];
-    const totalNeeded = items.length;
-    let attempts = 0;
-    const maxAttempts = Math.max(totalNeeded * 2, 5);
-
-    while (
-      (current.length < totalNeeded || current.some((b) => !b.scene_description?.trim())) &&
-      attempts < maxAttempts
-    ) {
-      attempts += 1;
-      const readyCount = current.filter((b) => b.scene_description?.trim()).length;
-      setBriefsProgress({ current: readyCount, total: totalNeeded });
-
-      const res = await fetch(`/api/sm/campaigns/${id}/briefs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ max_items: 1 }),
-      });
-      const json = await readApiJson<{ briefs?: SMCreativeBrief[]; error?: string }>(res);
-      if (!res.ok) throw new Error(json.error ?? "Brief generation failed");
-
-      const next = json.briefs ?? [];
-      if (next.length === 0) break;
-      if (next.length === current.length && current.every((b) => b.scene_description?.trim())) {
-        break;
-      }
-      current = next;
-      setBriefs(next);
-    }
-
-    setBriefsProgress(null);
-    return current;
-  }
-
-  async function handleGenerateBriefs() {
-    setBriefsLoading(true);
+  async function handleRetryBatch() {
+    setBatchRetrying(true);
     setError(null);
     try {
-      await ensureAllBriefs();
-      router.push(`/campaign/${id}/briefs`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Brief generation failed");
-    } finally {
-      setBriefsLoading(false);
-    }
-  }
-
-  async function handleGenerateCreatives() {
-    setCreativesLoading(true);
-    setError(null);
-    setCreativesProgress(null);
-    try {
-      setBriefsLoading(true);
-      const currentBriefs = await ensureAllBriefs();
-      setBriefsLoading(false);
-      const incomplete = currentBriefs.filter((b) => !b.scene_description?.trim());
-      if (incomplete.length > 0) {
-        throw new Error(
-          `${incomplete.length} brief(s) are still missing scene descriptions — click Generate all briefs first, then retry.`
-        );
+      const res = await fetch(`/api/sm/campaigns/${id}/briefs/batch`, { method: "POST" });
+      const json = (await res.json()) as { error?: string; errors?: string[] };
+      if (!res.ok) throw new Error(json.error ?? "Batch brief generation failed");
+      if (json.errors?.length) {
+        setError(`${json.errors.length} brief(s) failed — retry or review partial results.`);
       }
-
-      const pending = currentBriefs
-        .filter((b) => b.status !== "done")
-        .sort((a, b) => a.post_number - b.post_number);
-      if (pending.length === 0) {
-        router.push(`/campaign/${id}/briefs`);
-        return;
-      }
-
-      setCreativesProgress({ current: 0, total: pending.length });
-      const failures: string[] = [];
-
-      for (let i = 0; i < pending.length; i += 1) {
-        const brief = pending[i];
-        setCreativesProgress({ current: i, total: pending.length });
-        try {
-          const res = await fetch(`/api/sm/briefs/${brief.id}/generate`, { method: "POST" });
-          const json = await readApiJson<{ error?: string }>(res);
-          if (!res.ok) {
-            failures.push(`Post #${brief.post_number}: ${json.error ?? "failed"}`);
-          }
-        } catch (e) {
-          failures.push(
-            `Post #${brief.post_number}: ${e instanceof Error ? e.message : "failed"}`
-          );
-        }
-        setCreativesProgress({ current: i + 1, total: pending.length });
-      }
-
       await loadBriefs();
-
-      if (failures.length > 0) {
-        throw new Error(
-          failures.length === pending.length
-            ? "Creative generation failed — please try again."
-            : `${failures.length} of ${pending.length} creatives failed. View briefs to retry.`
-        );
-      }
-
-      router.push(`/campaign/${id}/briefs`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Creative generation failed");
+      setError(e instanceof Error ? e.message : "Batch brief generation failed");
     } finally {
-      setBriefsLoading(false);
-      setBriefsProgress(null);
-      setCreativesLoading(false);
-      setCreativesProgress(null);
+      setBatchRetrying(false);
     }
   }
 
@@ -245,7 +156,7 @@ export default function CampaignCalendarPage() {
           <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-4 py-4">
             <p className="text-sm text-amber-200/90">
               Calendar is incomplete — {items.length} of {expectedPosts} posts. Regenerate to
-              fill the full schedule before generating briefs or creatives.
+              fill the full schedule before reviewing briefs.
             </p>
             <button
               type="button"
@@ -281,24 +192,15 @@ export default function CampaignCalendarPage() {
         ) : (
           <CampaignCalendarView
             items={items}
-            onGenerateBriefs={() => void handleGenerateBriefs()}
-            onGenerateCreatives={() => void handleGenerateCreatives()}
-            briefsLoading={briefsLoading}
-            briefsProgress={briefsProgress ?? undefined}
-            creativesLoading={creativesLoading}
-            creativesProgress={creativesProgress ?? undefined}
-            hasBriefs={hasBriefs}
-            pendingCreatives={pendingCreatives}
-            calendarComplete={!isCalendarIncomplete}
+            campaignId={id}
+            briefsReady={briefsReady}
+            briefsTotal={items.length}
+            approvedCount={approvedCount}
+            reviewedCount={reviewedCount}
+            batchRunning={batchRunning}
+            onRetryBatch={() => void handleRetryBatch()}
+            batchRetrying={batchRetrying}
           />
-        )}
-        {hasBriefs && (
-          <Link
-            href={`/campaign/${id}/briefs`}
-            className="text-sm text-zinc-500 hover:text-zinc-300"
-          >
-            View briefs{creativesLoading ? "" : pendingCreatives === 0 ? " & creatives" : ""} →
-          </Link>
         )}
       </div>
     </div>

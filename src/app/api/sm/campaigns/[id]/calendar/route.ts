@@ -3,6 +3,7 @@ import {
   deriveSuggestedDate,
   generateCampaignCalendar,
 } from "@/lib/sm/campaign-calendar-engine";
+import { runBatchBriefGeneration } from "@/lib/sm/batch-brief-generation";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import {
   bulkCreateCalendarItems,
@@ -94,6 +95,11 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     await updateCampaign(id, { status: "calendar_ready" });
+
+    void runBatchBriefGeneration(id).catch((err) =>
+      console.error("[batch briefs]", err)
+    );
+
     return { items: saved, count: saved.length };
   });
 }

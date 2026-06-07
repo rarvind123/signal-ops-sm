@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import CampaignNav from "@/components/sm/CampaignNav";
 import CreativeBriefCard from "@/components/sm/CreativeBriefCard";
+import { parseBriefsResponse } from "@/lib/sm/briefs-api";
 import { sectionTitle } from "@/lib/sm/ui";
 import type { SMCreativeBrief } from "@/types/sm";
 
@@ -17,7 +18,7 @@ export default function CampaignBriefsPage() {
   const loadBriefs = useCallback(async () => {
     const res = await fetch(`/api/sm/campaigns/${id}/briefs`);
     if (res.ok) {
-      setBriefs((await res.json()) as SMCreativeBrief[]);
+      setBriefs(await parseBriefsResponse(res));
     }
     setLoading(false);
   }, [id]);

@@ -278,6 +278,8 @@ export interface SMCampaign {
   mandatory_ctas: string[];
   additional_notes?: string;
   status: SMCampaignStatus;
+  review_token?: string;
+  review_enabled?: boolean;
   created_at: string;
   updated_at?: string;
 }
@@ -348,6 +350,8 @@ export interface SMCreativeBrief {
   visual_approach_mode?: SMVisualApproachMode;
   scene_description?: string;
   status: "pending" | "generating" | "done";
+  approved?: boolean | null;
+  client_comment?: string;
   generated_asset_id?: string;
   created_at: string;
 }

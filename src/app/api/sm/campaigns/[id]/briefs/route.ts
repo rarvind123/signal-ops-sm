@@ -21,7 +21,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function GET(req: Request, context: RouteContext) {
   return smRouteHandler(req, async () => {
     const { id } = await context.params;
-    return getCampaignBriefs(id);
+    const briefs = await getCampaignBriefs(id);
+    return { briefs };
   });
 }
 

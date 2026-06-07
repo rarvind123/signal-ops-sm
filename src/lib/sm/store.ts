@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomBytes } from "crypto";
 import { normalizeCampaignStrategyOutput } from "@/lib/sm/campaign-strategy-utils";
 import { supabase } from "@/lib/supabase";
 import type {
@@ -264,6 +265,8 @@ function mapCampaign(row: Record<string, unknown>): SMCampaign {
     mandatory_ctas: (row.mandatory_ctas as string[]) ?? [],
     additional_notes: row.additional_notes ? String(row.additional_notes) : undefined,
     status: (row.status as SMCampaign["status"]) ?? "drafting",
+    review_token: row.review_token ? String(row.review_token) : undefined,
+    review_enabled: row.review_enabled === true,
     created_at: String(row.created_at),
     updated_at: row.updated_at ? String(row.updated_at) : undefined,
   };
@@ -323,6 +326,8 @@ function mapCreativeBrief(row: Record<string, unknown>): SMCreativeBrief {
     visual_approach_mode: row.visual_approach_mode as SMCreativeBrief["visual_approach_mode"],
     scene_description: row.scene_description ? String(row.scene_description) : undefined,
     status: (row.status as SMCreativeBrief["status"]) ?? "pending",
+    approved: row.approved === null || row.approved === undefined ? null : Boolean(row.approved),
+    client_comment: row.client_comment ? String(row.client_comment) : undefined,
     generated_asset_id: row.generated_asset_id ? String(row.generated_asset_id) : undefined,
     created_at: String(row.created_at),
   };
@@ -692,6 +697,8 @@ export async function createCampaign(
       platforms: data.platforms ?? [],
       mandatory_ctas: data.mandatory_ctas ?? [],
       additional_notes: data.additional_notes ?? null,
+      review_token: randomBytes(16).toString("hex"),
+      review_enabled: false,
       status: "drafting",
       created_at: now,
       updated_at: now,
@@ -913,6 +920,60 @@ export async function updateBriefStatus(
   if (assetId) patch.generated_asset_id = assetId;
   const { error } = await supabase.from("sm_creative_briefs").update(patch).eq("id", id);
   throwIfError(error);
+}
+
+export async function patchCreativeBriefFields(
+  id: string,
+  patch: Partial<
+    Pick<
+      SMCreativeBrief,
+      "hook" | "scene_description" | "cta" | "caption_direction" | "approved" | "client_comment"
+    >
+  >
+): Promise<SMCreativeBrief | null> {
+  const { data, error } = await supabase
+    .from("sm_creative_briefs")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  throwIfError(error);
+  return data ? mapCreativeBrief(data as Record<string, unknown>) : null;
+}
+
+export async function getCampaignReviewByToken(token: string): Promise<{
+  campaign: SMCampaign;
+  client: SMClient;
+  briefs: SMCreativeBrief[];
+} | null> {
+  const { data, error } = await supabase
+    .from("sm_campaigns")
+    .select("*")
+    .eq("review_token", token)
+    .eq("review_enabled", true)
+    .maybeSingle();
+  throwIfError(error);
+  if (!data) return null;
+
+  const campaign = mapCampaign(data as Record<string, unknown>);
+  const [client, briefs] = await Promise.all([
+    getClient(campaign.client_id),
+    getCampaignBriefs(campaign.id),
+  ]);
+  if (!client) return null;
+  return { campaign, client, briefs };
+}
+
+export async function enableCampaignReview(campaignId: string): Promise<SMCampaign | null> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) return null;
+
+  const patch: Partial<SMCampaign> = { review_enabled: true };
+  if (!campaign.review_token) {
+    patch.review_token = randomBytes(16).toString("hex");
+  }
+
+  return updateCampaign(campaignId, patch);
 }
 
 export async function updateCalendarItemStatus(

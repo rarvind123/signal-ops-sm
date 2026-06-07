@@ -11,7 +11,8 @@ export default function CampaignNav({ campaignId }: { campaignId: string }) {
     { href: base, label: "Overview" },
     { href: `${base}/strategy`, label: "Strategy" },
     { href: `${base}/calendar`, label: "Calendar" },
-    { href: `${base}/briefs`, label: "Briefs" },
+    { href: `${base}/review`, label: "Review" },
+    { href: `${base}/briefs`, label: "Creatives" },
   ];
 
   return (

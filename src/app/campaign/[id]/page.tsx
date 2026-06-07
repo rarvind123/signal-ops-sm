@@ -13,6 +13,7 @@ export default function CampaignOverviewPage() {
   const id = params.id as string;
   const [campaign, setCampaign] = useState<SMCampaign | null>(null);
   const [calendarCount, setCalendarCount] = useState(0);
+  const [shareToast, setShareToast] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +33,20 @@ export default function CampaignOverviewPage() {
 
   if (loading) return <p className="px-6 py-12 text-sm text-zinc-600">Loading…</p>;
   if (!campaign) return <p className="px-6 py-12 text-sm text-red-400/90">Campaign not found</p>;
+
+  async function handleShareReview() {
+    const res = await fetch(`/api/sm/campaigns/${id}/enable-review`, { method: "POST" });
+    if (!res.ok) return;
+    const json = (await res.json()) as { campaign?: SMCampaign };
+    const token = json.campaign?.review_token;
+    if (!token) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/review/${token}`);
+    setCampaign((c) =>
+      c ? { ...c, review_enabled: true, review_token: token } : c
+    );
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 3000);
+  }
 
   return (
     <div className="min-h-screen px-6 py-8 sm:px-10 sm:py-12">
@@ -65,11 +80,27 @@ export default function CampaignOverviewPage() {
                 Calendar ({calendarCount} posts)
               </Link>
               <Link
+                href={`/campaign/${id}/review`}
+                className="text-sm text-zinc-500 hover:text-zinc-300"
+              >
+                Review briefs
+              </Link>
+              <Link
                 href={`/campaign/${id}/briefs`}
                 className="text-sm text-zinc-500 hover:text-zinc-300"
               >
-                Creative briefs
+                Generated creatives
               </Link>
+              <button
+                type="button"
+                onClick={() => void handleShareReview()}
+                className="w-fit rounded border border-zinc-700 px-3 py-1.5 text-left text-xs text-zinc-400 transition-colors hover:text-white"
+              >
+                Share for client approval
+              </button>
+              {shareToast && (
+                <p className="text-xs text-green-400">Review link copied to clipboard</p>
+              )}
             </>
           )}
         </div>

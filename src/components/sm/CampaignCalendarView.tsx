@@ -1,31 +1,30 @@
 "use client";
 
-import { btnPrimary, btnSecondary } from "@/lib/sm/ui";
+import Link from "next/link";
+import { btnSecondary } from "@/lib/sm/ui";
 import { FORMAT_COLORS, formatLabel } from "@/lib/sm/content-format-ui";
 import type { SMCampaignCalendarItem } from "@/types/sm";
 
 export default function CampaignCalendarView({
   items,
-  onGenerateBriefs,
-  onGenerateCreatives,
-  briefsLoading,
-  briefsProgress,
-  creativesLoading,
-  creativesProgress,
-  hasBriefs,
-  pendingCreatives,
-  calendarComplete = true,
+  campaignId,
+  briefsReady = 0,
+  briefsTotal = 0,
+  approvedCount = 0,
+  reviewedCount = 0,
+  batchRunning = false,
+  onRetryBatch,
+  batchRetrying = false,
 }: {
   items: SMCampaignCalendarItem[];
-  onGenerateBriefs?: () => void;
-  onGenerateCreatives?: () => void;
-  briefsLoading?: boolean;
-  briefsProgress?: { current: number; total: number };
-  creativesLoading?: boolean;
-  creativesProgress?: { current: number; total: number };
-  hasBriefs?: boolean;
-  pendingCreatives?: number;
-  calendarComplete?: boolean;
+  campaignId: string;
+  briefsReady?: number;
+  briefsTotal?: number;
+  approvedCount?: number;
+  reviewedCount?: number;
+  batchRunning?: boolean;
+  onRetryBatch?: () => void;
+  batchRetrying?: boolean;
 }) {
   const byWeek = items.reduce(
     (acc, item) => {
@@ -39,6 +38,22 @@ export default function CampaignCalendarView({
 
   return (
     <div className="flex flex-col gap-8">
+      {(batchRunning || briefsReady > 0) && (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 py-3 text-sm text-zinc-400">
+          {batchRunning ? (
+            <p>
+              Writing briefs… {briefsReady}/{briefsTotal}
+            </p>
+          ) : (
+            <p>
+              {briefsReady} briefs ready
+              {reviewedCount > 0 && ` · ${reviewedCount}/${briefsTotal} reviewed`}
+              {approvedCount > 0 && ` · ${approvedCount} approved`}
+            </p>
+          )}
+        </div>
+      )}
+
       {Object.keys(byWeek)
         .map(Number)
         .sort((a, b) => a - b)
@@ -85,37 +100,23 @@ export default function CampaignCalendarView({
           </div>
         ))}
 
-      <div className="flex flex-wrap gap-3">
-        {onGenerateBriefs && !hasBriefs && calendarComplete && (
-          <button
-            type="button"
-            onClick={onGenerateBriefs}
-            disabled={briefsLoading || creativesLoading}
-            className={`${btnPrimary} w-fit`}
+      <div className="flex flex-wrap items-center gap-3">
+        {!batchRunning && briefsReady > 0 && (
+          <Link
+            href={`/campaign/${campaignId}/review`}
+            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
           >
-            {briefsLoading && briefsProgress
-              ? `Writing briefs… ${briefsProgress.current}/${briefsProgress.total}`
-              : briefsLoading
-                ? "Writing briefs…"
-                : "Generate all briefs"}
-          </button>
+            Review briefs →
+          </Link>
         )}
-        {onGenerateCreatives && calendarComplete && (
+        {onRetryBatch && (
           <button
             type="button"
-            onClick={onGenerateCreatives}
-            disabled={briefsLoading || creativesLoading}
-            className={`${hasBriefs && !briefsLoading ? btnPrimary : btnSecondary} w-fit`}
+            onClick={onRetryBatch}
+            disabled={batchRetrying || batchRunning}
+            className={`${btnSecondary} w-fit`}
           >
-            {creativesLoading && creativesProgress
-              ? `Generating creatives… ${creativesProgress.current}/${creativesProgress.total}`
-              : creativesLoading
-                ? "Generating creatives…"
-                : pendingCreatives === 0 && hasBriefs
-                  ? "All creatives generated"
-                  : hasBriefs
-                    ? `Generate creatives${pendingCreatives ? ` (${pendingCreatives})` : ""}`
-                    : "Generate all creatives"}
+            {batchRetrying ? "Retrying briefs…" : "Retry brief generation"}
           </button>
         )}
       </div>
