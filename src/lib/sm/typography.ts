@@ -3,6 +3,7 @@ import type { SMClient, SMTone } from "@/types/sm";
 export interface TypographyStyle {
   cssClass: string;
   fontStack: string;
+  fontFamily?: string;
   fontWeight: number;
   letterSpacing: string;
   textTransform: "uppercase" | "none";
@@ -72,25 +73,41 @@ export function getTypography(tone?: SMTone): TypographyStyle {
   return TONE_TYPOGRAPHY[tone ?? "professional"];
 }
 
+function buildCustomTypography(fontPrimary: string): TypographyStyle {
+  const isSerif = /garamond|georgia|times|palatino|lora|merriweather|playfair/i.test(
+    fontPrimary
+  );
+  const isDisplay = /bebas|oswald|impact|condensed|anton/i.test(fontPrimary);
+  const fallback = isSerif ? "Georgia, serif" : "Arial, sans-serif";
+
+  return {
+    cssClass: "",
+    fontFamily: fontPrimary,
+    fontStack: `'${fontPrimary}', ${fallback}`,
+    fontWeight: isDisplay ? 700 : isSerif ? 400 : 600,
+    letterSpacing: isDisplay ? "0.04em" : isSerif ? "0.01em" : "-0.01em",
+    textTransform: isDisplay ? "uppercase" : "none",
+    lineHeight: isDisplay ? 1.0 : 1.25,
+    italic: false,
+    isCustomFont: true,
+  };
+}
+
 export function getClientTypography(client: SMClient): TypographyStyle {
   if (client.font_primary) {
-    const font = client.font_primary;
-    const isSerif = /garamond|georgia|times|palatino|lora|merriweather|playfair/i.test(font);
-    const isDisplay = /bebas|oswald|impact|condensed|anton/i.test(font);
-
-    return {
-      cssClass: "",
-      fontStack: `'${font}', ${isSerif ? "Georgia, serif" : "Arial, sans-serif"}`,
-      fontWeight: isDisplay ? 700 : isSerif ? 400 : 600,
-      letterSpacing: isDisplay ? "0.04em" : isSerif ? "0.01em" : "-0.01em",
-      textTransform: isDisplay ? "uppercase" : "none",
-      lineHeight: isDisplay ? 1.0 : 1.25,
-      italic: false,
-      isCustomFont: true,
-    };
+    return buildCustomTypography(client.font_primary);
   }
+  return getTypography(client.tone);
+}
 
-  return TONE_TYPOGRAPHY[client.tone ?? "professional"];
+export function getTypographyFontProps(typo: TypographyStyle): {
+  className: string;
+  fontFamily?: string;
+} {
+  return {
+    className: typo.isCustomFont ? "" : typo.cssClass,
+    fontFamily: typo.isCustomFont ? typo.fontStack : undefined,
+  };
 }
 
 export interface HeadlineTiers {
@@ -153,13 +170,20 @@ export function isColorReadableOnDark(hex: string): boolean {
   return luminance < 0.7;
 }
 
+export function getBrandAccentColor(
+  client?: Pick<SMClient, "brand_colors" | "color_palette">
+): string | null {
+  if (!client) return null;
+  if (client.color_palette?.accent) return client.color_palette.accent;
+  if (client.color_palette?.primary) return client.color_palette.primary;
+  if (client.brand_colors?.length) return client.brand_colors[0].hex;
+  return null;
+}
+
 export function getReadableBrandAccent(
   client?: Pick<SMClient, "brand_colors" | "color_palette">
 ): string | undefined {
-  const hex =
-    client?.color_palette?.accent ??
-    client?.color_palette?.primary ??
-    client?.brand_colors?.[0]?.hex;
+  const hex = getBrandAccentColor(client);
   if (!hex || !isColorReadableOnDark(hex)) return undefined;
   return hex;
 }

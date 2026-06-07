@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  brightnessFromPalette,
   getImageRegionBrightness,
   selectLogoForFormat,
 } from "@/lib/sm/logo-selector";
@@ -9,6 +10,7 @@ import { getOverlayConfig } from "@/lib/sm/overlay-config";
 import {
   getClientTypography,
   getReadableBrandAccent,
+  getTypographyFontProps,
   resolveHeadlineTiers,
   splitWord,
 } from "@/lib/sm/typography";
@@ -116,14 +118,15 @@ export default function AssetCard({
   const [localAsset, setLocalAsset] = useState(asset);
   const [showTextOverlay, setShowTextOverlay] = useState(true);
   const typo = getClientTypography(client);
+  const fontProps = getTypographyFontProps(typo);
 
   useEffect(() => {
     setLocalAsset(asset);
   }, [asset]);
 
   useEffect(() => {
-    if (!typo.isCustomFont || !typo.fontStack) return;
-    const fontName = client.font_primary?.replace(/ /g, "+");
+    if (!typo.isCustomFont || !typo.fontFamily) return;
+    const fontName = typo.fontFamily.replace(/ /g, "+");
     if (!fontName) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
@@ -132,7 +135,7 @@ export default function AssetCard({
     return () => {
       document.head.removeChild(link);
     };
-  }, [typo.isCustomFont, typo.fontStack, client.font_primary]);
+  }, [typo.isCustomFont, typo.fontFamily]);
 
   useEffect(() => {
     if (!localAsset.storage_url) return;
@@ -162,6 +165,8 @@ export default function AssetCard({
     }
 
     const imageSrc = `${localAsset.storage_url}?v=${refreshKey}`;
+    const paletteBrightness = brightnessFromPalette(client.color_palette);
+
     void getImageRegionBrightness(imageSrc, {
       x: 240,
       y: 0,
@@ -170,8 +175,12 @@ export default function AssetCard({
       imgW: 400,
       imgH: 400,
     }).then((brightness) => {
+      const effectiveBrightness =
+        brightness === 128 && paletteBrightness !== undefined
+          ? paletteBrightness
+          : brightness;
       setLogoUrl(
-        selectLogoForFormat(logos, creativeFormat, brightness) ??
+        selectLogoForFormat(logos, creativeFormat, effectiveBrightness) ??
           logos.primary ??
           client.logo_url ??
           null
@@ -271,7 +280,6 @@ export default function AssetCard({
                 const setupWeight = Math.max(typo.fontWeight - 200, 300);
                 const punchWeight = Math.min(typo.fontWeight + 200, 900);
                 const accentColor = getReadableBrandAccent(client);
-                const fontFamily = typo.isCustomFont ? typo.fontStack : undefined;
 
                 return (
                   <div className="pointer-events-none absolute bottom-0 left-0 right-0">
@@ -287,7 +295,7 @@ export default function AssetCard({
                     <div className={overlay.containerClass}>
                       {tiers.setup && (
                         <p
-                          className={`${typo.cssClass} mb-0.5`}
+                          className={`${fontProps.className} mb-0.5`}
                           style={{
                             color: overlay.setupColor,
                             fontWeight: setupWeight,
@@ -296,7 +304,7 @@ export default function AssetCard({
                             fontSize: overlay.fontSize.setup,
                             lineHeight: 1.25,
                             textShadow: overlay.setupShadow,
-                            fontFamily,
+                            fontFamily: fontProps.fontFamily,
                           }}
                         >
                           {tiers.setup}
@@ -306,7 +314,7 @@ export default function AssetCard({
                         punch={tiers.punch}
                         emphasisWord={headlineMeta?.emphasis_word}
                         accentColor={accentColor}
-                        cssClass={typo.cssClass}
+                        cssClass={fontProps.className}
                         fontWeight={punchWeight}
                         letterSpacing={
                           typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
@@ -315,7 +323,7 @@ export default function AssetCard({
                         fontSize={overlay.fontSize.punch}
                         punchColor={overlay.punchColor}
                         textShadow={overlay.punchShadow}
-                        fontFamily={fontFamily}
+                        fontFamily={fontProps.fontFamily}
                       />
                     </div>
                   </div>

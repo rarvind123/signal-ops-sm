@@ -1,4 +1,18 @@
-import type { SMLogoSet } from "@/types/sm";
+import type { SMColorPalette, SMLogoSet } from "@/types/sm";
+
+export function hexToBrightness(hex: string): number {
+  const normalized = hex.replace("#", "");
+  if (normalized.length !== 6) return 128;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+export function brightnessFromPalette(palette?: SMColorPalette): number | undefined {
+  const hex = palette?.background ?? palette?.primary;
+  return hex ? hexToBrightness(hex) : undefined;
+}
 
 export async function getImageRegionBrightness(
   imageUrl: string,

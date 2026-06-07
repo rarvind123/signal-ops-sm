@@ -1,4 +1,5 @@
 import { completeJson } from "@/lib/ai";
+import { getBrandAccentColor } from "@/lib/sm/typography";
 import type {
   SMClient,
   SMAssetType,
@@ -157,8 +158,10 @@ function typographyZoneForFormat(creativeFormat?: SMCreativeFormat): string {
 
 function colorContextForClient(client: SMClient, signalops: SMSignalOpsOutput): string {
   const p = client.color_palette ?? {};
-  if (p.primary) {
-    return `dominant colour palette: ${[p.primary, p.secondary, p.accent].filter(Boolean).join(", ")}`;
+  const accent = getBrandAccentColor(client);
+  if (p.primary || accent) {
+    const colors = [p.primary, p.secondary, p.accent ?? accent].filter(Boolean);
+    return `dominant colour palette: ${colors.join(", ")}`;
   }
   if (client.brand_colors?.length) {
     return `colour palette: ${client.brand_colors.map((c) => c.hex).join(", ")}`;
