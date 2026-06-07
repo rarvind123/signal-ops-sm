@@ -81,13 +81,25 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             <h1 className="text-lg font-semibold text-white">Admin Panel</h1>
             <p className="text-sm text-zinc-500">SignalOps — Inventious</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-sm text-zinc-500 transition-colors hover:text-white"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                window.location.href = "/login";
+              }}
+              className="text-xs text-zinc-600 transition-colors hover:text-red-400"
+            >
+              Log out
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm text-zinc-500 transition-colors hover:text-white"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         {loading && <p className="text-sm text-zinc-500">Loading…</p>}
