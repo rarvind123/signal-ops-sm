@@ -99,7 +99,7 @@ export default function ModePicker({
       <div className="flex flex-1 flex-col justify-center gap-10">
         <div className="max-w-md">
           <p className={`${label} mb-3`}>SignalOps</p>
-          <h1 className={`${sectionTitle} text-[1.59375rem] sm:text-[1.9125rem]`}>
+          <h1 className={`${sectionTitle} text-[1.28125rem] sm:text-[1.6rem]`}>
             What are you creating?
           </h1>
         </div>
