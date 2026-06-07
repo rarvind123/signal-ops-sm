@@ -1,5 +1,6 @@
 import { completeText } from "@/lib/ai";
 import { cleanJsonResponse } from "@/lib/json-sanitize";
+import { supabase } from "@/lib/supabase";
 import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
 import type {
@@ -52,6 +53,57 @@ export async function runSignalOpsEngine(
   return lastOutput;
 }
 
+async function getRecentCreativeSignatures(clientId: string): Promise<string> {
+  const { data: requests } = await supabase
+    .from("sm_creative_requests")
+    .select("id")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const requestIds = (requests ?? []).map((row) => String(row.id));
+  if (requestIds.length === 0) return "";
+
+  const { data: signalopsData } = await supabase
+    .from("sm_signalops_outputs")
+    .select("visual_approach, color_recommendation, theme")
+    .in("request_id", requestIds)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (!signalopsData?.length) return "";
+
+  const modes = [
+    ...new Set(
+      signalopsData
+        .map((s) => {
+          const approach = s.visual_approach as { mode?: string } | null;
+          return approach?.mode;
+        })
+        .filter(Boolean)
+    ),
+  ];
+  const colors = signalopsData
+    .map((s) => s.color_recommendation)
+    .filter(Boolean)
+    .slice(0, 3);
+  const themes = signalopsData
+    .map((s) => s.theme)
+    .filter(Boolean)
+    .slice(0, 3);
+
+  return `
+RECENT CREATIVE HISTORY FOR THIS CLIENT (do NOT repeat these):
+Visual approach modes used recently: ${modes.join(", ")}
+Color palettes used recently: ${colors.join(" | ")}
+Campaign themes used recently: ${themes.join(" | ")}
+
+Your output MUST use a DIFFERENT visual approach mode from the ones listed above.
+Your color direction MUST feel distinct from the recent palettes.
+Your theme MUST offer a fresh angle — not a variation of recent themes.
+If all 5 modes have been used recently, pick the one least recently used.`;
+}
+
 async function callSignalOpsModel(
   client: SMClient,
   request: SMCreativeRequest,
@@ -60,6 +112,7 @@ async function callSignalOpsModel(
   const brandContext = buildBrandContext(client);
   const briefContext = buildBriefContext(request);
   const beMenu = buildBEMenu(request.goal);
+  const recentHistory = await getRecentCreativeSignatures(client.id);
   const retryNote =
     attempt > 0
       ? `\n\nRETRY ${attempt}: Your previous direction scored below ${LIONS_SCORE_THRESHOLD}/10 on Lions quality. Rewrite with a sharper insight bridge, a braver headline option, and more specific visual direction.`
@@ -278,6 +331,7 @@ ${brandContext}
 TODAY'S BRIEF:
 ${briefContext}
 ${photoStyleNote}
+${recentHistory}
 
 BEHAVIOURAL ECONOMICS MENU (pre-matched to brief goal "${request.goal ?? "awareness"}"):
 ${beMenu}

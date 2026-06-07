@@ -21,6 +21,7 @@ import ModePicker, { type SMMode } from "@/components/sm/ModePicker";
 import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
 import VisualApproachCard from "@/components/sm/VisualApproachCard";
 import AdminPanel from "@/components/sm/AdminPanel";
+import ClientGallery from "@/components/sm/ClientGallery";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 
 type SMStep = "brand" | "brief" | "campaign_brief" | "signalops" | "assets";
@@ -321,21 +322,24 @@ export default function Home() {
               onSelect={(client) => {
                 setActiveClient(client);
                 setShowCreateForm(false);
-                goToBriefStep();
               }}
-              onCreate={() => setShowCreateForm(true)}
+              onCreate={() => {
+                setShowCreateForm(true);
+                setActiveClient(null);
+              }}
             />
-            {(showCreateForm || activeClient) && (
+            {showCreateForm && (
               <BrandProfileForm
-                key={showCreateForm ? "new-brand" : (activeClient?.id ?? "new-brand")}
-                initial={showCreateForm ? undefined : (activeClient ?? undefined)}
+                key="new-brand"
                 onLogoUploaded={() => void refreshActiveClient()}
                 onSave={(client) => {
                   setActiveClient(client);
                   setShowCreateForm(false);
-                  goToBriefStep();
                 }}
               />
+            )}
+            {activeClient && !showCreateForm && (
+              <ClientGallery clientId={activeClient.id} onProceed={goToBriefStep} />
             )}
           </div>
         )}
@@ -370,6 +374,7 @@ export default function Home() {
             }}
             onEdit={() => setStep("brief")}
             onChangeBrand={handleStartOver}
+            onRedo={(newOutput) => setSignalOpsOutput(newOutput)}
           />
         )}
 

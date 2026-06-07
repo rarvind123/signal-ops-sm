@@ -538,6 +538,31 @@ export async function saveSignalOpsOutput(
   return mapSignalOpsOutput(data as Record<string, unknown>);
 }
 
+export async function getClientGalleryAssets(
+  clientId: string,
+  limit = 12
+): Promise<SMGeneratedAsset[]> {
+  const { data: requests, error: reqError } = await supabase
+    .from("sm_creative_requests")
+    .select("id")
+    .eq("client_id", clientId);
+  throwIfError(reqError);
+
+  const requestIds = (requests ?? []).map((row) => String(row.id));
+  if (requestIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("sm_generated_assets")
+    .select("*")
+    .in("request_id", requestIds)
+    .eq("status", "done")
+    .not("storage_url", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  throwIfError(error);
+  return (data ?? []).map((row) => mapGeneratedAsset(row as Record<string, unknown>));
+}
+
 export async function listGeneratedAssets(
   requestId: string
 ): Promise<SMGeneratedAsset[]> {

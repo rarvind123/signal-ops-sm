@@ -5,6 +5,8 @@ import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
 import { btnPrimary, btnSecondary, label, sectionTitle } from "@/lib/sm/ui";
 import type { SMCreativeLens, SMSignalOpsOutput } from "@/types/sm";
 
+const QUALITY_THRESHOLD = 6.5;
+
 function Panel({
   title,
   children,
@@ -28,28 +30,76 @@ export default function SignalOpsInsightsCard({
   onContinue,
   onEdit,
   onChangeBrand,
+  onRedo,
 }: {
   output: SMSignalOpsOutput;
   lens?: SMCreativeLens;
   onContinue: (headlineIndex: number) => void;
   onEdit: () => void;
   onChangeBrand?: () => void;
+  onRedo?: (newOutput: SMSignalOpsOutput) => void;
 }) {
   const [selectedHeadline, setSelectedHeadline] = useState(0);
+  const [qualityOverride, setQualityOverride] = useState(false);
+  const [regenLoading, setRegenLoading] = useState(false);
   const lensName = lens ? CREATIVE_LENSES.find((l) => l.id === lens)?.name : null;
+
+  const lionsScore = output.lions_score?.overall ?? 0;
+  const isBelowQuality = lionsScore > 0 && lionsScore < QUALITY_THRESHOLD;
+  const canContinue = !isBelowQuality || qualityOverride;
+
+  async function handleStrengthenStrategy() {
+    setRegenLoading(true);
+    try {
+      const res = await fetch(`/api/sm/creative-requests/${output.request_id}/signalops`, {
+        method: "POST",
+      });
+      const newOutput = (await res.json()) as SMSignalOpsOutput & { error?: string };
+      if (!res.ok) throw new Error(newOutput.error ?? "SignalOps failed");
+      setQualityOverride(false);
+      onRedo?.(newOutput);
+    } finally {
+      setRegenLoading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className={sectionTitle}>Strategy</h2>
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-5 border-b border-zinc-800 pb-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-400">
+            ✦ SignalOps Creative Direction
+          </span>
+          {lionsScore >= 8 && (
+            <span className="rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-xs text-green-400">
+              Strong brief — {lionsScore}/10
+            </span>
+          )}
           {lensName && lens !== "signalops" && (
-            <span className={`${label} normal-case tracking-normal text-zinc-400`}>
+            <span className={`${label} normal-case tracking-normal text-zinc-500`}>
               {lensName}
             </span>
           )}
         </div>
+
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-wider text-zinc-500">What we found</p>
+          <p className="text-base leading-relaxed text-white">
+            {output.insight_bridge?.creative_tension
+              ? `"${output.insight_bridge.creative_tension}"`
+              : output.theme}
+          </p>
+          {output.insight_bridge?.creative_tension && (
+            <p className="text-sm text-zinc-400">
+              {output.insight_bridge.human_truth} — and{" "}
+              {output.insight_bridge.brand_truth.toLowerCase()}. That gap is where this brief
+              lives.
+            </p>
+          )}
+        </div>
       </div>
+
+      <h2 className={sectionTitle}>Strategy</h2>
 
       {output.insight_bridge && (
         <Panel title="Insight bridge">
@@ -194,6 +244,40 @@ export default function SignalOpsInsightsCard({
         </Panel>
       )}
 
+      {isBelowQuality && !qualityOverride && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-lg text-amber-400">⚠</span>
+            <div>
+              <p className="text-sm font-medium text-amber-300">
+                This creative direction scored {lionsScore}/10
+              </p>
+              <p className="mt-1 text-xs text-zinc-400">
+                {output.lions_score?.improvement_note ??
+                  "The insight or visual concept could be stronger."}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handleStrengthenStrategy()}
+              disabled={regenLoading}
+              className="flex-1 rounded border border-amber-500/40 bg-amber-600/20 px-3 py-2 text-sm text-amber-300 hover:bg-amber-600/30 disabled:opacity-50"
+            >
+              {regenLoading ? "Strengthening…" : "↻ Strengthen the strategy"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setQualityOverride(true)}
+              className="px-3 text-xs text-zinc-500 hover:text-zinc-400"
+            >
+              Use anyway
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-3 pt-2">
         <button type="button" onClick={onEdit} className={btnSecondary}>
           Edit brief
@@ -203,13 +287,15 @@ export default function SignalOpsInsightsCard({
             Change brand
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => onContinue(selectedHeadline)}
-          className={`${btnPrimary} flex-1 sm:flex-none`}
-        >
-          Continue to creatives
-        </button>
+        {canContinue && (
+          <button
+            type="button"
+            onClick={() => onContinue(selectedHeadline)}
+            className={`${btnPrimary} flex-1 sm:flex-none`}
+          >
+            Continue to creatives
+          </button>
+        )}
       </div>
     </div>
   );
