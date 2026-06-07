@@ -6,7 +6,9 @@ import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 import {
   btnGhost,
   HOME_BTN_PRIMARY,
-  HOME_TEXT_GREY,
+  HOME_GREY_BTN_STYLE,
+  HOME_GREY_TEXT_STYLE,
+  HOME_LOGO_STYLE,
   label,
   SIGNALOPS_TM,
 } from "@/lib/sm/ui";
@@ -15,7 +17,6 @@ import type { SMCreativeFormat } from "@/types/sm";
 export type SMMode = "single_post" | "campaign";
 
 const homeSurface = "home-surface flex min-h-[72vh] flex-col";
-const homeHeading = `text-base font-medium tracking-tight ${HOME_TEXT_GREY}`;
 const homeField =
   "w-full rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-sm placeholder:text-zinc-600 outline-none transition-colors focus:border-zinc-600 focus:bg-zinc-900/60";
 
@@ -48,7 +49,8 @@ export default function ModePicker({
             alt="inventious"
             width={378}
             height={118}
-            className="h-[2.3rem] w-auto object-contain object-left opacity-80 sm:h-[2.5875rem]"
+            className="h-[2.3rem] w-auto object-contain object-left sm:h-[2.5875rem]"
+            style={HOME_LOGO_STYLE}
             priority
           />
           <button
@@ -62,8 +64,15 @@ export default function ModePicker({
 
         <div className="flex flex-1 flex-col justify-center gap-10">
           <div>
-            <p className={`${label} mb-3`}>{SIGNALOPS_TM}</p>
-            <h1 className={`${homeHeading} text-3xl sm:text-4xl`}>Social media</h1>
+            <p className={`${label} mb-3`} style={HOME_GREY_TEXT_STYLE}>
+              {SIGNALOPS_TM}
+            </p>
+            <h1
+              className="text-base font-medium tracking-tight text-3xl sm:text-4xl"
+              style={HOME_GREY_TEXT_STYLE}
+            >
+              Social media
+            </h1>
             <p className="mt-2 text-sm text-zinc-500">One post or a full campaign?</p>
           </div>
 
@@ -73,7 +82,9 @@ export default function ModePicker({
               onClick={() => onSelectSocialMode("single_post")}
               className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
             >
-              <p className={`text-sm font-medium ${HOME_TEXT_GREY}`}>Single social media creative</p>
+              <p className="text-sm font-medium" style={HOME_GREY_TEXT_STYLE}>
+                Single social media creative
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 One post — strategy, visual, and copy for a single piece of content.
               </p>
@@ -83,7 +94,9 @@ export default function ModePicker({
               onClick={() => onSelectSocialMode("campaign")}
               className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
             >
-              <p className={`text-sm font-medium ${HOME_TEXT_GREY}`}>Social media campaign</p>
+              <p className="text-sm font-medium" style={HOME_GREY_TEXT_STYLE}>
+                Social media campaign
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 Full strategy, calendar, briefs, and creatives for 30+ posts.
               </p>
@@ -102,15 +115,21 @@ export default function ModePicker({
           alt="inventious"
           width={378}
           height={118}
-          className="h-[2.3rem] w-auto object-contain object-left opacity-80 sm:h-[2.5875rem]"
+          className="h-[2.3rem] w-auto object-contain object-left sm:h-[2.5875rem]"
+          style={HOME_LOGO_STYLE}
           priority
         />
       </header>
 
       <div className="flex flex-1 flex-col justify-center gap-10">
         <div className="max-w-md">
-          <p className={`${label} mb-3`}>{SIGNALOPS_TM}</p>
-          <h1 className={`${homeHeading} text-[1.28125rem] sm:text-[1.6rem]`}>
+          <p className={`${label} mb-3`} style={HOME_GREY_TEXT_STYLE}>
+            {SIGNALOPS_TM}
+          </p>
+          <h1
+            className="text-base font-medium tracking-tight text-[1.28125rem] sm:text-[1.6rem]"
+            style={HOME_GREY_TEXT_STYLE}
+          >
             What are you creating?
           </h1>
         </div>
@@ -125,6 +144,7 @@ export default function ModePicker({
               value={selected}
               onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
               className={`${homeField} pr-10`}
+              style={HOME_GREY_TEXT_STYLE}
             >
               {CREATIVE_FORMATS.map((format) => (
                 <option
@@ -156,6 +176,7 @@ export default function ModePicker({
           onClick={handleContinue}
           disabled={!selectedFormat?.available}
           className={`${HOME_BTN_PRIMARY} w-fit`}
+          style={HOME_GREY_BTN_STYLE}
         >
           Continue
         </button>

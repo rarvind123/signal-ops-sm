@@ -2,10 +2,18 @@
 
 export const SIGNALOPS_TM = "SignalOps™";
 
-/** 80% grey — homepage primary text (replaces near-white) */
-export const HOME_TEXT_GREY = "home-primary-text";
+/** 80% grey — homepage (#cccccc) */
+export const HOME_GREY = "#cccccc";
+export const HOME_GREY_TEXT_STYLE = { color: HOME_GREY } as const;
+export const HOME_GREY_BTN_STYLE = {
+  backgroundColor: HOME_GREY,
+  color: "#09090b",
+} as const;
+export const HOME_LOGO_STYLE = { opacity: 0.65 } as const;
 
-export const HOME_BTN_PRIMARY = "home-btn-primary rounded-lg px-5 py-2.5 text-sm font-medium transition-opacity";
+export const HOME_TEXT_GREY = "home-primary-text";
+export const HOME_BTN_PRIMARY =
+  "home-btn-primary rounded-lg px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40";
 
 export const label = "text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500";
 

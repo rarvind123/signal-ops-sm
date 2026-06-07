@@ -26,28 +26,20 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Homepage — 80% grey (#cccccc) for all text and primary button */
+/* Homepage — 80% grey (#cccccc) fallback */
 .home-surface {
-  color: #cccccc;
+  color: #cccccc !important;
 }
 
 .home-surface h1,
 .home-surface h2,
 .home-surface select,
+.home-surface p.home-primary-text,
 .home-surface .home-primary-text {
-  color: #cccccc;
+  color: #cccccc !important;
 }
 
 .home-surface .home-btn-primary {
-  background-color: #cccccc;
-  color: #09090b;
-}
-
-.home-surface .home-btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.home-surface .home-btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  background-color: #cccccc !important;
+  color: #09090b !important;
 }
