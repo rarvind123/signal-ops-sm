@@ -97,21 +97,33 @@ Return as a JSON object with a "calendar_items" array:
 
 Return ONLY valid JSON. No markdown.`;
 
-  const result = await completeJson<Record<string, unknown>>(
-    systemPrompt,
-    userPrompt,
-    "claude-sonnet-4-6",
-    { maxTokens: 6000, temperature: 0.6 }
-  );
+  const MAX_ATTEMPTS = 3;
+  let lastCount = 0;
 
-  const items = unwrapCalendarItems(result);
-  if (items.length === 0) {
-    throw new Error(
-      "Calendar planner returned no posts — please retry. If this persists, check OPENROUTER_API_KEY."
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    const retryNote =
+      attempt > 0
+        ? `\n\nRETRY ${attempt}: Your previous response had ${lastCount} items but exactly ${totalPosts} are required. Return a complete "calendar_items" array with post_number 1 through ${totalPosts}. Do not truncate.`
+        : "";
+
+    const result = await completeJson<Record<string, unknown>>(
+      systemPrompt,
+      userPrompt + retryNote,
+      "claude-sonnet-4-6",
+      { maxTokens: 12000, temperature: 0.6 }
     );
+
+    const items = unwrapCalendarItems(result);
+    lastCount = items.length;
+
+    if (items.length === totalPosts) {
+      return items;
+    }
   }
 
-  return items;
+  throw new Error(
+    `Calendar planner returned ${lastCount} of ${totalPosts} required posts — please retry. If this persists, check OPENROUTER_API_KEY.`
+  );
 }
 
 export function deriveSuggestedDate(

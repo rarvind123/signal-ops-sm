@@ -10,6 +10,7 @@ import type {
   SMCreativeRequest,
   SMGeneratedAsset,
   SMSignalOpsOutput,
+  SMVisualApproachMode,
 } from "@/types/sm";
 import BrandProfileForm from "@/components/sm/BrandProfileForm";
 import CampaignBriefForm from "@/components/sm/CampaignBriefForm";
@@ -18,6 +19,7 @@ import CreativeBriefForm from "@/components/sm/CreativeBriefForm";
 import CreativePreviewGrid from "@/components/sm/CreativePreviewGrid";
 import ModePicker, { type SMMode } from "@/components/sm/ModePicker";
 import SignalOpsInsightsCard from "@/components/sm/SignalOpsInsightsCard";
+import VisualApproachCard from "@/components/sm/VisualApproachCard";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 import { btnGhost } from "@/lib/sm/ui";
 
@@ -80,6 +82,8 @@ export default function Home() {
   const [generatedAssets, setGeneratedAssets] = useState<SMGeneratedAsset[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [signalopsLoading, setSignalopsLoading] = useState(false);
+  const [selectedHeadline, setSelectedHeadline] = useState(0);
+  const [generateLoading, setGenerateLoading] = useState(false);
 
   const formatMeta = CREATIVE_FORMATS.find((f) => f.id === activeFormat);
 
@@ -91,6 +95,7 @@ export default function Home() {
     setActiveRequest(null);
     setSignalOpsOutput(null);
     setGeneratedAssets([]);
+    setSelectedHeadline(0);
     setError(null);
     setShowCreateForm(true);
   }
@@ -104,7 +109,38 @@ export default function Home() {
     setGeneratedAssets([]);
     setSignalOpsOutput(null);
     setActiveRequest(null);
+    setSelectedHeadline(0);
     setError(null);
+  }
+
+  async function generateCreatives(visualApproachOverride?: SMVisualApproachMode) {
+    if (!activeRequest) return;
+    setError(null);
+    setGenerateLoading(true);
+    try {
+      const res = await fetch(`/api/sm/creative-requests/${activeRequest.id}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platforms: activeRequest.platforms,
+          asset_types: ["post"],
+          headline_index: selectedHeadline,
+          visual_approach_override: visualApproachOverride,
+        }),
+      });
+      const json = (await res.json()) as {
+        assets?: SMGeneratedAsset[];
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.error ?? "Generation failed");
+      }
+      setGeneratedAssets(json.assets ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Generation failed");
+    } finally {
+      setGenerateLoading(false);
+    }
   }
 
   async function refreshActiveClient() {
@@ -244,31 +280,9 @@ export default function Home() {
           <SignalOpsInsightsCard
             output={signalOpsOutput}
             lens={activeRequest?.creative_lens}
-            onApprove={async (headlineIndex, visualApproachOverride) => {
-              if (!activeRequest) return;
-              setError(null);
-              const res = await fetch(
-                `/api/sm/creative-requests/${activeRequest.id}/generate`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    platforms: activeRequest.platforms,
-                    asset_types: ["post"],
-                    headline_index: headlineIndex,
-                    visual_approach_override: visualApproachOverride,
-                  }),
-                }
-              );
-              const json = (await res.json()) as {
-                assets?: SMGeneratedAsset[];
-                error?: string;
-              };
-              if (!res.ok) {
-                setError(json.error ?? "Generation failed");
-                return;
-              }
-              setGeneratedAssets(json.assets ?? []);
+            onContinue={(headlineIndex) => {
+              setSelectedHeadline(headlineIndex);
+              setGeneratedAssets([]);
               setStep("assets");
             }}
             onEdit={() => setStep("brief")}
@@ -276,28 +290,39 @@ export default function Home() {
           />
         )}
 
-        {step === "assets" && activeClient && (
-          <CreativePreviewGrid
-            assets={generatedAssets}
-            client={activeClient}
-            onRegenerate={async (assetId, direction) => {
-              const res = await fetch(`/api/sm/assets/${assetId}/regenerate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ direction: direction || undefined }),
-              });
-              const updated = (await res.json()) as SMGeneratedAsset & { error?: string };
-              if (!res.ok) {
-                console.error("[Redo] Failed:", updated.error);
-                return;
-              }
-              setGeneratedAssets((prev) =>
-                prev.map((a) => (a.id === assetId ? updated : a))
-              );
-            }}
-            onNewBrief={handleNewBrief}
-            onChangeBrand={handleStartOver}
-          />
+        {step === "assets" && activeClient && signalOpsOutput && (
+          <div className="flex flex-col gap-8">
+            <VisualApproachCard
+              output={signalOpsOutput}
+              onApprove={generateCreatives}
+              loading={generateLoading}
+              hasCreatives={generatedAssets.length > 0}
+            />
+            {generatedAssets.length > 0 && (
+              <CreativePreviewGrid
+                assets={generatedAssets}
+                client={activeClient}
+                headlineMeta={signalOpsOutput.headlines[selectedHeadline]}
+                onRegenerate={async (assetId, direction) => {
+                  const res = await fetch(`/api/sm/assets/${assetId}/regenerate`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ direction: direction || undefined }),
+                  });
+                  const updated = (await res.json()) as SMGeneratedAsset & { error?: string };
+                  if (!res.ok) {
+                    console.error("[Redo] Failed:", updated.error);
+                    return;
+                  }
+                  setGeneratedAssets((prev) =>
+                    prev.map((a) => (a.id === assetId ? updated : a))
+                  );
+                }}
+                onNewBrief={handleNewBrief}
+                onChangeBrand={handleStartOver}
+              />
+            )}
+          </div>
         )}
       </div>
     </div>

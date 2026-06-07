@@ -8,6 +8,7 @@ import {
   getClientLogoUrl,
   getCreativeRequest,
   getGeneratedAsset,
+  getSignalOpsOutput,
 } from "@/lib/sm/store";
 
 export const runtime = "nodejs";
@@ -51,10 +52,21 @@ export async function GET(req: Request, context: RouteContext) {
 
     if (asset.headline) {
       try {
+        const signalops = request ? await getSignalOpsOutput(request.id) : null;
+        const headlineMeta = signalops?.headlines.find((h) => h.text === asset.headline);
+
         imageBuffer = await compositeTextOntoImage(
           imageBuffer,
           asset.headline,
-          client?.tone
+          client?.tone,
+          headlineMeta
+            ? {
+                setup: headlineMeta.setup,
+                punch: headlineMeta.punch,
+                emphasis_word: headlineMeta.emphasis_word,
+                brand_colors: client?.brand_colors,
+              }
+            : { brand_colors: client?.brand_colors }
         );
       } catch (e) {
         console.warn("[download] Text composite failed, serving without text:", e);

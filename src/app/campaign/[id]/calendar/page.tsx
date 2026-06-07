@@ -213,6 +213,12 @@ export default function CampaignCalendarPage() {
   }
 
   const hasStrategy = Boolean(strategy?.narrative_theme?.trim());
+  const expectedPosts = Object.values(strategy?.content_mix ?? {}).reduce(
+    (sum, count) => sum + (count ?? 0),
+    0
+  );
+  const isCalendarIncomplete =
+    expectedPosts > 0 && items.length > 0 && items.length < expectedPosts;
 
   return (
     <div className="min-h-screen px-6 py-8 sm:px-10 sm:py-12">
@@ -233,6 +239,23 @@ export default function CampaignCalendarPage() {
           <p className="rounded-lg border border-red-500/10 bg-red-500/5 px-4 py-3 text-sm text-red-400/90">
             {error}
           </p>
+        )}
+
+        {isCalendarIncomplete && (
+          <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-4 py-4">
+            <p className="text-sm text-amber-200/90">
+              Calendar is incomplete — {items.length} of {expectedPosts} posts. Regenerate to
+              fill the full schedule before generating briefs or creatives.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleGenerateCalendar()}
+              disabled={calendarLoading}
+              className={`${btnPrimary} mt-3`}
+            >
+              {calendarLoading ? "Planning calendar…" : "Regenerate calendar"}
+            </button>
+          </div>
         )}
 
         {items.length === 0 ? (
@@ -266,6 +289,7 @@ export default function CampaignCalendarPage() {
             creativesProgress={creativesProgress ?? undefined}
             hasBriefs={hasBriefs}
             pendingCreatives={pendingCreatives}
+            calendarComplete={!isCalendarIncomplete}
           />
         )}
         {hasBriefs && (

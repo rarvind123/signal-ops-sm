@@ -35,9 +35,17 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:wght@300;400&family=Lora:wght@400;500&family=DM+Sans:wght@400;700&family=Inter:wght@400;600&family=Oswald:wght@600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@400;700&family=Inter:wght@400;600&family=Oswald:wght@600;700&display=swap"
           rel="stylesheet"
         />
+        <style>{`
+          .font-lora { font-family: 'Lora', Georgia, serif; }
+          .font-cormorant { font-family: 'Cormorant Garamond', 'Times New Roman', serif; }
+          .font-bebas { font-family: 'Bebas Neue', Impact, sans-serif; }
+          .font-dm { font-family: 'DM Sans', Arial, sans-serif; }
+          .font-oswald { font-family: 'Oswald', Impact, sans-serif; }
+          .font-inter { font-family: 'Inter', Arial, sans-serif; }
+        `}</style>
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -21,6 +21,7 @@ import type {
 const DEFAULT_VISUAL_APPROACH: SMVisualApproach = {
   mode: "concept_first",
   rationale: "",
+  obvious_ideas_rejected: [],
   scene_description: "",
   product_visible: false,
   brave_score: 5,

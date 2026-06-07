@@ -83,6 +83,9 @@ export interface SMCreativeRequest {
 
 export interface SMSignalOpsHeadline {
   text: string;
+  setup?: string;
+  punch?: string;
+  emphasis_word?: string;
   rationale: string;
   be_trigger: string;
 }
@@ -125,6 +128,7 @@ export type SMVisualApproachMode =
 export interface SMVisualApproach {
   mode: SMVisualApproachMode;
   rationale: string;
+  obvious_ideas_rejected: string[];
   scene_description: string;
   product_visible: boolean;
   brave_score: number;

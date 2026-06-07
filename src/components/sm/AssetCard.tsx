@@ -1,18 +1,89 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getTypography } from "@/lib/sm/typography";
+import {
+  getReadableBrandAccent,
+  getTierFontSizes,
+  getTypography,
+  resolveHeadlineTiers,
+  splitWord,
+} from "@/lib/sm/typography";
 import { btnSecondary, field } from "@/lib/sm/ui";
-import type { SMClient, SMGeneratedAsset } from "@/types/sm";
+import type { SMClient, SMGeneratedAsset, SMSignalOpsHeadline } from "@/types/sm";
 import PublishModal from "./PublishModal";
+
+function PunchLine({
+  punch,
+  emphasisWord,
+  accentColor,
+  cssClass,
+  fontWeight,
+  letterSpacing,
+  textTransform,
+  fontSize,
+}: {
+  punch: string;
+  emphasisWord?: string;
+  accentColor?: string;
+  cssClass: string;
+  fontWeight: number;
+  letterSpacing: string;
+  textTransform: "uppercase" | "none";
+  fontSize: string;
+}) {
+  const words = punch.split(" ");
+  const accentIndex = emphasisWord
+    ? words.findIndex((w) => splitWord(w).clean.toLowerCase() === emphasisWord.toLowerCase())
+    : words.length - 1;
+  const targetIndex = accentIndex >= 0 ? accentIndex : words.length - 1;
+
+  return (
+    <p
+      className={`${cssClass} text-white`}
+      style={{
+        fontWeight,
+        letterSpacing,
+        textTransform,
+        fontSize,
+        lineHeight: 1.1,
+        textShadow: "0 1px 6px rgba(0,0,0,0.7)",
+      }}
+    >
+      {words.map((word, i) => {
+        const { clean, punct } = splitWord(word);
+        const isAccent = accentColor && i === targetIndex;
+        return (
+          <span key={i}>
+            {i > 0 && " "}
+            {isAccent ? (
+              <span
+                style={{
+                  color: accentColor,
+                  textShadow: `0 0 20px ${accentColor}40`,
+                }}
+              >
+                {clean}
+              </span>
+            ) : (
+              clean
+            )}
+            {punct}
+          </span>
+        );
+      })}
+    </p>
+  );
+}
 
 export default function AssetCard({
   asset,
   client,
+  headlineMeta,
   onRegenerate,
 }: {
   asset: SMGeneratedAsset;
   client: SMClient;
+  headlineMeta?: SMSignalOpsHeadline;
   onRegenerate: (id: string, direction?: string) => Promise<void>;
 }) {
   const [regenerating, setRegenerating] = useState(false);
@@ -114,29 +185,64 @@ export default function AssetCard({
                 />
               </div>
             )}
-            {showTextOverlay && localAsset.headline && (() => {
-              const typo = getTypography(client.tone);
-              return (
-                <div className="absolute bottom-0 left-0 right-0">
-                  <div className="absolute bottom-0 left-0 right-0 h-2/5 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="relative px-4 pb-4 pt-8">
-                    <p
+            {localAsset.status === "done" &&
+              localAsset.storage_url &&
+              localAsset.headline &&
+              showTextOverlay &&
+              (() => {
+                const typo = getTypography(client.tone);
+                const tiers = resolveHeadlineTiers(localAsset.headline, headlineMeta);
+                if (!tiers) return null;
+
+                const punchWordCount = tiers.punch.split(" ").length;
+                const { setup: setupFontSize, punch: punchFontSize } =
+                  getTierFontSizes(punchWordCount);
+                const setupWeight = Math.max(typo.fontWeight - 200, 300);
+                const punchWeight = Math.min(typo.fontWeight + 200, 900);
+                const accentColor = getReadableBrandAccent(client.brand_colors);
+
+                return (
+                  <div className="pointer-events-none absolute bottom-0 left-0 right-0">
+                    <div
+                      className="absolute bottom-0 left-0 right-0"
                       style={{
-                        fontFamily: `'${typo.fontFamily}', sans-serif`,
-                        fontWeight: typo.fontWeight,
-                        letterSpacing: typo.letterSpacing,
-                        textTransform: typo.textTransform,
-                        lineHeight: typo.lineHeight,
-                        fontSize: "clamp(13px, 3.5cqi, 22px)",
+                        height: "60%",
+                        background:
+                          "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.4) 45%, transparent 100%)",
                       }}
-                      className="text-white drop-shadow-sm"
-                    >
-                      {localAsset.headline}
-                    </p>
+                    />
+                    <div className="relative px-5 pb-5 pt-10">
+                      {tiers.setup && (
+                        <p
+                          className={`${typo.cssClass} mb-0.5 text-white/75`}
+                          style={{
+                            fontWeight: setupWeight,
+                            letterSpacing: typo.letterSpacing,
+                            textTransform: typo.textTransform,
+                            fontSize: setupFontSize,
+                            lineHeight: 1.25,
+                            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                          }}
+                        >
+                          {tiers.setup}
+                        </p>
+                      )}
+                      <PunchLine
+                        punch={tiers.punch}
+                        emphasisWord={headlineMeta?.emphasis_word}
+                        accentColor={accentColor}
+                        cssClass={typo.cssClass}
+                        fontWeight={punchWeight}
+                        letterSpacing={
+                          typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
+                        }
+                        textTransform={typo.textTransform}
+                        fontSize={punchFontSize}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </>
         )}
 
@@ -174,10 +280,10 @@ export default function AssetCard({
           <button
             type="button"
             onClick={() => setShowTextOverlay((prev) => !prev)}
-            className="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-0.5 text-xs text-white"
-            title={showTextOverlay ? "Hide text overlay" : "Show text overlay"}
+            className="absolute right-14 top-2 z-10 rounded bg-black/40 px-1.5 py-0.5 text-xs text-white/70 hover:bg-black/60"
+            title="Toggle headline overlay"
           >
-            {showTextOverlay ? "T" : "T̶"}
+            Aa
           </button>
         )}
       </div>

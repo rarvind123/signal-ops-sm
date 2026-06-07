@@ -16,7 +16,14 @@ const LIONS_SCORE_THRESHOLD = 6.0;
 const MAX_LIONS_RETRIES = 2;
 
 type RawSignalOpsPayload = Partial<SignalOpsPayload> & {
-  headlines?: Array<{ text?: string; rationale?: string; be_trigger?: string }>;
+  headlines?: Array<{
+    text?: string;
+    setup?: string;
+    punch?: string;
+    emphasis_word?: string;
+    rationale?: string;
+    be_trigger?: string;
+  }>;
 };
 
 export async function runSignalOpsEngine(
@@ -129,6 +136,37 @@ This is the mode that wins Grand Prix awards.
 Fevicol buses, WWF cigarette animals, Amnesty barbed wire imagery.
 BRAVE SCORE: 8-10. Most clients resist this mode. It is usually correct.
 
+ANTI-CLICHÉ MANDATE (applies to all modes):
+
+Before writing the scene_description, identify the three most obvious visuals for this brief. These are:
+- The stock photo version (what appears first on Getty Images for these keywords)
+- The junior designer version (safe, literal, expected)
+- The ad agency cliché (the trope everyone has seen before)
+
+Then REJECT all three.
+
+The scene_description you write must not resemble any of the rejected ideas.
+
+Examples of obvious ideas to reject:
+- Baby brand brief → hands holding baby feet, smiling baby with product, mother applying lotion → REJECT
+- Chess brief → chess pieces on board, hand moving a piece → REJECT
+- Coffee brand → steam rising from cup, cozy morning → REJECT
+- Luxury brand → marble, gold, elegant woman → REJECT
+- Fitness brand → person in gym, muscles, determination → REJECT
+
+Instead, find the visual that:
+1. Only exists because of this brand's specific truth
+2. Has never been used in this category before
+3. Makes sense only when you understand the brand — and makes perfect sense when you do
+
+For Himalaya baby: Grandmother's weathered hand and a newborn's hand touching — 90 years of trust made visible without showing any product.
+For a coffee brand: A single lit lamp in a dark house at 5am — someone awake before the world, no coffee in frame.
+For a fitness brand: The gym bag left by the door — the choice made, before the effort.
+
+The obvious is forgettable. The unexpected is the ad.
+
+Document your rejection in "obvious_ideas_rejected" — this proves you didn't take the easy path.
+
 MODE 2 — PRODUCT TRANSFORMED (Product appears but impossibly reimagined)
 When to use: The product's physical form has creative potential — it can become something else.
 The product appears but in an unexpected, impossible, or conceptual way.
@@ -214,24 +252,38 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
   "visual_approach": {
     "mode": "concept_first | product_transformed | product_hero | effects_visible | visual_tension",
     "rationale": "Why this mode is right for this brand and this specific brief — what about the brand's truth or the brief's goal makes this mode the correct choice",
-    "scene_description": "Exactly what to generate: specific subjects, their positions, lighting direction, background details, mood, composition. Concrete enough that a director could brief a photographer from this alone. No abstract adjectives.",
+    "obvious_ideas_rejected": [
+      "The first obvious visual you thought of — describe it briefly so it's clear you rejected it",
+      "The second obvious visual — the stock photo version",
+      "The third obvious visual — what any junior designer would do"
+    ],
+    "scene_description": "The scene you WILL generate — it must not resemble any of the three rejected ideas. This is the scene that makes a creative director lean forward. Describe it in specific physical terms: what is in the frame, where, how it is lit, what it implies. Concrete, FLUX-renderable, no abstract adjectives.",
     "product_visible": false,
     "brave_score": 8
   },
 
   "headlines": [
     {
-      "text": "Headline option 1 — must read like a real published ad",
+      "text": "The complete headline — setup and punch combined as one line",
+      "setup": "The lighter setup line — context, contrast, or tension builder",
+      "punch": "The bold punch line — the payoff the viewer remembers",
+      "emphasis_word": "single word in the punch to accent with brand colour",
       "rationale": "Why this works for this brand, this audience, this moment",
       "be_trigger": "Which BE trigger this headline specifically activates"
     },
     {
       "text": "Headline option 2",
+      "setup": "...",
+      "punch": "...",
+      "emphasis_word": "...",
       "rationale": "...",
       "be_trigger": "..."
     },
     {
       "text": "Headline option 3 — make this the brave option: the one that might scare a cautious client but would win an award",
+      "setup": "...",
+      "punch": "...",
+      "emphasis_word": "...",
       "rationale": "...",
       "be_trigger": "..."
     }
@@ -369,6 +421,9 @@ function normalizeSignalOpsOutput(parsed: RawSignalOpsPayload): SignalOpsPayload
     headlines: Array.isArray(parsed.headlines)
       ? parsed.headlines.map((h) => ({
           text: h.text ?? "",
+          setup: h.setup?.trim() || undefined,
+          punch: h.punch?.trim() || undefined,
+          emphasis_word: h.emphasis_word?.trim() || undefined,
           rationale: h.rationale ?? "",
           be_trigger: h.be_trigger ?? "",
         }))
@@ -406,6 +461,12 @@ function normalizeVisualApproach(
   return {
     mode,
     rationale: raw?.rationale?.trim() ?? "",
+    obvious_ideas_rejected: Array.isArray(raw?.obvious_ideas_rejected)
+      ? raw.obvious_ideas_rejected
+          .filter((idea): idea is string => typeof idea === "string")
+          .map((idea) => idea.trim())
+          .filter(Boolean)
+      : [],
     scene_description:
       raw?.scene_description?.trim() || visualDirection?.trim() || "",
     product_visible:

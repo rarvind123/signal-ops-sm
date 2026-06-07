@@ -25,7 +25,19 @@ export async function GET(req: Request, context: RouteContext) {
     ]);
 
     let resolvedCampaign = campaign;
+    const expectedPosts = strategy
+      ? Object.values(strategy.content_mix).reduce((sum, count) => sum + (count ?? 0), 0)
+      : 0;
+
     if (campaign.status === "calendar_ready" && calendar.length === 0) {
+      const healed = await updateCampaign(id, { status: "strategy_ready" });
+      if (healed) resolvedCampaign = healed;
+    } else if (
+      campaign.status === "calendar_ready" &&
+      expectedPosts > 0 &&
+      calendar.length > 0 &&
+      calendar.length < expectedPosts
+    ) {
       const healed = await updateCampaign(id, { status: "strategy_ready" });
       if (healed) resolvedCampaign = healed;
     }

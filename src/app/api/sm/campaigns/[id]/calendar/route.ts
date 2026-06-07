@@ -46,10 +46,23 @@ export async function POST(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Strategy not found — run strategy first" }, { status: 400 });
     }
 
+    const expectedPosts = Object.values(strategy.content_mix).reduce(
+      (sum, count) => sum + (count ?? 0),
+      0
+    );
+
     const rawItems = await generateCampaignCalendar(client, campaign, strategy);
     if (!Array.isArray(rawItems) || rawItems.length === 0) {
       return NextResponse.json(
         { error: "Calendar generation returned no posts — please try again." },
+        { status: 502 }
+      );
+    }
+    if (expectedPosts > 0 && rawItems.length !== expectedPosts) {
+      return NextResponse.json(
+        {
+          error: `Calendar generation returned ${rawItems.length} of ${expectedPosts} posts — please try again.`,
+        },
         { status: 502 }
       );
     }

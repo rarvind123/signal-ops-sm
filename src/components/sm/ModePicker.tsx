@@ -37,7 +37,7 @@ export default function ModePicker({
             alt="inventious"
             width={378}
             height={118}
-            className="h-8 w-auto object-contain object-left sm:h-9"
+            className="h-[2.3rem] w-auto object-contain object-left sm:h-[2.5875rem]"
             priority
           />
           <button
@@ -91,7 +91,7 @@ export default function ModePicker({
           alt="inventious"
           width={378}
           height={118}
-          className="h-8 w-auto object-contain object-left sm:h-9"
+          className="h-[2.3rem] w-auto object-contain object-left sm:h-[2.5875rem]"
           priority
         />
       </header>
@@ -99,7 +99,9 @@ export default function ModePicker({
       <div className="flex flex-1 flex-col justify-center gap-10">
         <div className="max-w-md">
           <p className={`${label} mb-3`}>SignalOps</p>
-          <h1 className={`${sectionTitle} text-3xl sm:text-4xl`}>What are you creating?</h1>
+          <h1 className={`${sectionTitle} text-[1.59375rem] sm:text-[1.9125rem]`}>
+            What are you creating?
+          </h1>
         </div>
 
         <div className="flex max-w-md flex-col gap-2">

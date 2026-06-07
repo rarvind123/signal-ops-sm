@@ -14,6 +14,7 @@ export default function CampaignCalendarView({
   creativesProgress,
   hasBriefs,
   pendingCreatives,
+  calendarComplete = true,
 }: {
   items: SMCampaignCalendarItem[];
   onGenerateBriefs?: () => void;
@@ -24,6 +25,7 @@ export default function CampaignCalendarView({
   creativesProgress?: { current: number; total: number };
   hasBriefs?: boolean;
   pendingCreatives?: number;
+  calendarComplete?: boolean;
 }) {
   const byWeek = items.reduce(
     (acc, item) => {
@@ -84,7 +86,7 @@ export default function CampaignCalendarView({
         ))}
 
       <div className="flex flex-wrap gap-3">
-        {onGenerateBriefs && !hasBriefs && (
+        {onGenerateBriefs && !hasBriefs && calendarComplete && (
           <button
             type="button"
             onClick={onGenerateBriefs}
@@ -98,7 +100,7 @@ export default function CampaignCalendarView({
                 : "Generate all briefs"}
           </button>
         )}
-        {onGenerateCreatives && (
+        {onGenerateCreatives && calendarComplete && (
           <button
             type="button"
             onClick={onGenerateCreatives}

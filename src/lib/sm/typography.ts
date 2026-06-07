@@ -1,66 +1,209 @@
 import type { SMTone } from "@/types/sm";
 
 export interface TypographyStyle {
-  fontFamily: string;
+  cssClass: string;
+  fontStack: string;
   fontWeight: number;
   letterSpacing: string;
   textTransform: "uppercase" | "none";
   lineHeight: number;
-  googleFontsUrl: string;
+  italic: boolean;
 }
 
 export const TONE_TYPOGRAPHY: Record<SMTone, TypographyStyle> = {
   bold: {
-    fontFamily: "Bebas Neue",
+    cssClass: "font-bebas",
+    fontStack: "'Bebas Neue', Impact, sans-serif",
     fontWeight: 400,
-    letterSpacing: "0.05em",
+    letterSpacing: "0.06em",
     textTransform: "uppercase",
     lineHeight: 1.0,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap",
+    italic: false,
   },
   premium: {
-    fontFamily: "Cormorant Garamond",
+    cssClass: "font-cormorant",
+    fontStack: "'Cormorant Garamond', 'Times New Roman', serif",
     fontWeight: 300,
-    letterSpacing: "0.08em",
+    letterSpacing: "0.06em",
     textTransform: "none",
-    lineHeight: 1.2,
-    googleFontsUrl:
-      "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&display=swap",
+    lineHeight: 1.3,
+    italic: true,
   },
   warm: {
-    fontFamily: "Lora",
+    cssClass: "font-lora",
+    fontStack: "'Lora', Georgia, serif",
     fontWeight: 400,
     letterSpacing: "0.01em",
     textTransform: "none",
-    lineHeight: 1.3,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Lora:wght@400;500&display=swap",
+    lineHeight: 1.4,
+    italic: false,
   },
   playful: {
-    fontFamily: "DM Sans",
+    cssClass: "font-dm",
+    fontStack: "'DM Sans', Arial, sans-serif",
     fontWeight: 700,
     letterSpacing: "-0.02em",
     textTransform: "none",
     lineHeight: 1.1,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap",
+    italic: false,
   },
   professional: {
-    fontFamily: "Inter",
+    cssClass: "font-inter",
+    fontStack: "'Inter', Arial, sans-serif",
     fontWeight: 600,
     letterSpacing: "-0.01em",
     textTransform: "none",
     lineHeight: 1.2,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap",
+    italic: false,
   },
   urgent: {
-    fontFamily: "Oswald",
+    cssClass: "font-oswald",
+    fontStack: "'Oswald', Impact, sans-serif",
     fontWeight: 700,
     letterSpacing: "0.04em",
     textTransform: "uppercase",
     lineHeight: 1.0,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap",
+    italic: false,
   },
 };
 
 export function getTypography(tone?: SMTone): TypographyStyle {
   return TONE_TYPOGRAPHY[tone ?? "professional"];
+}
+
+export interface HeadlineTiers {
+  setup: string;
+  punch: string;
+}
+
+export function splitHeadlineIntoTiers(headline: string): HeadlineTiers | null {
+  if (!headline || headline.length < 10) return null;
+
+  if (headline.includes(" — ")) {
+    const [setup, ...rest] = headline.split(" — ");
+    return { setup: setup.trim(), punch: rest.join(" — ").trim() };
+  }
+
+  const sentences = headline.match(/[^.!?]+[.!?]+\s*/g);
+  if (sentences && sentences.length >= 2) {
+    const punch = sentences[sentences.length - 1].trim();
+    const setup = sentences.slice(0, -1).join("").trim();
+    return { setup, punch };
+  }
+
+  if (headline.includes(", ")) {
+    const idx = headline.indexOf(", ");
+    return {
+      setup: headline.slice(0, idx + 1).trim(),
+      punch: headline.slice(idx + 2).trim(),
+    };
+  }
+
+  const words = headline.split(" ");
+  if (words.length >= 4) {
+    const splitAt = Math.ceil(words.length * 0.45);
+    return {
+      setup: words.slice(0, splitAt).join(" "),
+      punch: words.slice(splitAt).join(" "),
+    };
+  }
+
+  return { setup: "", punch: headline };
+}
+
+export function resolveHeadlineTiers(
+  headline: string,
+  meta?: { setup?: string; punch?: string }
+): HeadlineTiers | null {
+  if (meta?.setup && meta?.punch) {
+    return { setup: meta.setup, punch: meta.punch };
+  }
+  return splitHeadlineIntoTiers(headline);
+}
+
+export function isColorReadableOnDark(hex: string): boolean {
+  const normalized = hex.replace("#", "");
+  if (normalized.length !== 6) return false;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.7;
+}
+
+export function getReadableBrandAccent(
+  brandColors?: Array<{ hex: string; label: string }>
+): string | undefined {
+  const hex = brandColors?.[0]?.hex;
+  if (!hex || !isColorReadableOnDark(hex)) return undefined;
+  return hex;
+}
+
+export function getTierFontSizes(punchWordCount: number): { setup: string; punch: string } {
+  const punch =
+    punchWordCount <= 3
+      ? "clamp(18px, 5.5cqi, 28px)"
+      : punchWordCount <= 5
+        ? "clamp(15px, 4.5cqi, 24px)"
+        : punchWordCount <= 8
+          ? "clamp(13px, 3.8cqi, 20px)"
+          : "clamp(12px, 3.2cqi, 17px)";
+
+  const setup =
+    punchWordCount <= 3 ? "clamp(11px, 2.8cqi, 15px)" : "clamp(11px, 2.6cqi, 14px)";
+
+  return { setup, punch };
+}
+
+export function splitWord(word: string): { clean: string; punct: string } {
+  const match = word.match(/^(.+?)([.!?,;:]+)?$/);
+  return { clean: match?.[1] ?? word, punct: match?.[2] ?? "" };
+}
+
+export function getTierFontSizesPx(
+  punchWordCount: number,
+  width: number
+): { setup: number; punch: number } {
+  const punch =
+    punchWordCount <= 3
+      ? Math.round(width * 0.052)
+      : punchWordCount <= 5
+        ? Math.round(width * 0.042)
+        : punchWordCount <= 8
+          ? Math.round(width * 0.036)
+          : Math.round(width * 0.03);
+
+  const setup =
+    punchWordCount <= 3 ? Math.round(width * 0.026) : Math.round(width * 0.024);
+
+  return { setup, punch };
+}
+
+export function formatHeadlineLines(headline: string): string[] {
+  const sentenceBreaks = headline.match(/[^.!?]+[.!?]+/g);
+  if (sentenceBreaks && sentenceBreaks.length > 1) {
+    return sentenceBreaks.map((s) => s.trim());
+  }
+
+  if (headline.includes(" — ")) {
+    return headline.split(" — ").map((s) => s.trim());
+  }
+
+  if (headline.length > 30 && headline.includes(",")) {
+    return headline.split(",").map((s) => s.trim());
+  }
+
+  const words = headline.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (current.length + word.length > 32 && current) {
+      lines.push(current.trim());
+      current = word;
+    } else {
+      current += (current ? " " : "") + word;
+    }
+  }
+  if (current) lines.push(current.trim());
+  return lines;
 }

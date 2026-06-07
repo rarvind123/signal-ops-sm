@@ -2,26 +2,8 @@
 
 import { useState } from "react";
 import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
-import { btnPrimary, btnSecondary, chip, chipActive, label, sectionTitle } from "@/lib/sm/ui";
-import type {
-  SMCreativeLens,
-  SMSignalOpsOutput,
-  SMVisualApproachMode,
-} from "@/types/sm";
-
-const APPROACH_LABELS: Record<
-  SMVisualApproachMode,
-  { label: string; description: string }
-> = {
-  concept_first: { label: "Concept First", description: "No product. Pure idea." },
-  product_transformed: {
-    label: "Product Transformed",
-    description: "Product reimagined.",
-  },
-  product_hero: { label: "Product Hero", description: "Product as subject." },
-  effects_visible: { label: "Effects Visible", description: "Show the impact." },
-  visual_tension: { label: "Visual Tension", description: "Contradiction as idea." },
-};
+import { btnPrimary, btnSecondary, label, sectionTitle } from "@/lib/sm/ui";
+import type { SMCreativeLens, SMSignalOpsOutput } from "@/types/sm";
 
 function Panel({
   title,
@@ -43,26 +25,18 @@ function Panel({
 export default function SignalOpsInsightsCard({
   output,
   lens,
-  onApprove,
+  onContinue,
   onEdit,
   onChangeBrand,
 }: {
   output: SMSignalOpsOutput;
   lens?: SMCreativeLens;
-  onApprove: (
-    headlineIndex: number,
-    visualApproachOverride?: SMVisualApproachMode
-  ) => Promise<void>;
+  onContinue: (headlineIndex: number) => void;
   onEdit: () => void;
   onChangeBrand?: () => void;
 }) {
-  const [loading, setLoading] = useState(false);
   const [selectedHeadline, setSelectedHeadline] = useState(0);
-  const [selectedMode, setSelectedMode] = useState<SMVisualApproachMode>(
-    output.visual_approach?.mode ?? "concept_first"
-  );
   const lensName = lens ? CREATIVE_LENSES.find((l) => l.id === lens)?.name : null;
-  const braveScore = output.visual_approach?.brave_score ?? 5;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,58 +75,6 @@ export default function SignalOpsInsightsCard({
               </p>
             </div>
           </div>
-        </Panel>
-      )}
-
-      {output.visual_approach && (
-        <Panel title="Visual approach">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] tabular-nums ${
-                braveScore >= 8
-                  ? "border-red-500/20 text-red-400/90"
-                  : braveScore >= 6
-                    ? "border-amber-500/20 text-amber-400/90"
-                    : "border-zinc-800 text-zinc-500"
-              }`}
-            >
-              Brave {braveScore}/10
-            </span>
-          </div>
-
-          <div className="mb-3 flex flex-wrap gap-2">
-            {(Object.keys(APPROACH_LABELS) as SMVisualApproachMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setSelectedMode(mode)}
-                className={`${chip} ${
-                  selectedMode === mode ? chipActive : "hover:border-zinc-700"
-                }`}
-              >
-                {APPROACH_LABELS[mode].label}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-xs leading-relaxed text-zinc-500">
-            <span className="text-zinc-600">Why: </span>
-            {selectedMode === output.visual_approach.mode
-              ? output.visual_approach.rationale
-              : `Override — ${APPROACH_LABELS[selectedMode].description} Regenerate strategy for a new scene description.`}
-          </p>
-
-          {selectedMode === output.visual_approach.mode &&
-            output.visual_approach.scene_description && (
-              <div className="mt-3 border-t border-zinc-800/80 pt-3">
-                <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-600">
-                  Scene to generate
-                </p>
-                <p className="font-mono text-xs leading-relaxed text-zinc-400">
-                  {output.visual_approach.scene_description}
-                </p>
-              </div>
-            )}
         </Panel>
       )}
 
@@ -283,17 +205,10 @@ export default function SignalOpsInsightsCard({
         )}
         <button
           type="button"
-          onClick={() => {
-            setLoading(true);
-            void onApprove(
-              selectedHeadline,
-              selectedMode !== output.visual_approach?.mode ? selectedMode : undefined
-            ).finally(() => setLoading(false));
-          }}
-          disabled={loading}
+          onClick={() => onContinue(selectedHeadline)}
           className={`${btnPrimary} flex-1 sm:flex-none`}
         >
-          {loading ? "Generating…" : "Generate creatives"}
+          Continue to creatives
         </button>
       </div>
     </div>
