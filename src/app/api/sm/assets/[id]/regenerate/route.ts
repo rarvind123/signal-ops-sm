@@ -67,7 +67,8 @@ export async function POST(req: Request, context: RouteContext) {
         signalops,
         asset.platform,
         asset.asset_type,
-        headline
+        headline,
+        request?.creative_format
       );
 
     const userDirection =

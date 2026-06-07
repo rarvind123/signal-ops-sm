@@ -32,6 +32,7 @@ function throwIfError(error: { message: string } | null): void {
 }
 
 function mapClient(row: Record<string, unknown>): SMClient {
+  const legacyLogo = row.logo_url ? String(row.logo_url) : undefined;
   return {
     id: String(row.id),
     name: String(row.name),
@@ -39,12 +40,104 @@ function mapClient(row: Record<string, unknown>): SMClient {
     usp: row.usp ? String(row.usp) : undefined,
     target_audience: (row.target_audience as SMClient["target_audience"]) ?? {},
     tone: row.tone as SMClient["tone"],
+    has_brand_kit: Boolean(row.has_brand_kit),
+    logos: {
+      primary: row.logo_primary_url
+        ? String(row.logo_primary_url)
+        : legacyLogo,
+      white: row.logo_white_url ? String(row.logo_white_url) : undefined,
+      dark: row.logo_dark_url ? String(row.logo_dark_url) : undefined,
+      symbol: row.logo_symbol_url ? String(row.logo_symbol_url) : undefined,
+    },
+    logo_url: legacyLogo,
+    color_palette: {
+      primary: row.color_primary ? String(row.color_primary) : undefined,
+      secondary: row.color_secondary ? String(row.color_secondary) : undefined,
+      accent: row.color_accent ? String(row.color_accent) : undefined,
+      background: row.color_background ? String(row.color_background) : undefined,
+      text: row.color_text ? String(row.color_text) : undefined,
+    },
     brand_colors: (row.brand_colors as SMClient["brand_colors"]) ?? [],
+    font_primary: row.font_primary ? String(row.font_primary) : undefined,
+    font_secondary: row.font_secondary ? String(row.font_secondary) : undefined,
+    font_source: row.font_source
+      ? (String(row.font_source) as SMClient["font_source"])
+      : undefined,
+    photo_style: row.photo_style
+      ? (String(row.photo_style) as SMClient["photo_style"])
+      : undefined,
+    voice: {
+      description: row.voice_description ? String(row.voice_description) : undefined,
+      do: (row.voice_do as string[]) ?? [],
+      dont: (row.voice_dont as string[]) ?? [],
+    },
+    guidelines_pdf_url: row.guidelines_pdf_url
+      ? String(row.guidelines_pdf_url)
+      : undefined,
+    guidelines_summary: row.guidelines_summary
+      ? String(row.guidelines_summary)
+      : undefined,
     social_handles: (row.social_handles as SMClient["social_handles"]) ?? {},
-    logo_url: row.logo_url ? String(row.logo_url) : undefined,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at ?? row.created_at),
   };
+}
+
+function toDbClientFields(
+  input: Partial<Omit<SMClient, "id" | "created_at" | "updated_at">>
+): Record<string, unknown> {
+  const db: Record<string, unknown> = {};
+
+  if (input.name !== undefined) db.name = input.name;
+  if (input.tagline !== undefined) db.tagline = input.tagline ?? null;
+  if (input.usp !== undefined) db.usp = input.usp ?? null;
+  if (input.target_audience !== undefined) db.target_audience = input.target_audience;
+  if (input.tone !== undefined) db.tone = input.tone ?? null;
+  if (input.brand_colors !== undefined) db.brand_colors = input.brand_colors;
+  if (input.social_handles !== undefined) db.social_handles = input.social_handles;
+  if (input.has_brand_kit !== undefined) db.has_brand_kit = input.has_brand_kit;
+  if (input.logo_url !== undefined) db.logo_url = input.logo_url ?? null;
+
+  if (input.logos !== undefined) {
+    if (input.logos.primary !== undefined) {
+      db.logo_primary_url = input.logos.primary ?? null;
+      if (input.logos.primary) db.logo_url = input.logos.primary;
+    }
+    if (input.logos.white !== undefined) db.logo_white_url = input.logos.white ?? null;
+    if (input.logos.dark !== undefined) db.logo_dark_url = input.logos.dark ?? null;
+    if (input.logos.symbol !== undefined) db.logo_symbol_url = input.logos.symbol ?? null;
+  }
+
+  if (input.color_palette !== undefined) {
+    const p = input.color_palette;
+    if (p.primary !== undefined) db.color_primary = p.primary ?? null;
+    if (p.secondary !== undefined) db.color_secondary = p.secondary ?? null;
+    if (p.accent !== undefined) db.color_accent = p.accent ?? null;
+    if (p.background !== undefined) db.color_background = p.background ?? null;
+    if (p.text !== undefined) db.color_text = p.text ?? null;
+  }
+
+  if (input.font_primary !== undefined) db.font_primary = input.font_primary ?? null;
+  if (input.font_secondary !== undefined) db.font_secondary = input.font_secondary ?? null;
+  if (input.font_source !== undefined) db.font_source = input.font_source ?? null;
+  if (input.photo_style !== undefined) db.photo_style = input.photo_style ?? null;
+
+  if (input.voice !== undefined) {
+    if (input.voice.description !== undefined) {
+      db.voice_description = input.voice.description ?? null;
+    }
+    if (input.voice.do !== undefined) db.voice_do = input.voice.do;
+    if (input.voice.dont !== undefined) db.voice_dont = input.voice.dont;
+  }
+
+  if (input.guidelines_pdf_url !== undefined) {
+    db.guidelines_pdf_url = input.guidelines_pdf_url ?? null;
+  }
+  if (input.guidelines_summary !== undefined) {
+    db.guidelines_summary = input.guidelines_summary ?? null;
+  }
+
+  return db;
 }
 
 function mapBrandAsset(row: Record<string, unknown>): SMBrandAsset {
@@ -269,13 +362,14 @@ export async function createClient(
   const { data, error } = await supabase
     .from("sm_clients")
     .insert({
+      ...toDbClientFields(input),
       name: input.name,
-      tagline: input.tagline ?? null,
-      usp: input.usp ?? null,
       target_audience: input.target_audience ?? {},
-      tone: input.tone ?? null,
       brand_colors: input.brand_colors ?? [],
       social_handles: input.social_handles ?? {},
+      has_brand_kit: input.has_brand_kit ?? false,
+      voice_do: input.voice?.do ?? [],
+      voice_dont: input.voice?.dont ?? [],
       created_at: now,
       updated_at: now,
     })
@@ -291,7 +385,7 @@ export async function updateClient(
 ): Promise<SMClient | null> {
   const { data, error } = await supabase
     .from("sm_clients")
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({ ...toDbClientFields(patch), updated_at: new Date().toISOString() })
     .eq("id", id)
     .select("*")
     .maybeSingle();
@@ -309,6 +403,7 @@ export async function deleteClient(id: string): Promise<boolean> {
 
 export async function getClientLogoUrl(clientId: string): Promise<string | null> {
   const client = await getClient(clientId);
+  if (client?.logos?.primary) return client.logos.primary;
   if (client?.logo_url) return client.logo_url;
 
   const { data, error } = await supabase

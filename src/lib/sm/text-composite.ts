@@ -1,14 +1,16 @@
 import "server-only";
 
 import sharp from "sharp";
+import { getOverlayConfig } from "@/lib/sm/overlay-config";
 import {
+  getClientTypography,
   getReadableBrandAccent,
   getTierFontSizesPx,
   getTypography,
   resolveHeadlineTiers,
   splitWord,
 } from "@/lib/sm/typography";
-import type { SMTone } from "@/types/sm";
+import type { SMCreativeFormat, SMClient } from "@/types/sm";
 
 function escapeXml(text: string): string {
   return text.replace(/[<>&"]/g, (c) => {
@@ -26,6 +28,7 @@ function buildPunchTspans(
   punch: string,
   emphasisWord: string | undefined,
   accentColor: string | undefined,
+  punchColor: string,
   textTransform: string
 ): string {
   const words = punch.split(" ");
@@ -41,7 +44,7 @@ function buildPunchTspans(
       const suffix = escapeXml(punct);
       const spacer = i < words.length - 1 ? " " : "";
       const isAccent = accentColor && i === targetIndex;
-      const fill = isAccent ? accentColor : "white";
+      const fill = isAccent ? accentColor : punchColor;
       return `<tspan fill="${fill}">${content}${suffix}</tspan>${spacer ? `<tspan>${spacer}</tspan>` : ""}`;
     })
     .join("");
@@ -50,26 +53,28 @@ function buildPunchTspans(
 export async function compositeTextOntoImage(
   imageBuffer: Buffer,
   headline: string,
-  tone?: SMTone,
+  client?: SMClient,
   options?: {
     setup?: string;
     punch?: string;
     emphasis_word?: string;
-    brand_colors?: Array<{ hex: string; label: string }>;
+    creative_format?: SMCreativeFormat;
   }
 ): Promise<Buffer> {
   const { width = 1080, height = 1080 } = await sharp(imageBuffer).metadata();
-  const typo = getTypography(tone);
+  const typo = client ? getClientTypography(client) : getTypography();
   const tiers = resolveHeadlineTiers(headline, options);
   if (!tiers) return imageBuffer;
 
+  const format = options?.creative_format;
   const punchWordCount = tiers.punch.split(" ").length;
+  const overlay = getOverlayConfig(format, punchWordCount);
   const { setup: setupSize, punch: punchSize } = getTierFontSizesPx(punchWordCount, width);
-  const paddingX = Math.round(width * 0.05);
+  const paddingX = Math.round(width * (format === "print_ad" ? 0.07 : 0.05));
   const paddingY = Math.round(height * 0.05);
   const setupWeight = Math.max(typo.fontWeight - 200, 300);
   const punchWeight = Math.min(typo.fontWeight + 200, 900);
-  const accentColor = getReadableBrandAccent(options?.brand_colors);
+  const accentColor = client ? getReadableBrandAccent(client) : undefined;
 
   const punchLineH = punchSize * 1.1;
   const gradientH = Math.round(height * 0.6);
@@ -81,7 +86,7 @@ export async function compositeTextOntoImage(
     ? `<text x="${paddingX}" y="${setupY}"
       font-family="${typo.fontStack}" font-size="${setupSize}" font-weight="${setupWeight}"
       letter-spacing="${typo.letterSpacing}"
-      fill="rgba(255,255,255,0.75)" filter="url(#shadow)">${escapeXml(tiers.setup)}</text>`
+      fill="${overlay.setupColor}" filter="url(#shadow)">${escapeXml(tiers.setup)}</text>`
     : "";
 
   const punchLetterSpacing =
@@ -94,8 +99,19 @@ export async function compositeTextOntoImage(
         tiers.punch,
         options?.emphasis_word,
         accentColor,
+        overlay.punchColor,
         typo.textTransform
       )}</text>`;
+
+  const whiteBand =
+    format === "print_ad"
+      ? `<rect x="0" y="${height - Math.round(height * 0.22)}" width="${width}" height="${Math.round(height * 0.22)}" fill="white"/>`
+      : "";
+
+  const gradientRect =
+    overlay.gradientStyle !== "none"
+      ? `<rect x="0" y="${height - gradientH}" width="${width}" height="${gradientH}" fill="url(#grad)"/>`
+      : "";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
     <defs>
@@ -108,7 +124,8 @@ export async function compositeTextOntoImage(
         <feDropShadow dx="0" dy="1" stdDeviation="3" flood-opacity="0.6"/>
       </filter>
     </defs>
-    <rect x="0" y="${height - gradientH}" width="${width}" height="${gradientH}" fill="url(#grad)"/>
+    ${whiteBand}
+    ${gradientRect}
     ${setupText}
     ${punchText}
   </svg>`;

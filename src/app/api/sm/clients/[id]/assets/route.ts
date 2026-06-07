@@ -35,11 +35,22 @@ export async function POST(req: Request, context: RouteContext) {
     });
 
     if (type === "logo") {
+      const rawVariant = String(formData.get("logo_variant") ?? "primary");
+      const variant =
+        rawVariant === "white" ||
+        rawVariant === "dark" ||
+        rawVariant === "symbol" ||
+        rawVariant === "primary"
+          ? rawVariant
+          : "primary";
       try {
-        await updateClient(clientId, { logo_url: saved.publicUrl });
+        await updateClient(clientId, {
+          logo_url: variant === "primary" ? saved.publicUrl : client.logo_url,
+          logos: { ...client.logos, [variant]: saved.publicUrl },
+        });
       } catch (err) {
         console.warn(
-          "[asset upload] Could not update logo_url on client:",
+          "[asset upload] Could not update logo on client:",
           err instanceof Error ? err.message : err
         );
       }

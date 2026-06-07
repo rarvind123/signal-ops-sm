@@ -1,4 +1,4 @@
-import type { SMTone } from "@/types/sm";
+import type { SMClient, SMTone } from "@/types/sm";
 
 export interface TypographyStyle {
   cssClass: string;
@@ -8,6 +8,7 @@ export interface TypographyStyle {
   textTransform: "uppercase" | "none";
   lineHeight: number;
   italic: boolean;
+  isCustomFont?: boolean;
 }
 
 export const TONE_TYPOGRAPHY: Record<SMTone, TypographyStyle> = {
@@ -71,6 +72,27 @@ export function getTypography(tone?: SMTone): TypographyStyle {
   return TONE_TYPOGRAPHY[tone ?? "professional"];
 }
 
+export function getClientTypography(client: SMClient): TypographyStyle {
+  if (client.font_primary) {
+    const font = client.font_primary;
+    const isSerif = /garamond|georgia|times|palatino|lora|merriweather|playfair/i.test(font);
+    const isDisplay = /bebas|oswald|impact|condensed|anton/i.test(font);
+
+    return {
+      cssClass: "",
+      fontStack: `'${font}', ${isSerif ? "Georgia, serif" : "Arial, sans-serif"}`,
+      fontWeight: isDisplay ? 700 : isSerif ? 400 : 600,
+      letterSpacing: isDisplay ? "0.04em" : isSerif ? "0.01em" : "-0.01em",
+      textTransform: isDisplay ? "uppercase" : "none",
+      lineHeight: isDisplay ? 1.0 : 1.25,
+      italic: false,
+      isCustomFont: true,
+    };
+  }
+
+  return TONE_TYPOGRAPHY[client.tone ?? "professional"];
+}
+
 export interface HeadlineTiers {
   setup: string;
   punch: string;
@@ -132,9 +154,12 @@ export function isColorReadableOnDark(hex: string): boolean {
 }
 
 export function getReadableBrandAccent(
-  brandColors?: Array<{ hex: string; label: string }>
+  client?: Pick<SMClient, "brand_colors" | "color_palette">
 ): string | undefined {
-  const hex = brandColors?.[0]?.hex;
+  const hex =
+    client?.color_palette?.accent ??
+    client?.color_palette?.primary ??
+    client?.brand_colors?.[0]?.hex;
   if (!hex || !isColorReadableOnDark(hex)) return undefined;
   return hex;
 }

@@ -2,14 +2,23 @@
 
 import { useEffect, useState } from "react";
 import {
+  getImageRegionBrightness,
+  selectLogoForFormat,
+} from "@/lib/sm/logo-selector";
+import { getOverlayConfig } from "@/lib/sm/overlay-config";
+import {
+  getClientTypography,
   getReadableBrandAccent,
-  getTierFontSizes,
-  getTypography,
   resolveHeadlineTiers,
   splitWord,
 } from "@/lib/sm/typography";
 import { btnSecondary, field } from "@/lib/sm/ui";
-import type { SMClient, SMGeneratedAsset, SMSignalOpsHeadline } from "@/types/sm";
+import type {
+  SMCreativeFormat,
+  SMClient,
+  SMGeneratedAsset,
+  SMSignalOpsHeadline,
+} from "@/types/sm";
 import PublishModal from "./PublishModal";
 
 function PunchLine({
@@ -21,6 +30,9 @@ function PunchLine({
   letterSpacing,
   textTransform,
   fontSize,
+  punchColor,
+  textShadow,
+  fontFamily,
 }: {
   punch: string;
   emphasisWord?: string;
@@ -30,6 +42,9 @@ function PunchLine({
   letterSpacing: string;
   textTransform: "uppercase" | "none";
   fontSize: string;
+  punchColor: string;
+  textShadow: string;
+  fontFamily?: string;
 }) {
   const words = punch.split(" ");
   const accentIndex = emphasisWord
@@ -39,14 +54,16 @@ function PunchLine({
 
   return (
     <p
-      className={`${cssClass} text-white`}
+      className={cssClass}
       style={{
+        color: punchColor,
         fontWeight,
         letterSpacing,
         textTransform,
         fontSize,
         lineHeight: 1.1,
-        textShadow: "0 1px 6px rgba(0,0,0,0.7)",
+        textShadow,
+        fontFamily,
       }}
     >
       {words.map((word, i) => {
@@ -79,11 +96,13 @@ export default function AssetCard({
   asset,
   client,
   headlineMeta,
+  creativeFormat,
   onRegenerate,
 }: {
   asset: SMGeneratedAsset;
   client: SMClient;
   headlineMeta?: SMSignalOpsHeadline;
+  creativeFormat?: SMCreativeFormat;
   onRegenerate: (id: string, direction?: string) => Promise<void>;
 }) {
   const [regenerating, setRegenerating] = useState(false);
@@ -91,27 +110,81 @@ export default function AssetCard({
   const [showRedoInput, setShowRedoInput] = useState(false);
   const [redoDirection, setRedoDirection] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [logoUrl, setLogoUrl] = useState<string | null>(client.logo_url ?? null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(
+    client.logos?.primary ?? client.logo_url ?? null
+  );
   const [localAsset, setLocalAsset] = useState(asset);
   const [showTextOverlay, setShowTextOverlay] = useState(true);
+  const typo = getClientTypography(client);
 
   useEffect(() => {
     setLocalAsset(asset);
   }, [asset]);
 
   useEffect(() => {
-    if (client.logo_url) setLogoUrl(client.logo_url);
-  }, [client.logo_url]);
+    if (!typo.isCustomFont || !typo.fontStack) return;
+    const fontName = client.font_primary?.replace(/ /g, "+");
+    if (!fontName) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?family=${fontName}:wght@300;400;600;700&display=swap`;
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, [typo.isCustomFont, typo.fontStack, client.font_primary]);
 
   useEffect(() => {
-    if (logoUrl) return;
-    fetch(`/api/sm/clients/${client.id}/logo`)
-      .then((r) => r.json())
-      .then((data: { logo_url: string | null }) => {
-        if (data.logo_url) setLogoUrl(data.logo_url);
-      })
-      .catch(() => {});
-  }, [client.id, logoUrl]);
+    if (!localAsset.storage_url) return;
+
+    const logos = client.logos ?? {};
+    const hasVariants = Boolean(logos.white || logos.dark);
+    const formatForced =
+      creativeFormat === "print_ad" || creativeFormat === "outdoor";
+
+    if (!hasVariants && !formatForced) {
+      const fallback = logos.primary ?? client.logo_url ?? null;
+      if (fallback) setLogoUrl(fallback);
+      else {
+        fetch(`/api/sm/clients/${client.id}/logo`)
+          .then((r) => r.json())
+          .then((data: { logo_url: string | null }) => {
+            if (data.logo_url) setLogoUrl(data.logo_url);
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
+    if (formatForced) {
+      setLogoUrl(selectLogoForFormat(logos, creativeFormat) ?? logos.primary ?? null);
+      return;
+    }
+
+    const imageSrc = `${localAsset.storage_url}?v=${refreshKey}`;
+    void getImageRegionBrightness(imageSrc, {
+      x: 240,
+      y: 0,
+      w: 160,
+      h: 80,
+      imgW: 400,
+      imgH: 400,
+    }).then((brightness) => {
+      setLogoUrl(
+        selectLogoForFormat(logos, creativeFormat, brightness) ??
+          logos.primary ??
+          client.logo_url ??
+          null
+      );
+    });
+  }, [
+    localAsset.storage_url,
+    client.logos,
+    client.logo_url,
+    client.id,
+    creativeFormat,
+    refreshKey,
+  ]);
 
   const isTextOnly =
     localAsset.status === "done" && !localAsset.storage_url && Boolean(localAsset.copy);
@@ -190,38 +263,40 @@ export default function AssetCard({
               localAsset.headline &&
               showTextOverlay &&
               (() => {
-                const typo = getTypography(client.tone);
                 const tiers = resolveHeadlineTiers(localAsset.headline, headlineMeta);
                 if (!tiers) return null;
 
                 const punchWordCount = tiers.punch.split(" ").length;
-                const { setup: setupFontSize, punch: punchFontSize } =
-                  getTierFontSizes(punchWordCount);
+                const overlay = getOverlayConfig(creativeFormat, punchWordCount);
                 const setupWeight = Math.max(typo.fontWeight - 200, 300);
                 const punchWeight = Math.min(typo.fontWeight + 200, 900);
-                const accentColor = getReadableBrandAccent(client.brand_colors);
+                const accentColor = getReadableBrandAccent(client);
+                const fontFamily = typo.isCustomFont ? typo.fontStack : undefined;
 
                 return (
                   <div className="pointer-events-none absolute bottom-0 left-0 right-0">
-                    <div
-                      className="absolute bottom-0 left-0 right-0"
-                      style={{
-                        height: "60%",
-                        background:
-                          "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.4) 45%, transparent 100%)",
-                      }}
-                    />
-                    <div className="relative px-5 pb-5 pt-10">
+                    {overlay.gradientStyle !== "none" && (
+                      <div
+                        className="absolute bottom-0 left-0 right-0"
+                        style={{
+                          height: "60%",
+                          background: overlay.gradientStyle,
+                        }}
+                      />
+                    )}
+                    <div className={overlay.containerClass}>
                       {tiers.setup && (
                         <p
-                          className={`${typo.cssClass} mb-0.5 text-white/75`}
+                          className={`${typo.cssClass} mb-0.5`}
                           style={{
+                            color: overlay.setupColor,
                             fontWeight: setupWeight,
                             letterSpacing: typo.letterSpacing,
                             textTransform: typo.textTransform,
-                            fontSize: setupFontSize,
+                            fontSize: overlay.fontSize.setup,
                             lineHeight: 1.25,
-                            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                            textShadow: overlay.setupShadow,
+                            fontFamily,
                           }}
                         >
                           {tiers.setup}
@@ -237,7 +312,10 @@ export default function AssetCard({
                           typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
                         }
                         textTransform={typo.textTransform}
-                        fontSize={punchFontSize}
+                        fontSize={overlay.fontSize.punch}
+                        punchColor={overlay.punchColor}
+                        textShadow={overlay.punchShadow}
+                        fontFamily={fontFamily}
                       />
                     </div>
                   </div>

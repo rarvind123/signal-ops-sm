@@ -40,6 +40,37 @@ export type SMCreativeLens =
   | "behaviour_change"
   | "craft_first";
 
+export type SMPhotoStyle =
+  | "lifestyle"
+  | "product"
+  | "minimal"
+  | "documentary"
+  | "illustrated"
+  | "premium";
+
+export type SMFontSource = "google" | "system" | "custom";
+
+export interface SMColorPalette {
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  background?: string;
+  text?: string;
+}
+
+export interface SMLogoSet {
+  primary?: string;
+  white?: string;
+  dark?: string;
+  symbol?: string;
+}
+
+export interface SMVoiceGuidelines {
+  description?: string;
+  do?: string[];
+  dont?: string[];
+}
+
 export interface SMClient {
   id: string;
   name: string;
@@ -52,9 +83,19 @@ export interface SMClient {
     location?: string;
   };
   tone?: SMTone;
-  brand_colors: Array<{ hex: string; label: string }>;
-  social_handles: Partial<Record<SMPlatform, string>>;
+  has_brand_kit: boolean;
+  logos: SMLogoSet;
   logo_url?: string;
+  color_palette: SMColorPalette;
+  brand_colors: Array<{ hex: string; label: string }>;
+  font_primary?: string;
+  font_secondary?: string;
+  font_source?: SMFontSource;
+  photo_style?: SMPhotoStyle;
+  voice: SMVoiceGuidelines;
+  guidelines_pdf_url?: string;
+  guidelines_summary?: string;
+  social_handles: Partial<Record<SMPlatform, string>>;
   created_at: string;
   updated_at: string;
 }

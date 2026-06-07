@@ -131,7 +131,8 @@ export async function POST(req: Request, context: RouteContext) {
           signalops,
           platform,
           assetType,
-          headline
+          headline,
+          request.creative_format
         );
 
         const aspectRatio: FluxAspectRatio =

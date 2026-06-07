@@ -26,7 +26,15 @@ export async function POST(req: Request) {
       usp: body.usp?.trim() || undefined,
       tone: body.tone as SMTone | undefined,
       target_audience: body.target_audience ?? {},
+      has_brand_kit: body.has_brand_kit ?? false,
+      logos: body.logos ?? {},
+      color_palette: body.color_palette ?? {},
       brand_colors: body.brand_colors ?? [{ hex: "#000000", label: "primary" }],
+      font_primary: body.font_primary,
+      font_secondary: body.font_secondary,
+      font_source: body.font_source,
+      photo_style: body.photo_style,
+      voice: body.voice ?? { do: [], dont: [] },
       social_handles: body.social_handles ?? {},
     });
 

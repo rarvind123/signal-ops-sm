@@ -208,12 +208,17 @@ OUTPUT RULES:
 - The insight bridge is the most important output. If it is weak, everything else fails.
 - Return ONLY valid JSON. No markdown. No preamble.`;
 
+  const photoStyleNote = client.photo_style
+    ? `\nPHOTOGRAPHY STYLE: This brand uses ${client.photo_style} photography. All scene descriptions must align with this style.`
+    : "";
+
   const userPrompt = `
 BRAND DNA:
 ${brandContext}
 
 TODAY'S BRIEF:
 ${briefContext}
+${photoStyleNote}
 
 BEHAVIOURAL ECONOMICS MENU (pre-matched to brief goal "${request.goal ?? "awareness"}"):
 ${beMenu}
@@ -495,12 +500,40 @@ function buildBEMenu(goal?: string): string {
 }
 
 function buildBrandContext(client: SMClient): string {
-  return `Brand: ${client.name}
-Tagline: ${client.tagline ?? "N/A"}
-USP: ${client.usp ?? "N/A"}
-Tone: ${client.tone ?? "N/A"}
-Target Audience: ${JSON.stringify(client.target_audience)}
-Brand Colors: ${client.brand_colors.map((c) => `${c.label}: ${c.hex}`).join(", ") || "N/A"}`;
+  const lines = [
+    `Brand: ${client.name}`,
+    client.tagline ? `Tagline: ${client.tagline}` : null,
+    client.usp ? `USP: ${client.usp}` : null,
+    `Tone: ${client.tone ?? "professional"}`,
+    client.voice?.description ? `Voice: ${client.voice.description}` : null,
+    client.voice?.do?.length ? `Voice Do's: ${client.voice.do.join(", ")}` : null,
+    client.voice?.dont?.length ? `Voice Don'ts: ${client.voice.dont.join(", ")}` : null,
+    `Audience: ${JSON.stringify(client.target_audience)}`,
+  ];
+
+  const palette = client.color_palette ?? {};
+  const colorLines = Object.entries(palette)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}: ${v}`);
+  if (colorLines.length) {
+    lines.push(`Brand colours: ${colorLines.join(", ")}`);
+  } else if (client.brand_colors?.length) {
+    lines.push(
+      `Brand colours: ${client.brand_colors.map((c) => `${c.label}: ${c.hex}`).join(", ")}`
+    );
+  }
+
+  if (client.photo_style) {
+    lines.push(`Photography style: ${client.photo_style}`);
+  }
+
+  if (client.font_primary) {
+    lines.push(
+      `Brand font: ${client.font_primary} — respect this typographic character in the visual direction`
+    );
+  }
+
+  return lines.filter(Boolean).join("\n");
 }
 
 function buildBriefContext(request: SMCreativeRequest): string {

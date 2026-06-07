@@ -34,7 +34,18 @@ export async function PATCH(req: Request, context: RouteContext) {
       usp: body.usp?.trim(),
       tone: body.tone as SMTone | undefined,
       target_audience: body.target_audience,
+      has_brand_kit: body.has_brand_kit,
+      logos: body.logos,
+      logo_url: body.logo_url,
+      color_palette: body.color_palette,
       brand_colors: body.brand_colors,
+      font_primary: body.font_primary,
+      font_secondary: body.font_secondary,
+      font_source: body.font_source,
+      photo_style: body.photo_style,
+      voice: body.voice,
+      guidelines_pdf_url: body.guidelines_pdf_url,
+      guidelines_summary: body.guidelines_summary,
       social_handles: body.social_handles,
     });
     if (!updated) {

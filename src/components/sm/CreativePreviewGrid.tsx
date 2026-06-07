@@ -1,13 +1,19 @@
 "use client";
 
 import { btnGhost, btnPrimary, sectionTitle } from "@/lib/sm/ui";
-import type { SMClient, SMGeneratedAsset, SMSignalOpsHeadline } from "@/types/sm";
+import type {
+  SMCreativeFormat,
+  SMClient,
+  SMGeneratedAsset,
+  SMSignalOpsHeadline,
+} from "@/types/sm";
 import AssetCard from "./AssetCard";
 
 export default function CreativePreviewGrid({
   assets,
   client,
   headlineMeta,
+  creativeFormat,
   onRegenerate,
   onNewBrief,
   onChangeBrand,
@@ -15,6 +21,7 @@ export default function CreativePreviewGrid({
   assets: SMGeneratedAsset[];
   client: SMClient;
   headlineMeta?: SMSignalOpsHeadline;
+  creativeFormat?: SMCreativeFormat;
   onRegenerate: (id: string, direction?: string) => Promise<void>;
   onNewBrief: () => void;
   onChangeBrand: () => void;
@@ -45,6 +52,7 @@ export default function CreativePreviewGrid({
             asset={asset}
             client={client}
             headlineMeta={headlineMeta}
+            creativeFormat={creativeFormat}
             onRegenerate={onRegenerate}
           />
         ))}

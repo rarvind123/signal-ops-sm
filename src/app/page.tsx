@@ -303,6 +303,7 @@ export default function Home() {
                 assets={generatedAssets}
                 client={activeClient}
                 headlineMeta={signalOpsOutput.headlines[selectedHeadline]}
+                creativeFormat={activeRequest?.creative_format}
                 onRegenerate={async (assetId, direction) => {
                   const res = await fetch(`/api/sm/assets/${assetId}/regenerate`, {
                     method: "POST",

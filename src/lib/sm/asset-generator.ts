@@ -2,6 +2,7 @@ import { completeJson } from "@/lib/ai";
 import type {
   SMClient,
   SMAssetType,
+  SMCreativeFormat,
   SMGoal,
   SMPlatform,
   SMSignalOpsOutput,
@@ -130,16 +131,56 @@ export function buildBriefImagePrompt(
   return parts.replace(/\s+/g, " ").trim().slice(0, 3800);
 }
 
+const PHOTO_STYLE_MAP: Record<string, string> = {
+  lifestyle:
+    "lifestyle photography with real people in natural settings, candid and authentic",
+  product:
+    "clean product photography, controlled lighting, professional studio quality",
+  minimal: "minimal composition, generous white space, restrained and deliberate",
+  documentary: "documentary-style photography, raw and real, no posing",
+  illustrated: "graphic illustration style, not photorealistic",
+  premium: "high-end luxury photography, impeccable lighting, aspirational",
+};
+
+function typographyZoneForFormat(creativeFormat?: SMCreativeFormat): string {
+  if (!creativeFormat || creativeFormat === "social_media") {
+    return "clear negative space in the lower third for headline overlay";
+  }
+  if (creativeFormat === "print_ad") {
+    return "clean white band at the bottom 20% of the image — completely clear, no visual elements — reserved for headline typography";
+  }
+  if (creativeFormat === "outdoor") {
+    return "massive clear zone on one side (left or right) — at minimum 40% of the frame must be clean solid colour for OOH headline placement";
+  }
+  return "clear space for headline overlay";
+}
+
+function colorContextForClient(client: SMClient, signalops: SMSignalOpsOutput): string {
+  const p = client.color_palette ?? {};
+  if (p.primary) {
+    return `dominant colour palette: ${[p.primary, p.secondary, p.accent].filter(Boolean).join(", ")}`;
+  }
+  if (client.brand_colors?.length) {
+    return `colour palette: ${client.brand_colors.map((c) => c.hex).join(", ")}`;
+  }
+  return signalops.color_recommendation;
+}
+
 export function buildImageGenerationPrompt(
-  _client: SMClient,
+  client: SMClient,
   signalops: SMSignalOpsOutput,
   platform: SMPlatform,
   assetType: SMAssetType,
-  _headline: string
+  _headline: string,
+  creativeFormat?: SMCreativeFormat
 ): string {
   const approach = signalops.visual_approach;
   const modeInstructions =
     VISUAL_APPROACH_INSTRUCTIONS[approach?.mode ?? "concept_first"];
+
+  const photoStyle = client.photo_style
+    ? PHOTO_STYLE_MAP[client.photo_style]
+    : "professional commercial photography";
 
   const compositionNote =
     assetType === "story" || assetType === "reel_cover"
@@ -150,15 +191,18 @@ export function buildImageGenerationPrompt(
 
   const parts = [
     approach?.scene_description || signalops.visual_direction,
-    signalops.color_recommendation,
+    colorContextForClient(client, signalops),
+    photoStyle,
+    typographyZoneForFormat(creativeFormat),
     compositionNote,
     modeInstructions,
-    "ultra high quality commercial photography",
+    "ultra high quality",
     "sharp focus",
-    "professional studio or location lighting",
+    "professional lighting",
     "8k resolution",
-    "premium advertising aesthetic",
     UNIVERSAL_EXCLUSIONS,
+    "no product packaging",
+    "no tins or bottles",
   ]
     .filter(Boolean)
     .join(", ");

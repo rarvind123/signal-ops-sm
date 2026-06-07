@@ -58,15 +58,13 @@ export async function GET(req: Request, context: RouteContext) {
         imageBuffer = await compositeTextOntoImage(
           imageBuffer,
           asset.headline,
-          client?.tone,
-          headlineMeta
-            ? {
-                setup: headlineMeta.setup,
-                punch: headlineMeta.punch,
-                emphasis_word: headlineMeta.emphasis_word,
-                brand_colors: client?.brand_colors,
-              }
-            : { brand_colors: client?.brand_colors }
+          client ?? undefined,
+          {
+            setup: headlineMeta?.setup,
+            punch: headlineMeta?.punch,
+            emphasis_word: headlineMeta?.emphasis_word,
+            creative_format: request?.creative_format,
+          }
         );
       } catch (e) {
         console.warn("[download] Text composite failed, serving without text:", e);
