@@ -26,9 +26,9 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Homepage — 80% grey (#cccccc) fallback */
+/* Homepage grey (#a3a3a3) fallback */
 .home-surface {
-  color: #cccccc !important;
+  color: #a3a3a3 !important;
 }
 
 .home-surface h1,
@@ -36,10 +36,10 @@ body {
 .home-surface select,
 .home-surface p.home-primary-text,
 .home-surface .home-primary-text {
-  color: #cccccc !important;
+  color: #a3a3a3 !important;
 }
 
 .home-surface .home-btn-primary {
-  background-color: #cccccc !important;
+  background-color: #a3a3a3 !important;
   color: #09090b !important;
 }

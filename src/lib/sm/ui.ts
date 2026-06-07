@@ -2,8 +2,8 @@
 
 export const SIGNALOPS_TM = "SignalOps™";
 
-/** 80% grey — homepage (#cccccc) */
-export const HOME_GREY = "#cccccc";
+/** Homepage grey — 20% darker than #cccccc */
+export const HOME_GREY = "#a3a3a3";
 export const HOME_GREY_TEXT_STYLE = { color: HOME_GREY } as const;
 export const HOME_GREY_BTN_STYLE = {
   backgroundColor: HOME_GREY,
