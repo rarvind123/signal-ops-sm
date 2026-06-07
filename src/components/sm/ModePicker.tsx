@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 import {
   btnGhost,
-  btnPrimary,
+  HOME_BTN_PRIMARY,
   HOME_TEXT_GREY,
   label,
   SIGNALOPS_TM,
@@ -14,9 +14,10 @@ import type { SMCreativeFormat } from "@/types/sm";
 
 export type SMMode = "single_post" | "campaign";
 
+const homeSurface = "home-surface flex min-h-[72vh] flex-col";
 const homeHeading = `text-base font-medium tracking-tight ${HOME_TEXT_GREY}`;
 const homeField =
-  "w-full rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-sm text-[#cccccc] placeholder:text-zinc-600 outline-none transition-colors focus:border-zinc-600 focus:bg-zinc-900/60";
+  "w-full rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-sm placeholder:text-zinc-600 outline-none transition-colors focus:border-zinc-600 focus:bg-zinc-900/60";
 
 export default function ModePicker({
   onSelectFormat,
@@ -40,7 +41,7 @@ export default function ModePicker({
 
   if (showSocialChoice) {
     return (
-      <div className={`flex min-h-[72vh] flex-col ${HOME_TEXT_GREY}`}>
+      <div className={homeSurface}>
         <header className="mb-16 flex items-start justify-between gap-4">
           <Image
             src="/inventious-logo.png"
@@ -94,7 +95,7 @@ export default function ModePicker({
   }
 
   return (
-    <div className={`flex min-h-[72vh] flex-col ${HOME_TEXT_GREY}`}>
+    <div className={homeSurface}>
       <header className="mb-16">
         <Image
           src="/inventious-logo.png"
@@ -154,7 +155,7 @@ export default function ModePicker({
           type="button"
           onClick={handleContinue}
           disabled={!selectedFormat?.available}
-          className={`${btnPrimary} w-fit`}
+          className={`${HOME_BTN_PRIMARY} w-fit`}
         >
           Continue
         </button>

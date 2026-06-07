@@ -23,7 +23,7 @@ import VisualApproachCard from "@/components/sm/VisualApproachCard";
 import AdminPanel from "@/components/sm/AdminPanel";
 import ClientGallery from "@/components/sm/ClientGallery";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
-import { HOME_TEXT_GREY, SIGNALOPS_TM } from "@/lib/sm/ui";
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 
 type SMStep = "brand" | "brief" | "campaign_brief" | "signalops" | "assets";
 
@@ -197,7 +197,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-[#060608]">
       <div
-        className={`flex-1 px-6 py-8 sm:px-10 sm:py-12 ${mode === null ? HOME_TEXT_GREY : "text-zinc-200"}`}
+        className={`flex-1 px-6 py-8 sm:px-10 sm:py-12 ${mode === null ? "home-surface" : "text-zinc-200"}`}
       >
         <div className="mx-auto flex max-w-2xl flex-col gap-10">
         {mode !== null && (

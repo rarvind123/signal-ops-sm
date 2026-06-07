@@ -3,7 +3,9 @@
 export const SIGNALOPS_TM = "SignalOps™";
 
 /** 80% grey — homepage primary text (replaces near-white) */
-export const HOME_TEXT_GREY = "text-[#cccccc]";
+export const HOME_TEXT_GREY = "home-primary-text";
+
+export const HOME_BTN_PRIMARY = "home-btn-primary rounded-lg px-5 py-2.5 text-sm font-medium transition-opacity";
 
 export const label = "text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500";
 
