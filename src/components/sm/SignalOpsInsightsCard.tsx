@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
-import { btnPrimary, btnSecondary, label, sectionTitle } from "@/lib/sm/ui";
+import { btnPrimary, btnSecondary, label, sectionTitle, SIGNALOPS_TM } from "@/lib/sm/ui";
 import type { SMCreativeLens, SMSignalOpsOutput } from "@/types/sm";
 
 const QUALITY_THRESHOLD = 6.5;
@@ -55,7 +55,7 @@ export default function SignalOpsInsightsCard({
         method: "POST",
       });
       const newOutput = (await res.json()) as SMSignalOpsOutput & { error?: string };
-      if (!res.ok) throw new Error(newOutput.error ?? "SignalOps failed");
+      if (!res.ok) throw new Error(newOutput.error ?? `${SIGNALOPS_TM} failed`);
       setQualityOverride(false);
       onRedo?.(newOutput);
     } finally {
@@ -68,7 +68,7 @@ export default function SignalOpsInsightsCard({
       <div className="mb-5 border-b border-zinc-800 pb-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-400">
-            ✦ SignalOps Creative Direction
+            ✦ {SIGNALOPS_TM} Creative Direction
           </span>
           {lionsScore >= 8 && (
             <span className="rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-xs text-green-400">

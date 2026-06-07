@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { label } from "@/lib/sm/ui";
+import { label, SIGNALOPS_TM } from "@/lib/sm/ui";
 
 const ADMIN_KEY = "Mumbai";
 
@@ -79,7 +79,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-white">Admin Panel</h1>
-            <p className="text-sm text-zinc-500">SignalOps — Inventious</p>
+            <p className="text-sm text-zinc-500">{SIGNALOPS_TM} — Inventious</p>
           </div>
           <div className="flex items-center gap-4">
             <button
@@ -151,7 +151,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   {[
                     { label: "Clients", value: summary.total_clients },
                     { label: "Images generated", value: summary.total_images_generated },
-                    { label: "SignalOps runs", value: summary.total_signalops_runs },
+                    { label: `${SIGNALOPS_TM} runs`, value: summary.total_signalops_runs },
                     { label: "Image cost", value: `$${summary.image_cost_usd}` },
                     { label: "AI cost", value: `$${summary.signalops_cost_usd}` },
                     {
@@ -190,7 +190,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     <tr className="border-b border-zinc-800 text-xs text-zinc-500">
                       <th className="px-4 py-2 text-left">Client</th>
                       <th className="px-4 py-2 text-right">Images</th>
-                      <th className="px-4 py-2 text-right">SignalOps runs</th>
+                      <th className="px-4 py-2 text-right">{SIGNALOPS_TM} runs</th>
                       <th className="px-4 py-2 text-right">Est. cost</th>
                     </tr>
                   </thead>
@@ -224,7 +224,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 </table>
               </div>
               <p className="text-xs text-zinc-600">
-                Cost estimate: $0.04/image (Replicate FLUX 1.1 Pro) + $0.02/SignalOps run
+                Cost estimate: $0.04/image (Replicate FLUX 1.1 Pro) + $0.02/{SIGNALOPS_TM} run
                 (OpenRouter Claude Sonnet)
               </p>
             </div>

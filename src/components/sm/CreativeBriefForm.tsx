@@ -11,6 +11,7 @@ import {
   sectionSub,
   sectionTitle,
   select,
+  SIGNALOPS_TM,
 } from "@/lib/sm/ui";
 import type {
   SMClient,
@@ -228,7 +229,7 @@ export default function CreativeBriefForm({
         disabled={loading || !brief.trim() || (isSocial && platforms.length === 0)}
         className={`${btnPrimary} w-fit`}
       >
-        {loading ? "Analyzing…" : "Run SignalOps"}
+        {loading ? "Analyzing…" : `Run ${SIGNALOPS_TM}`}
       </button>
     </form>
   );

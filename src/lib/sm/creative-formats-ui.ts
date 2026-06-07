@@ -49,7 +49,7 @@ export const CREATIVE_FORMATS: CreativeFormatOption[] = [
   {
     id: "pitch_deck",
     label: "Pitch Presentation",
-    description: "Investor and client presentations powered by SignalOps.",
+    description: "Investor and client presentations powered by SignalOps™.",
     icon: "📊",
     available: false,
     comingSoonLabel: "Coming soon",

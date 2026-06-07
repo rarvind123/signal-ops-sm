@@ -1,3 +1,4 @@
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 import type { SMCreativeLens } from "@/types/sm";
 
 export interface CreativeLensOption {
@@ -10,7 +11,7 @@ export interface CreativeLensOption {
 export const CREATIVE_LENSES: CreativeLensOption[] = [
   {
     id: "signalops",
-    name: "SignalOps",
+    name: SIGNALOPS_TM,
     tagline: "Default creative intelligence",
     description:
       "Balanced strategic direction — insight, emotion, and platform-native execution.",

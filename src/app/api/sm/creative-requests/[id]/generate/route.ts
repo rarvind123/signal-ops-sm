@@ -14,6 +14,7 @@ import {
   type FluxAspectRatio,
 } from "@/lib/sm/image-gen";
 import { smRouteHandler } from "@/lib/sm/api-auth";
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 import { generateTVScript } from "@/lib/sm/tv-script";
 import {
   createGeneratedAsset,
@@ -66,7 +67,7 @@ export async function POST(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
     if (!signalopsRow) {
-      return NextResponse.json({ error: "SignalOps output not found" }, { status: 400 });
+      return NextResponse.json({ error: `${SIGNALOPS_TM} output not found` }, { status: 400 });
     }
 
     let signalops = signalopsRow;

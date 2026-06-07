@@ -23,6 +23,7 @@ import VisualApproachCard from "@/components/sm/VisualApproachCard";
 import AdminPanel from "@/components/sm/AdminPanel";
 import ClientGallery from "@/components/sm/ClientGallery";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 
 type SMStep = "brand" | "brief" | "campaign_brief" | "signalops" | "assets";
 
@@ -182,12 +183,12 @@ export default function Home() {
       });
       const output = (await res.json()) as SMSignalOpsOutput & { error?: string };
       if (!res.ok) {
-        throw new Error(output.error ?? "SignalOps failed");
+        throw new Error(output.error ?? `${SIGNALOPS_TM} failed`);
       }
       setSignalOpsOutput(output);
       setStep("signalops");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "SignalOps failed");
+      setError(e instanceof Error ? e.message : `${SIGNALOPS_TM} failed`);
     } finally {
       setSignalopsLoading(false);
     }
@@ -195,12 +196,12 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#060608]">
-      <div className="flex-1 px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
+      <div
+        className={`flex-1 px-6 py-8 sm:px-10 sm:py-12 ${mode === null ? "text-zinc-300" : "text-zinc-200"}`}
+      >
         <div className="mx-auto flex max-w-2xl flex-col gap-10">
-        <header
-          className={`flex items-start justify-between gap-6 ${mode === null ? "justify-end" : ""}`}
-        >
-          {mode !== null && (
+        {mode !== null && (
+          <header className="flex items-start justify-between gap-6">
             <div>
               <Image
                 src="/inventious-logo.png"
@@ -214,9 +215,7 @@ export default function Home() {
                 {mode === "campaign" ? "Social media campaign" : formatMeta?.label}
               </p>
             </div>
-          )}
-          <div className="flex items-center gap-4">
-            {mode !== null && step !== "brand" && (
+            {step !== "brand" && (
               <button
                 type="button"
                 onClick={handleStartOver}
@@ -225,15 +224,8 @@ export default function Home() {
                 ← Start over
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowAdminPrompt(true)}
-              className="text-xs text-zinc-700 transition-colors hover:text-zinc-500"
-            >
-              Admin
-            </button>
-          </div>
-        </header>
+          </header>
+        )}
 
         {showAdminPrompt && !showAdmin && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -428,14 +420,14 @@ export default function Home() {
               className="h-5 w-auto object-contain object-left opacity-60"
             />
             <span className="text-xs text-zinc-700">·</span>
-            <span className="text-xs text-zinc-600">SignalOps Creative Engine</span>
+            <span className="text-xs text-zinc-600">{SIGNALOPS_TM} Creative Engine</span>
           </div>
 
           <nav className="flex items-center gap-5">
             {[
               {
                 label: "Feedback",
-                href: "mailto:hello@inventious.in?subject=SignalOps Feedback",
+                href: `mailto:hello@inventious.in?subject=${encodeURIComponent(`${SIGNALOPS_TM} Feedback`)}`,
               },
               { label: "Support", href: "mailto:hello@inventious.in" },
               { label: "Privacy", href: "#" },
@@ -448,6 +440,13 @@ export default function Home() {
                 {link.label}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={() => setShowAdminPrompt(true)}
+              className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+            >
+              Admin
+            </button>
           </nav>
 
           <div className="flex items-center gap-4">

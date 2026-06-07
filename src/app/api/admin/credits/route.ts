@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 import { getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -60,13 +61,13 @@ export async function GET(req: Request) {
 
       if (remaining !== null && remaining < 2) {
         alerts.push({
-          service: "OpenRouter (SignalOps AI)",
+          service: `OpenRouter (${SIGNALOPS_TM} AI)`,
           status: "critical",
           message: `Credit nearly exhausted: $${remaining.toFixed(2)} remaining. Top up at openrouter.ai/credits`,
         });
       } else if (remaining !== null && remaining < 10) {
         alerts.push({
-          service: "OpenRouter (SignalOps AI)",
+          service: `OpenRouter (${SIGNALOPS_TM} AI)`,
           status: "low",
           message: `Credit running low: $${remaining.toFixed(2)} remaining. Consider topping up at openrouter.ai/credits`,
         });
@@ -76,21 +77,21 @@ export async function GET(req: Request) {
             ? `$${remaining.toFixed(2)} credit remaining`
             : "API key valid";
         alerts.push({
-          service: "OpenRouter (SignalOps AI)",
+          service: `OpenRouter (${SIGNALOPS_TM} AI)`,
           status: "ok",
           message: msg,
         });
       }
     } else {
       alerts.push({
-        service: "OpenRouter (SignalOps AI)",
+        service: `OpenRouter (${SIGNALOPS_TM} AI)`,
         status: "critical",
         message: `API key invalid (HTTP ${orRes.status}). Check at openrouter.ai/keys`,
       });
     }
   } catch {
     alerts.push({
-      service: "OpenRouter (SignalOps AI)",
+      service: `OpenRouter (${SIGNALOPS_TM} AI)`,
       status: "unknown",
       message: "Could not reach OpenRouter API",
     });

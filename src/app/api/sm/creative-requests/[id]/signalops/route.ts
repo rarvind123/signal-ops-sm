@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runSignalOpsEngine } from "@/lib/sm/signalops-engine";
 import { smRouteHandler } from "@/lib/sm/api-auth";
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 import {
   getClient,
   getCreativeRequest,
@@ -43,7 +44,7 @@ export async function POST(req: Request, context: RouteContext) {
       }
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "SignalOps failed";
+    const message = e instanceof Error ? e.message : `${SIGNALOPS_TM} failed`;
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

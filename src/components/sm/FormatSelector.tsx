@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
-import { btnGhost, btnPrimary, field, label, sectionTitle } from "@/lib/sm/ui";
+import { btnGhost, btnPrimary, field, label, sectionTitle, SIGNALOPS_TM } from "@/lib/sm/ui";
 import type { SMCreativeFormat } from "@/types/sm";
 
 export default function FormatSelector({
@@ -36,7 +36,7 @@ export default function FormatSelector({
 
       <div className="flex flex-1 flex-col justify-center gap-10">
         <div className="max-w-md">
-          <p className={`${label} mb-3`}>SignalOps</p>
+          <p className={`${label} mb-3`}>{SIGNALOPS_TM}</p>
           <h1 className={`${sectionTitle} text-3xl sm:text-4xl`}>I want to create</h1>
         </div>
 

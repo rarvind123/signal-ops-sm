@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { SIGNALOPS_TM } from "@/lib/sm/ui";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
@@ -71,7 +72,7 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
 
-        <p className="text-xs text-zinc-700">✦ SignalOps Creative Engine</p>
+        <p className="text-xs text-zinc-700">✦ {SIGNALOPS_TM} Creative Engine</p>
       </div>
     </div>
   );

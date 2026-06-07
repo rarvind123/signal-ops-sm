@@ -1,5 +1,7 @@
 /** Shared minimal UI class strings for SignalOps screens */
 
+export const SIGNALOPS_TM = "SignalOps™";
+
 export const label = "text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500";
 
 export const field =

@@ -3,10 +3,14 @@
 import Image from "next/image";
 import { useState } from "react";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
-import { btnGhost, btnPrimary, field, label, sectionTitle } from "@/lib/sm/ui";
+import { btnGhost, btnPrimary, field, label, SIGNALOPS_TM } from "@/lib/sm/ui";
 import type { SMCreativeFormat } from "@/types/sm";
 
 export type SMMode = "single_post" | "campaign";
+
+const homeText = "text-zinc-300";
+const homeHeading = `text-base font-medium tracking-tight ${homeText}`;
+const homeField = `${field} ${homeText}`;
 
 export default function ModePicker({
   onSelectFormat,
@@ -51,8 +55,8 @@ export default function ModePicker({
 
         <div className="flex flex-1 flex-col justify-center gap-10">
           <div>
-            <p className={`${label} mb-3`}>SignalOps</p>
-            <h1 className={`${sectionTitle} text-3xl sm:text-4xl`}>Social media</h1>
+            <p className={`${label} mb-3`}>{SIGNALOPS_TM}</p>
+            <h1 className={`${homeHeading} text-3xl sm:text-4xl`}>Social media</h1>
             <p className="mt-2 text-sm text-zinc-500">One post or a full campaign?</p>
           </div>
 
@@ -62,7 +66,7 @@ export default function ModePicker({
               onClick={() => onSelectSocialMode("single_post")}
               className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
             >
-              <p className="text-sm font-medium text-zinc-100">Single social media creative</p>
+              <p className={`text-sm font-medium ${homeText}`}>Single social media creative</p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 One post — strategy, visual, and copy for a single piece of content.
               </p>
@@ -72,7 +76,7 @@ export default function ModePicker({
               onClick={() => onSelectSocialMode("campaign")}
               className="rounded-lg border border-zinc-800/80 bg-zinc-900/30 p-5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-900/50"
             >
-              <p className="text-sm font-medium text-zinc-100">Social media campaign</p>
+              <p className={`text-sm font-medium ${homeText}`}>Social media campaign</p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 Full strategy, calendar, briefs, and creatives for 30+ posts.
               </p>
@@ -98,8 +102,8 @@ export default function ModePicker({
 
       <div className="flex flex-1 flex-col justify-center gap-10">
         <div className="max-w-md">
-          <p className={`${label} mb-3`}>SignalOps</p>
-          <h1 className={`${sectionTitle} text-[1.28125rem] sm:text-[1.6rem]`}>
+          <p className={`${label} mb-3`}>{SIGNALOPS_TM}</p>
+          <h1 className={`${homeHeading} text-[1.28125rem] sm:text-[1.6rem]`}>
             What are you creating?
           </h1>
         </div>
@@ -113,7 +117,7 @@ export default function ModePicker({
               id="home-format"
               value={selected}
               onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
-              className={`${field} pr-10`}
+              className={`${homeField} pr-10`}
             >
               {CREATIVE_FORMATS.map((format) => (
                 <option
