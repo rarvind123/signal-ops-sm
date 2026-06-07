@@ -195,22 +195,24 @@ export default function Home() {
   return (
     <div className="min-h-screen px-6 py-8 text-zinc-200 sm:px-10 sm:py-12">
       <div className="mx-auto flex max-w-2xl flex-col gap-10">
-        <header className="flex items-start justify-between gap-6">
-          <div>
-            <Image
-              src="/inventious-logo.png"
-              alt="inventious"
-              width={378}
-              height={118}
-              className="h-8 w-auto object-contain object-left"
-              priority
-            />
-            {mode !== null && (
+        <header
+          className={`flex items-start justify-between gap-6 ${mode === null ? "justify-end" : ""}`}
+        >
+          {mode !== null && (
+            <div>
+              <Image
+                src="/inventious-logo.png"
+                alt="inventious"
+                width={378}
+                height={118}
+                className="h-8 w-auto object-contain object-left"
+                priority
+              />
               <p className="mt-2 text-sm text-zinc-500">
                 {mode === "campaign" ? "Social media campaign" : formatMeta?.label}
               </p>
-            )}
-          </div>
+            </div>
+          )}
           <div className="flex items-center gap-4">
             {mode !== null && step !== "brand" && (
               <button
