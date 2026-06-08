@@ -1,5 +1,6 @@
 import { completeJson } from "@/lib/ai";
 import { getAdSize } from "@/lib/sm/ad-sizes";
+import { buildFluxPrompt } from "@/lib/sm/flux-prompt-builder";
 import { getBrandAccentColor } from "@/lib/sm/typography";
 import type {
   SMClient,
@@ -239,16 +240,21 @@ export function buildImageGenerationPrompt(
     assetType === "reel_cover" ||
     (platform === "instagram" && assetType === "post");
 
+  const copyDep = approach?.copy_dependency ?? 3;
   const compositionNote = isVertical
-    ? layoutCompositionNote(signalops.layout_template)
+    ? copyDep <= 2
+      ? "vertical portrait, subject fills entire frame, no reserved text zones"
+      : layoutCompositionNote(signalops.layout_template)
     : platform === "linkedin"
       ? "wide landscape composition, professional setting"
       : "bold central subject, clear negative space at bottom third";
 
   const portraitRule = isVertical ? PORTRAIT_COMPOSITION_RULE : null;
 
+  const fluxCore = buildFluxPrompt(signalops, client);
+
   const parts = [
-    approach?.scene_description || signalops.visual_direction,
+    fluxCore,
     portraitRule,
     colorContextForClient(client, signalops),
     photoStyle,
@@ -257,16 +263,12 @@ export function buildImageGenerationPrompt(
     compositionNote,
     modeInstructions,
     visualConstraintsForRequest(request),
-    "professional brand advertising photograph",
-    "family-safe G-rated campaign imagery",
-    "fully clothed subjects",
     "ultra high quality",
     "sharp focus",
-    "professional lighting",
     "8k resolution",
     UNIVERSAL_EXCLUSIONS,
-    "no product packaging",
-    "no tins or bottles",
+    approach?.product_placement === "none" ? "no product packaging" : null,
+    approach?.product_placement === "none" ? "no tins or bottles" : null,
   ]
     .filter(Boolean)
     .join(", ");

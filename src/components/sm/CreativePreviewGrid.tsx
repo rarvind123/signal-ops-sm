@@ -6,6 +6,7 @@ import type {
   SMClient,
   SMGeneratedAsset,
   SMSignalOpsHeadline,
+  SMVisualApproach,
 } from "@/types/sm";
 import AssetCard from "./AssetCard";
 
@@ -13,6 +14,7 @@ export default function CreativePreviewGrid({
   assets,
   client,
   headlineMeta,
+  visualApproach,
   creativeFormat,
   onRegenerate,
   onNewBrief,
@@ -21,6 +23,7 @@ export default function CreativePreviewGrid({
   assets: SMGeneratedAsset[];
   client: SMClient;
   headlineMeta?: SMSignalOpsHeadline;
+  visualApproach?: SMVisualApproach;
   creativeFormat?: SMCreativeFormat;
   onRegenerate: (id: string, direction?: string) => Promise<void>;
   onNewBrief: () => void;
@@ -52,6 +55,7 @@ export default function CreativePreviewGrid({
             asset={asset}
             client={client}
             headlineMeta={headlineMeta}
+            visualApproach={visualApproach}
             creativeFormat={creativeFormat}
             onRegenerate={onRegenerate}
           />

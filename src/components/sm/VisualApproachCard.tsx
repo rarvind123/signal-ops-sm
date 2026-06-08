@@ -134,6 +134,22 @@ export default function VisualApproachCard({
           : `${APPROACH_LABELS[selectedMode].description} Scene regenerated for this mode.`}
       </p>
 
+      {isRecommended && output.visual_approach.impossible_element && (
+        <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+          <p className="mb-1 text-[10px] uppercase tracking-wider text-amber-400/90">
+            Impossible element
+          </p>
+          <p className="text-xs leading-relaxed text-zinc-300">
+            {output.visual_approach.impossible_element}
+          </p>
+          {output.visual_approach.unstockable_test && (
+            <p className="mt-2 border-t border-zinc-800/80 pt-2 text-xs italic text-zinc-600">
+              {output.visual_approach.unstockable_test}
+            </p>
+          )}
+        </div>
+      )}
+
       {isRecommended && output.visual_approach.obvious_ideas_rejected?.length > 0 && (
         <details className="mt-2">
           <summary className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-500">

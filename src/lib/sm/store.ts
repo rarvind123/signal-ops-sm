@@ -31,6 +31,11 @@ const DEFAULT_VISUAL_APPROACH: SMVisualApproach = {
   scene_description: "",
   product_visible: false,
   brave_score: 5,
+  impossible_element: "",
+  copy_dependency: 3,
+  image_is_the_ad: false,
+  product_placement: "none",
+  unstockable_test: "",
 };
 
 const DEFAULT_CREATIVE_ANALOGY: SMCreativeAnalogy = {

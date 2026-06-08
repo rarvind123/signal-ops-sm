@@ -177,6 +177,10 @@ export type SMLayoutTemplate =
   | "type_forward"
   | "full_bleed_top_text";
 
+export type SMCopyDependency = 1 | 2 | 3 | 4 | 5;
+
+export type SMProductPlacement = "in_scene" | "corner_stamp" | "none";
+
 export interface SMVisualApproach {
   mode: SMVisualApproachMode;
   rationale: string;
@@ -184,6 +188,11 @@ export interface SMVisualApproach {
   scene_description: string;
   product_visible: boolean;
   brave_score: number;
+  impossible_element: string;
+  copy_dependency: SMCopyDependency;
+  image_is_the_ad: boolean;
+  product_placement: SMProductPlacement;
+  unstockable_test: string;
 }
 
 export interface SMCreativeAnalogy {

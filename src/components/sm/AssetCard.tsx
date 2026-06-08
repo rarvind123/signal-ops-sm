@@ -32,6 +32,7 @@ import type {
   SMClient,
   SMGeneratedAsset,
   SMSignalOpsHeadline,
+  SMVisualApproach,
 } from "@/types/sm";
 import PublishModal from "./PublishModal";
 
@@ -126,12 +127,14 @@ export default function AssetCard({
   asset,
   client,
   headlineMeta,
+  visualApproach,
   creativeFormat,
   onRegenerate,
 }: {
   asset: SMGeneratedAsset;
   client: SMClient;
   headlineMeta?: SMSignalOpsHeadline;
+  visualApproach?: SMVisualApproach;
   creativeFormat?: SMCreativeFormat;
   onRegenerate: (id: string, direction?: string) => Promise<void>;
 }) {
@@ -156,6 +159,11 @@ export default function AssetCard({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const typo = getClientTypography(client);
   const fontProps = getTypographyFontProps(typo);
+
+  const copyDependency = visualApproach?.copy_dependency ?? 3;
+  const isConceptAd =
+    visualApproach?.image_is_the_ad === true || copyDependency <= 2;
+  const isBalancedAd = !isConceptAd && copyDependency === 3;
 
   useEffect(() => {
     setLocalAsset(asset);
@@ -343,7 +351,9 @@ export default function AssetCard({
               alt={`${platformLabel} ${typeLabel}`}
               className={
                 (() => {
-                  const layout = localAsset.layout_template ?? "full_bleed_gradient";
+                  const layout = isConceptAd
+                    ? "full_bleed_gradient"
+                    : (localAsset.layout_template ?? "full_bleed_gradient");
                   const overlay = getOverlayConfig(
                     creativeFormat,
                     5,
@@ -356,12 +366,15 @@ export default function AssetCard({
             />
             {localAsset.headline &&
               showTextOverlay &&
+              !isConceptAd &&
               (() => {
                 const tiers = resolveHeadlineTiers(localAsset.headline, headlineMeta);
                 if (!tiers) return null;
 
                 const punchWordCount = tiers.punch.split(" ").length;
-                const layout = localAsset.layout_template ?? "full_bleed_gradient";
+                const layout = isConceptAd
+                  ? "full_bleed_gradient"
+                  : (localAsset.layout_template ?? "full_bleed_gradient");
                 const brandColor = getBrandAccentColor(client);
                 const overlay = getOverlayConfig(
                   creativeFormat,
@@ -374,11 +387,13 @@ export default function AssetCard({
                 const textAtBottom = appliedOverlayOptions.textPosition === "bottom";
                 const gradientAnchor = useBand
                   ? "none"
-                  : textAtTop
-                    ? "top"
-                    : textAtBottom
-                      ? "bottom"
-                      : overlay.gradientAnchor;
+                  : isBalancedAd
+                    ? "bottom"
+                    : textAtTop
+                      ? "top"
+                      : textAtBottom
+                        ? "bottom"
+                        : overlay.gradientAnchor;
                 const wrapperClass = useBand
                   ? overlay.wrapperClass
                   : textAtTop
@@ -386,7 +401,16 @@ export default function AssetCard({
                     : textAtBottom && overlay.gradientAnchor === "top"
                       ? "absolute bottom-0 left-0 right-0"
                       : overlay.wrapperClass;
-                const sizes = TEXT_SIZE_MAP[appliedOverlayOptions.textSize];
+                const textSizeKey = isBalancedAd
+                  ? appliedOverlayOptions.textSize === "xl"
+                    ? "lg"
+                    : appliedOverlayOptions.textSize === "lg"
+                      ? "md"
+                      : appliedOverlayOptions.textSize === "md"
+                        ? "sm"
+                        : "sm"
+                  : appliedOverlayOptions.textSize;
+                const sizes = TEXT_SIZE_MAP[textSizeKey];
                 const setupWeight = Math.max(typo.fontWeight - 200, 300);
                 const punchWeight = Math.min(typo.fontWeight + 200, 900);
                 const accentColor = getReadableBrandAccent(client);
@@ -481,7 +505,9 @@ export default function AssetCard({
               })()}
             {logoUrl &&
               (() => {
-                const layout = localAsset.layout_template ?? "full_bleed_gradient";
+                const layout = isConceptAd
+                  ? "full_bleed_gradient"
+                  : (localAsset.layout_template ?? "full_bleed_gradient");
                 const overlay = getOverlayConfig(
                   creativeFormat,
                   5,
@@ -489,15 +515,21 @@ export default function AssetCard({
                   getBrandAccentColor(client)
                 );
                 if (overlay.logoInBand) return null;
+                const logoPosition = isConceptAd || isBalancedAd
+                  ? "bottom-right"
+                  : overlay.logoPosition;
+                const logoSizeClass = isConceptAd
+                  ? "h-5 max-w-[80px]"
+                  : "h-8 max-w-[110px]";
                 return (
                   <div
-                    className={`absolute z-20 ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg)}`}
+                    className={`absolute z-20 ${LOGO_POSITION_CLASSES[logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg, isConceptAd)}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={logoUrl}
                       alt={client.name}
-                      className="h-8 w-auto max-w-[110px] object-contain"
+                      className={`w-auto object-contain ${logoSizeClass}`}
                     />
                   </div>
                 );
@@ -603,12 +635,22 @@ export default function AssetCard({
         />
       )}
 
-      {localAsset.headline && (
+      {localAsset.headline && !isConceptAd && (
         <div className="px-3 pt-3">
           <p className="text-sm text-zinc-200">&ldquo;{localAsset.headline}&rdquo;</p>
         </div>
       )}
-      {localAsset.copy && !isTextOnly && (
+      {isConceptAd && visualApproach?.impossible_element && (
+        <div className="px-3 pt-3">
+          <p className="text-[10px] uppercase tracking-wider text-amber-400/80">
+            Concept ad — image only
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+            {visualApproach.impossible_element}
+          </p>
+        </div>
+      )}
+      {localAsset.copy && !isTextOnly && copyDependency >= 4 && (
         <div className="px-3 pb-2 pt-1">
           <p className="line-clamp-3 text-xs leading-relaxed text-zinc-500">{localAsset.copy}</p>
         </div>

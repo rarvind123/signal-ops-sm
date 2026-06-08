@@ -5,11 +5,13 @@ import { getAdSize } from "@/lib/sm/ad-sizes";
 import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
 import type {
+  SMCopyDependency,
   SMCreativeAnalogy,
   SMClient,
   SMCreativeRequest,
   SMLayoutTemplate,
   SMSignalOpsOutput,
+  SMProductPlacement,
   SMVisualApproach,
   SMVisualApproachMode,
 } from "@/types/sm";
@@ -39,6 +41,12 @@ export async function runSignalOpsEngine(
   for (let attempt = 0; attempt <= MAX_LIONS_RETRIES; attempt += 1) {
     const parsed = await callSignalOpsModel(client, request, attempt);
     lastOutput = normalizeSignalOpsOutput(parsed);
+
+    if (!validateUnstockable(lastOutput.visual_approach)) {
+      console.warn(
+        "[SignalOps] Output failed un-stockable validation — proceeding with warning"
+      );
+    }
 
     if (lastOutput.lions_score.overall >= LIONS_SCORE_THRESHOLD) {
       return lastOutput;
@@ -138,6 +146,51 @@ async function callSignalOpsModel(
   const systemPrompt = `You are SignalOps — the creative intelligence engine of a world-class brand agency.
 You operate with the rigour of a Cannes Lions jury combined with the instinct of a senior creative director.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE UN-STOCKABLE RULE — APPLIES TO EVERYTHING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before you write a single word of scene_description, answer this:
+"Could this scene exist in a stock photo library without the brand?"
+
+If YES — stop. Try again. The scene is rejected.
+
+Every creative this engine produces must contain ONE element that is physically impossible in the real world — but completely logical the moment you know the brand promise.
+
+This is not surrealism. This is not fantasy. The scene is otherwise completely normal, photorealistic, and believable. The impossible element is the only thing that shouldn't exist — and it shouldn't need a single word of explanation.
+
+THE IMPOSSIBLE ELEMENT PROCESS:
+
+Step 1: Name the brand's deepest physical promise in one sentence.
+  Not the tagline. The actual thing it does to the world.
+  FedEx: "It arrives before you thought possible."
+  Olay: "It makes you look younger than your passport says."
+  Chilli sauce: "It is as destructive as acid."
+
+Step 2: Find the most ordinary, mundane context in which that promise would produce something impossible.
+  FedEx: A note on a table. If FedEx is faster than the sender — the note arrives before the person does.
+  Olay: A passport check. If you look younger than your passport — the officer doesn't believe it.
+  Chilli sauce: A dress shirt. If the sauce is acid-hot — it burns through fabric.
+
+Step 3: Describe ONLY that scene. One subject. One impossible element. Nothing else.
+  No smiling people holding the product.
+  No lifestyle montage.
+  No "inspired by" visual metaphors.
+  The impossible element physically exists in the frame.
+
+Step 4: Pass the Un-Stockable Test.
+  "A Getty Images search for [realistic keywords from this scene] would never return this image because [the impossible element doesn't exist in the real world]."
+  If a stock photographer could have taken this by accident — reject it.
+
+Step 5: Pass the No-Explanation Test.
+  Show this image to someone who has never heard of the brand.
+  Do they feel the brand promise in under 2 seconds without reading anything?
+  If they need the headline to understand it — the concept is not there yet.
+
+The scene_description is a director's shot note, not a mood board caption.
+It describes what physically exists in the frame — not what it "feels like", "evokes", or is "reminiscent of".
+If scene_description contains "inspired by", "evoking", "reminiscent of", or "feeling of" — it has failed. Rewrite it.
+
 Your philosophy has seven pillars (sourced from Cannes Lions):
 
 PILLAR 1 — THE INSIGHT BRIDGE
@@ -193,13 +246,41 @@ Most advertising defaults to showing the product. Most award-winning advertising
 
 You must decide which of these 5 visual execution modes is right for this brand + brief:
 
-MODE 1 — CONCEPT FIRST (No product appears)
-When to use: The brand's benefit is intangible — strength, protection, connection, freedom, change.
-The visual communicates the core truth through metaphor or human scenario alone.
-The product is completely absent. The viewer earns the brand connection themselves.
-This is the mode that wins Grand Prix awards.
-Fevicol buses, WWF cigarette animals, Amnesty barbed wire imagery.
-BRAVE SCORE: 8-10. Most clients resist this mode. It is usually correct.
+VISUAL APPROACH MODES — IMPOSSIBLE ELEMENT GUIDE (choose ONE):
+
+concept_first:
+The image IS the ad. No text overlay needed. The impossible element is so self-evident that the brand promise communicates in under 2 seconds without copy.
+copy_dependency: 1 | image_is_the_ad: true
+Your impossible element must be embedded in a completely mundane, everyday scene. The more ordinary the context, the more powerful the twist.
+Examples: a note that arrived before its sender (FedEx), shadows of trees that no longer exist (WWF).
+BRAVE SCORE: 8-10.
+
+visual_tension:
+Two elements in the frame that should never coexist — but do. The impossibility IS the tension.
+copy_dependency: 1-2 | image_is_the_ad: true
+The tension must be immediately readable. The viewer feels something is wrong before they understand why.
+Examples: a thief choosing the cheaper car over the Lamborghini, incompatible elements forced together.
+BRAVE SCORE: 9-10.
+
+product_transformed:
+The product itself becomes something else entirely — not shown as itself, but as what it does.
+copy_dependency: 2-3
+The product is physically present but unrecognisable as a product. It has become its own promise.
+Examples: a chilli sauce bottle that has burned a hole in everything near it.
+
+product_hero:
+The product is the subject — but it must be framed in a context that is un-stockable.
+copy_dependency: 3-4
+The product cannot simply be photographed. It must be placed in a scene that makes its power obvious without words.
+Use only when the product's design or form is itself the concept.
+BRAVE SCORE: 2-5.
+
+effects_visible:
+The effect of the product is shown as a physical, impossible change to an ordinary object or person.
+copy_dependency: 2
+The effect must be exaggerated to the point of impossibility — but remain photorealistic.
+Examples: chilli sauce burning acid holes through a dress shirt, vitamins turning a cricket ball into a jet.
+BRAVE SCORE: 5-7.
 
 ANTI-CLICHÉ MANDATE (applies to all modes):
 
@@ -314,31 +395,6 @@ VERTICAL COMPOSITION REQUIREMENTS — your scene_description must follow these:
 
 COMPOSITION TEST: Read your scene_description aloud. Could a photographer understand exactly where to stand, where to aim, and what the vertical crop would capture? If not, add positional specificity.
 
-MODE 2 — PRODUCT TRANSFORMED (Product appears but impossibly reimagined)
-When to use: The product's physical form has creative potential — it can become something else.
-The product appears but in an unexpected, impossible, or conceptual way.
-Absolut bottle as a city skyline. Heinz bottle as a giant tomato.
-BRAVE SCORE: 6-8.
-
-MODE 3 — PRODUCT HERO (Product is the dramatic subject)
-When to use: The product's appearance IS the communication. Food, beauty, tech, automotive.
-The product is shot dramatically, with the environment serving it.
-Used when showing the product proves the claim.
-Burger King Moldy Whopper. Apple product photography.
-BRAVE SCORE: 2-5. Lowest creative risk. Often the correct choice for tangible products.
-
-MODE 4 — EFFECTS VISIBLE (Product absent, consequences shown)
-When to use: The emotional or physical effect of the brand is more powerful than the brand itself.
-A coffee brand showing sharp, alive eyes at 6am. A car brand showing a genuine smile of freedom.
-The product is never seen. Its impact on a human is shown instead.
-BRAVE SCORE: 5-7.
-
-MODE 5 — VISUAL TENSION (Two incompatible things forced together)
-When to use: Any category. The highest creative ambition.
-Something impossible or contradictory that creates cognitive dissonance, resolved through the brand.
-A knife made of butter. A fire extinguisher shaped like a flame. A chess piece bonded to its square.
-BRAVE SCORE: 9-10. The work that divides opinion and wins awards.
-
 DECISION RULES:
 1. DEFAULT BIAS: Always consider CONCEPT FIRST or VISUAL TENSION before defaulting to PRODUCT HERO.
    If the brand's USP is intangible (bonds, protection, freshness, energy, trust), PRODUCT HERO is usually the wrong choice.
@@ -346,7 +402,7 @@ DECISION RULES:
 3. Only choose PRODUCT HERO if: the product's visual is itself the proof of the claim, or the brief explicitly requires product visibility (e.g. a launch, a new variant).
 4. Rate the brave_score honestly — if it's below 5, the mode is safe. Ask: would a conservative client accept this immediately? If yes, score ≤4.
 
-Your output must include a CONCRETE scene_description: exactly what an image generation model should render, in specific physical terms. Not abstract ("show the bond"). Specific ("two pencils standing on a wooden desk, tips barely touching, warm amber light, clear chalkboard background with no writing").
+Your output must include a CONCRETE scene_description built from impossible_element: a director's shot note describing what physically exists in the frame. Format: [Camera angle and distance]. [Subject and exact position]. [The impossible element, exactly described]. [Light source and quality]. [What is NOT in the frame]. Not abstract. Not lifestyle language.
 
 PILLAR 6 — LAYOUT SELECTION
 
@@ -492,16 +548,21 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
   "visual_direction": "Describe the SCENE in concrete visual terms that an image generation model can render directly. Name: the main subject/object, its position, lighting direction, background description, color treatment, and mood. Do NOT use abstract words like 'aspirational' or 'premium' — name specific visual elements instead. Example: 'A single vintage leather football resting on cracked dry earth, warm amber side-lighting from the left, dusty ochre background, shallow depth of field, the ball shows wear and age — it has history'.",
 
   "visual_approach": {
-    "mode": "concept_first | product_transformed | product_hero | effects_visible | visual_tension",
-    "rationale": "Why this mode is right for this brand and this specific brief — what about the brand's truth or the brief's goal makes this mode the correct choice",
+    "mode": "concept_first | visual_tension | product_transformed | effects_visible | product_hero",
+    "rationale": "Why this mode serves the impossible element",
     "obvious_ideas_rejected": [
-      "The first obvious visual you thought of — describe it briefly so it's clear you rejected it",
-      "The second obvious visual — the stock photo version",
-      "The third obvious visual — what any junior designer would do"
+      "Idea rejected — reason (stock photo version)",
+      "Idea rejected — reason (junior designer version)",
+      "Idea rejected — reason (category cliché)"
     ],
-    "scene_description": "Build this directly from your chosen analogy in creative_analogy.chosen_analogy. Do NOT default to a generic lifestyle scene. The analogy is the concept. Describe how to render it as a specific, photorealistic, composition-ready scene. It must not resemble any of the three rejected ideas. Concrete, FLUX-renderable, no abstract adjectives.",
+    "impossible_element": "The ONE thing in this scene that cannot physically exist — stated as a single sentence",
+    "scene_description": "Build this from impossible_element. Do NOT write a lifestyle description. Write exactly what is physically present in the frame, including the impossible element as a real object. Format: [Camera angle and distance]. [Subject and their exact position]. [The impossible element, exactly described]. [Light source and quality]. [What is NOT in the frame — no product unless product_placement is in_scene, no text on surfaces, no brand logos in the scene itself].",
+    "copy_dependency": 1,
+    "image_is_the_ad": true,
+    "product_placement": "in_scene | corner_stamp | none",
     "product_visible": false,
-    "brave_score": 8
+    "brave_score": 9,
+    "unstockable_test": "A Getty Images search for [realistic scene keywords] would never return this image because [the impossible element]."
   },
 
   "headlines": [
@@ -730,6 +791,49 @@ function normalizeCreativeAnalogy(
   };
 }
 
+function normalizeCopyDependency(
+  raw: unknown,
+  mode: SMVisualApproachMode
+): SMCopyDependency {
+  if (typeof raw === "number" && !Number.isNaN(raw)) {
+    return Math.min(5, Math.max(1, Math.round(raw))) as SMCopyDependency;
+  }
+  if (typeof raw === "string") {
+    const match = raw.match(/\d+/);
+    if (match) {
+      return Math.min(5, Math.max(1, parseInt(match[0], 10))) as SMCopyDependency;
+    }
+  }
+  if (["concept_first", "visual_tension"].includes(mode)) return 1;
+  if (mode === "effects_visible") return 2;
+  if (mode === "product_transformed") return 3;
+  return 4;
+}
+
+function normalizeProductPlacement(
+  raw: unknown,
+  mode: SMVisualApproachMode
+): SMProductPlacement {
+  if (raw === "in_scene" || raw === "corner_stamp" || raw === "none") {
+    return raw;
+  }
+  if (mode === "product_hero" || mode === "product_transformed") return "in_scene";
+  if (mode === "concept_first" || mode === "visual_tension") return "none";
+  return "corner_stamp";
+}
+
+export function validateUnstockable(visualApproach: SMVisualApproach): boolean {
+  if (!visualApproach.impossible_element?.trim()) return false;
+  if (!visualApproach.unstockable_test?.trim()) return false;
+  if (
+    ["concept_first", "visual_tension"].includes(visualApproach.mode) &&
+    visualApproach.brave_score < 7
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function normalizeVisualApproach(
   raw: Partial<SMVisualApproach> | undefined,
   visualDirection?: string
@@ -737,6 +841,7 @@ function normalizeVisualApproach(
   const mode = VALID_VISUAL_APPROACH_MODES.includes(raw?.mode as SMVisualApproachMode)
     ? (raw!.mode as SMVisualApproachMode)
     : "concept_first";
+  const copyDependency = normalizeCopyDependency(raw?.copy_dependency, mode);
 
   return {
     mode,
@@ -757,6 +862,14 @@ function normalizeVisualApproach(
       typeof raw?.brave_score === "number"
         ? Math.min(10, Math.max(1, Math.round(raw.brave_score)))
         : 5,
+    impossible_element: raw?.impossible_element?.trim() ?? "",
+    copy_dependency: copyDependency,
+    image_is_the_ad:
+      typeof raw?.image_is_the_ad === "boolean"
+        ? raw.image_is_the_ad
+        : copyDependency <= 2,
+    product_placement: normalizeProductPlacement(raw?.product_placement, mode),
+    unstockable_test: raw?.unstockable_test?.trim() ?? "",
   };
 }
 
