@@ -138,32 +138,27 @@ export default function ModePicker({
           <label htmlFor="home-format" className={label}>
             Format
           </label>
-          <div className="relative">
-            <select
-              id="home-format"
-              value={selected}
-              onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
-              className={`${homeField} pr-10`}
-              style={HOME_GREY_TEXT_STYLE}
-            >
-              {CREATIVE_FORMATS.map((format) => (
-                <option
-                  key={format.id}
-                  value={format.id}
-                  disabled={!format.available}
-                  className="bg-zinc-950"
-                >
-                  {format.label}
-                  {!format.available && format.comingSoonLabel
-                    ? ` (${format.comingSoonLabel})`
-                    : ""}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600">
-              ▾
-            </span>
-          </div>
+          <select
+            id="home-format"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
+            className={homeField}
+            style={HOME_GREY_TEXT_STYLE}
+          >
+            {CREATIVE_FORMATS.map((format) => (
+              <option
+                key={format.id}
+                value={format.id}
+                disabled={!format.available}
+                className="bg-zinc-950"
+              >
+                {format.label}
+                {!format.available && format.comingSoonLabel
+                  ? ` (${format.comingSoonLabel})`
+                  : ""}
+              </option>
+            ))}
+          </select>
           {selectedFormat && (
             <p className="pt-1 text-sm leading-relaxed text-zinc-500">
               {selectedFormat.description}

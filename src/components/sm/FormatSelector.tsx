@@ -44,31 +44,26 @@ export default function FormatSelector({
           <label htmlFor="creative-format" className={label}>
             Format
           </label>
-          <div className="relative">
-            <select
-              id="creative-format"
-              value={selected}
-              onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
-              className={`${field} pr-10`}
-            >
-              {CREATIVE_FORMATS.map((format) => (
-                <option
-                  key={format.id}
-                  value={format.id}
-                  disabled={!format.available}
-                  className="bg-zinc-950"
-                >
-                  {format.label}
-                  {!format.available && format.comingSoonLabel
-                    ? ` (${format.comingSoonLabel})`
-                    : ""}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600">
-              ▾
-            </span>
-          </div>
+          <select
+            id="creative-format"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value as SMCreativeFormat)}
+            className={field}
+          >
+            {CREATIVE_FORMATS.map((format) => (
+              <option
+                key={format.id}
+                value={format.id}
+                disabled={!format.available}
+                className="bg-zinc-950"
+              >
+                {format.label}
+                {!format.available && format.comingSoonLabel
+                  ? ` (${format.comingSoonLabel})`
+                  : ""}
+              </option>
+            ))}
+          </select>
           {selectedFormat && (
             <p className="pt-1 text-sm leading-relaxed text-zinc-500">
               {selectedFormat.description}

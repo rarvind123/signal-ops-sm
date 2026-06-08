@@ -20,7 +20,7 @@ export const label = "text-[11px] font-medium uppercase tracking-[0.12em] text-z
 export const field =
   "w-full rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors focus:border-zinc-600 focus:bg-zinc-900/60";
 
-export const select = `${field} cursor-pointer appearance-none`;
+export const select = `${field} cursor-pointer`;
 
 export const btnPrimary =
   "rounded-lg bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-950 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40";

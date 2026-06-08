@@ -286,46 +286,36 @@ export default function CreativeBriefForm({
         <label htmlFor="goal" className={label}>
           Goal
         </label>
-        <div className="relative">
-          <select
-            id="goal"
-            value={goal}
-            onChange={(e) => setGoal(e.target.value as SMGoal)}
-            className={`${select} pr-10`}
-          >
-            {GOALS.map((g) => (
-              <option key={g.key} value={g.key} className="bg-zinc-950">
-                {g.label}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600">
-            ▾
-          </span>
-        </div>
+        <select
+          id="goal"
+          value={goal}
+          onChange={(e) => setGoal(e.target.value as SMGoal)}
+          className={select}
+        >
+          {GOALS.map((g) => (
+            <option key={g.key} value={g.key} className="bg-zinc-950">
+              {g.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-2">
         <label htmlFor="creative-lens" className={label}>
           Creative approach
         </label>
-        <div className="relative">
-          <select
-            id="creative-lens"
-            value={creativeLens}
-            onChange={(e) => setCreativeLens(e.target.value as SMCreativeLens)}
-            className={`${select} pr-10`}
-          >
-            {CREATIVE_LENSES.map((lens) => (
-              <option key={lens.id} value={lens.id} className="bg-zinc-950">
-                {lens.name}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600">
-            ▾
-          </span>
-        </div>
+        <select
+          id="creative-lens"
+          value={creativeLens}
+          onChange={(e) => setCreativeLens(e.target.value as SMCreativeLens)}
+          className={select}
+        >
+          {CREATIVE_LENSES.map((lens) => (
+            <option key={lens.id} value={lens.id} className="bg-zinc-950">
+              {lens.name}
+            </option>
+          ))}
+        </select>
         {selectedLens && creativeLens !== "signalops" && (
           <p className="text-sm leading-relaxed text-zinc-500">{selectedLens.description}</p>
         )}
