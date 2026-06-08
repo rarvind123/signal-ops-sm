@@ -565,7 +565,7 @@ export default function AssetCard({
               : "border-zinc-800 text-zinc-600 hover:text-zinc-400"
           }`}
         >
-          {showFinalizePanel ? "↑ Close editor" : "✦ Finalize creative"}
+          {showFinalizePanel ? "↑ Close editor" : "✦ Edit creative"}
         </button>
       )}
 
