@@ -1,3 +1,5 @@
+import type { SMOverlaySettings } from "@/types/sm";
+
 export type CornerPosition = "bottom-left" | "bottom-right" | "top-left" | "top-right";
 
 export interface OverlayOptions {
@@ -14,6 +16,50 @@ export interface OverlayOptions {
   pipPosition: CornerPosition;
   pipSize: "sm" | "md" | "lg";
   showPip: boolean;
+}
+
+export function overlaySettingsFromOptions(
+  options: OverlayOptions
+): SMOverlaySettings {
+  return {
+    typography_position: options.textPosition,
+    typography_size: options.textSize,
+    logo_background: options.logoBg,
+    extra_text_enabled: options.showExtraText,
+    extra_text_content: options.extraText,
+    extra_text_position: options.extraTextPosition,
+    qr_enabled: options.showQr,
+    qr_url: options.qrUrl,
+    qr_position: options.qrPosition,
+    pip_enabled: options.showPip,
+    pip_url: options.pipImageUrl,
+    pip_position: options.pipPosition,
+    pip_size: options.pipSize,
+  };
+}
+
+export function overlayOptionsFromSettings(
+  settings?: SMOverlaySettings | null
+): OverlayOptions {
+  if (!settings || Object.keys(settings).length === 0) {
+    return DEFAULT_OVERLAY_OPTIONS;
+  }
+  return {
+    textPosition: settings.typography_position ?? DEFAULT_OVERLAY_OPTIONS.textPosition,
+    textSize: settings.typography_size ?? DEFAULT_OVERLAY_OPTIONS.textSize,
+    logoBg: settings.logo_background ?? DEFAULT_OVERLAY_OPTIONS.logoBg,
+    showExtraText: settings.extra_text_enabled ?? DEFAULT_OVERLAY_OPTIONS.showExtraText,
+    extraText: settings.extra_text_content ?? DEFAULT_OVERLAY_OPTIONS.extraText,
+    extraTextPosition:
+      settings.extra_text_position ?? DEFAULT_OVERLAY_OPTIONS.extraTextPosition,
+    showQr: settings.qr_enabled ?? DEFAULT_OVERLAY_OPTIONS.showQr,
+    qrUrl: settings.qr_url ?? DEFAULT_OVERLAY_OPTIONS.qrUrl,
+    qrPosition: settings.qr_position ?? DEFAULT_OVERLAY_OPTIONS.qrPosition,
+    showPip: settings.pip_enabled ?? DEFAULT_OVERLAY_OPTIONS.showPip,
+    pipImageUrl: settings.pip_url ?? DEFAULT_OVERLAY_OPTIONS.pipImageUrl,
+    pipPosition: settings.pip_position ?? DEFAULT_OVERLAY_OPTIONS.pipPosition,
+    pipSize: settings.pip_size ?? DEFAULT_OVERLAY_OPTIONS.pipSize,
+  };
 }
 
 export const DEFAULT_OVERLAY_OPTIONS: OverlayOptions = {

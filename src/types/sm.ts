@@ -223,6 +223,22 @@ export interface SMSignalOpsOutput {
   created_at: string;
 }
 
+export interface SMOverlaySettings {
+  typography_position?: "bottom" | "top";
+  typography_size?: "sm" | "md" | "lg" | "xl";
+  logo_background?: "pill" | "none" | "circle";
+  extra_text_enabled?: boolean;
+  extra_text_content?: string;
+  extra_text_position?: "bottom-left" | "bottom-right" | "bottom-center";
+  qr_enabled?: boolean;
+  qr_url?: string;
+  qr_position?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
+  pip_enabled?: boolean;
+  pip_url?: string | null;
+  pip_position?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
+  pip_size?: "sm" | "md" | "lg";
+}
+
 export interface SMGeneratedAsset {
   id: string;
   request_id: string;
@@ -236,6 +252,7 @@ export interface SMGeneratedAsset {
   generation_prompt?: string;
   layout_template?: SMLayoutTemplate;
   ad_size_id?: string;
+  overlay_settings?: SMOverlaySettings;
   status: "pending" | "generating" | "done" | "failed";
   error_message?: string;
   created_at: string;

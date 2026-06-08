@@ -1,22 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import type React from "react";
-import { btnPrimary, field } from "@/lib/sm/ui";
+import { field } from "@/lib/sm/ui";
 import type { OverlayOptions } from "@/lib/sm/overlay-options";
 
 export default function CreativeFinalizePanel({
   options,
   onChange,
-  hasPendingChanges = false,
   onApply,
+  onCancel,
 }: {
   options: OverlayOptions;
   onChange: React.Dispatch<React.SetStateAction<OverlayOptions>>;
-  hasPendingChanges?: boolean;
-  onApply?: () => void;
+  onApply: () => Promise<void>;
+  onCancel: () => void;
 }) {
+  const [isSaving, setIsSaving] = useState(false);
   const set = (patch: Partial<OverlayOptions>) =>
     onChange((prev) => ({ ...prev, ...patch }));
+
+  async function handleApplyChanges() {
+    setIsSaving(true);
+    try {
+      await onApply();
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 border-t border-zinc-800 bg-zinc-900/50 p-4">
@@ -292,15 +303,24 @@ export default function CreativeFinalizePanel({
         )}
       </div>
 
-      {hasPendingChanges && onApply && (
+      <div className="mt-6 flex gap-3 border-t border-zinc-800 pt-4">
         <button
           type="button"
-          onClick={onApply}
-          className={`${btnPrimary} w-full py-2.5 text-sm`}
+          onClick={() => void handleApplyChanges()}
+          disabled={isSaving}
+          className="flex-1 rounded-lg bg-white py-2.5 text-sm font-semibold text-black transition-colors hover:bg-zinc-100 disabled:opacity-50"
         >
-          Apply changes
+          {isSaving ? "Saving…" : "Apply changes"}
         </button>
-      )}
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="px-4 py-2.5 text-sm text-zinc-500 transition-colors hover:text-zinc-300 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

@@ -34,3 +34,6 @@ ALTER TABLE sm_generated_assets ADD COLUMN IF NOT EXISTS ad_size_id TEXT;
 
 -- Lateral thinking: perfect analogy layer
 ALTER TABLE sm_signalops_outputs ADD COLUMN IF NOT EXISTS creative_analogy JSONB DEFAULT '{}';
+
+-- Creative editor overlay settings
+ALTER TABLE sm_generated_assets ADD COLUMN IF NOT EXISTS overlay_settings JSONB DEFAULT '{}';

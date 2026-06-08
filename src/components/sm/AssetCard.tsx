@@ -13,6 +13,7 @@ import {
   CORNER_CLASSES,
   DEFAULT_OVERLAY_OPTIONS,
   logoBgClass,
+  overlayOptionsFromSettings,
   PIP_SIZE_CLASS,
   TEXT_SIZE_MAP,
   type OverlayOptions,
@@ -154,8 +155,6 @@ export default function AssetCard({
     useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
   const [showFinalizePanel, setShowFinalizePanel] = useState(false);
 
-  const hasPendingOverlayChanges =
-    JSON.stringify(draftOverlayOptions) !== JSON.stringify(appliedOverlayOptions);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const typo = getClientTypography(client);
   const fontProps = getTypographyFontProps(typo);
@@ -168,6 +167,12 @@ export default function AssetCard({
   useEffect(() => {
     setLocalAsset(asset);
   }, [asset]);
+
+  useEffect(() => {
+    const options = overlayOptionsFromSettings(asset.overlay_settings);
+    setDraftOverlayOptions(options);
+    setAppliedOverlayOptions(options);
+  }, [asset.id, asset.overlay_settings]);
 
   useEffect(() => {
     if (!typo.isCustomFont || !typo.fontFamily) return;
@@ -301,6 +306,30 @@ export default function AssetCard({
     } finally {
       setRegenerating(false);
     }
+  }
+
+  async function handleApplyOverlayChanges() {
+    const res = await fetch(`/api/sm/assets/${localAsset.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overlay_options: draftOverlayOptions }),
+    });
+    if (!res.ok) {
+      console.error("Failed to save overlay settings");
+      return;
+    }
+    const updated = (await res.json()) as SMGeneratedAsset;
+    setLocalAsset((prev) => ({
+      ...prev,
+      overlay_settings: updated.overlay_settings,
+    }));
+    setAppliedOverlayOptions(draftOverlayOptions);
+    setShowFinalizePanel(false);
+  }
+
+  function handleCancelOverlayChanges() {
+    setDraftOverlayOptions(appliedOverlayOptions);
+    setShowFinalizePanel(false);
   }
 
   async function handleDownload() {
@@ -630,8 +659,8 @@ export default function AssetCard({
         <CreativeFinalizePanel
           options={draftOverlayOptions}
           onChange={setDraftOverlayOptions}
-          hasPendingChanges={hasPendingOverlayChanges}
-          onApply={() => setAppliedOverlayOptions(draftOverlayOptions)}
+          onApply={handleApplyOverlayChanges}
+          onCancel={handleCancelOverlayChanges}
         />
       )}
 

@@ -267,6 +267,9 @@ function mapGeneratedAsset(row: Record<string, unknown>): SMGeneratedAsset {
       ? (row.layout_template as SMGeneratedAsset["layout_template"])
       : undefined,
     ad_size_id: row.ad_size_id ? String(row.ad_size_id) : undefined,
+    overlay_settings: row.overlay_settings
+      ? (row.overlay_settings as SMGeneratedAsset["overlay_settings"])
+      : undefined,
     status: row.status as SMGeneratedAsset["status"],
     error_message: row.error_message ? String(row.error_message) : undefined,
     created_at: String(row.created_at),
