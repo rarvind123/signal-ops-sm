@@ -66,6 +66,7 @@ export default function CreativeBriefForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [marketAds, setMarketAds] = useState<MetaMarketAd[]>([]);
+  const [marketSource, setMarketSource] = useState<"meta" | "ai" | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(false);
   const [marketSearched, setMarketSearched] = useState(false);
 
@@ -80,8 +81,12 @@ export default function CreativeBriefForm({
         category: client.usp ?? "",
       });
       const res = await fetch(`/api/sm/market-reference?${params}`);
-      const data = (await res.json()) as { ads?: MetaMarketAd[] };
+      const data = (await res.json()) as {
+        ads?: MetaMarketAd[];
+        source?: "meta" | "ai";
+      };
       setMarketAds(data.ads ?? []);
+      setMarketSource(data.source ?? null);
       setMarketSearched(true);
     } catch {
       // silently fail
@@ -133,7 +138,9 @@ export default function CreativeBriefForm({
           creative_lens: creativeLens,
           creative_format: activeFormat,
           market_context:
-            marketAds.length > 0 ? buildMarketContextSummary(marketAds) : undefined,
+            marketAds.length > 0
+              ? buildMarketContextSummary(marketAds, marketSource ?? "meta")
+              : undefined,
           ad_size_id: selectedSizeId || undefined,
         }),
       });
@@ -209,6 +216,18 @@ export default function CreativeBriefForm({
         )}
         {marketAds.length > 0 && (
           <div className="flex flex-col gap-2">
+            {marketSource === "ai" && (
+              <p className="mb-2 flex items-center gap-1 text-xs text-zinc-600">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500/60" />
+                AI-generated market context (connect Meta Ad Library for live data)
+              </p>
+            )}
+            {marketSource === "meta" && (
+              <p className="mb-2 flex items-center gap-1 text-xs text-zinc-600">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500/60" />
+                Live Meta Ad Library
+              </p>
+            )}
             <p className="text-xs text-zinc-500">
               What&apos;s currently running — SignalOps will differentiate from these
             </p>

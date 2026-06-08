@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  generateAiMarketContext,
   getCategoryBrands,
   type MetaMarketAd,
 } from "@/lib/sm/market-reference";
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
     const token = process.env.META_ACCESS_TOKEN ?? "";
 
     if (!token) {
-      return { ads: [] as MetaMarketAd[] };
+      const aiAds = await generateAiMarketContext(brand, category);
+      return { ads: aiAds, source: "ai" as const };
     }
 
     const searchTerms = [brand, category, ...getCategoryBrands(brand)]
@@ -57,6 +59,6 @@ export async function GET(req: Request) {
       return true;
     });
 
-    return { ads: deduped.slice(0, 8) };
+    return { ads: deduped.slice(0, 8), source: "meta" as const };
   });
 }
