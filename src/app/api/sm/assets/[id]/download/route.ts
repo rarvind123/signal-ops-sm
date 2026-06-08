@@ -48,15 +48,19 @@ async function buildDownloadImage(
     layoutTemplate === "brand_band_bottom"
       ? "bottom-right"
       : layoutTemplate === "brand_band_left"
-        ? "bottom-left"
+        ? "top-left"
         : layoutTemplate === "full_bleed_top_text"
           ? "bottom-right"
           : "top-right";
+  const logoOnSolidBand =
+    layoutTemplate === "brand_band_bottom" || layoutTemplate === "brand_band_left";
 
   try {
     const logoUrl = client ? await getClientLogoUrl(client.id) : null;
     if (logoUrl) {
-      imageBuffer = await compositeLogoOntoImage(imageBuffer, logoUrl, logoPosition);
+      imageBuffer = await compositeLogoOntoImage(imageBuffer, logoUrl, logoPosition, {
+        skipGlow: logoOnSolidBand,
+      });
     }
   } catch (e) {
     console.warn("[download] Logo composite failed, serving without logo:", e);

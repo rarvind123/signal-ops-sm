@@ -5,7 +5,8 @@ import sharp from "sharp";
 export async function compositeLogoOntoImage(
   imageBuffer: Buffer,
   logoUrl: string,
-  position: "top-right" | "top-left" | "bottom-right" | "bottom-left" = "top-right"
+  position: "top-right" | "top-left" | "bottom-right" | "bottom-left" = "top-right",
+  options?: { skipGlow?: boolean }
 ): Promise<Buffer> {
   const logoRes = await fetch(logoUrl);
   if (!logoRes.ok) {
@@ -35,35 +36,37 @@ export async function compositeLogoOntoImage(
   };
   const { top, left } = positions[position];
 
-  const glowSize = Math.round(logoMaxWidth * 1.15);
-  const glowBuffer = await sharp(logoBuffer)
-    .resize({ width: glowSize, withoutEnlargement: true })
-    .blur(4)
-    .tint({ r: 255, g: 255, b: 255 })
-    .toBuffer();
+  const layers: sharp.OverlayOptions[] = [];
 
-  const glowMeta = await sharp(glowBuffer).metadata();
-  const glowW = glowMeta.width ?? glowSize;
-  const glowH = glowMeta.height ?? logoH;
+  if (!options?.skipGlow) {
+    const glowSize = Math.round(logoMaxWidth * 1.15);
+    const glowBuffer = await sharp(logoBuffer)
+      .resize({ width: glowSize, withoutEnlargement: true })
+      .blur(4)
+      .tint({ r: 255, g: 255, b: 255 })
+      .toBuffer();
 
-  const glowTop = top - Math.round((glowH - logoH) / 2);
-  const glowLeft = left - Math.round((glowW - logoW) / 2);
+    const glowMeta = await sharp(glowBuffer).metadata();
+    const glowW = glowMeta.width ?? glowSize;
+    const glowH = glowMeta.height ?? logoH;
 
-  return image
-    .composite([
-      {
-        input: glowBuffer,
-        top: Math.max(0, glowTop),
-        left: Math.max(0, glowLeft),
-        blend: "over",
-      },
-      {
-        input: resizedLogo,
-        top,
-        left,
-        blend: "over",
-      },
-    ])
-    .jpeg({ quality: 90 })
-    .toBuffer();
+    const glowTop = top - Math.round((glowH - logoH) / 2);
+    const glowLeft = left - Math.round((glowW - logoW) / 2);
+
+    layers.push({
+      input: glowBuffer,
+      top: Math.max(0, glowTop),
+      left: Math.max(0, glowLeft),
+      blend: "over",
+    });
+  }
+
+  layers.push({
+    input: resizedLogo,
+    top,
+    left,
+    blend: "over",
+  });
+
+  return image.composite(layers).jpeg({ quality: 90 }).toBuffer();
 }

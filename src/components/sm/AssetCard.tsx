@@ -145,9 +145,14 @@ export default function AssetCard({
   );
   const [localAsset, setLocalAsset] = useState(asset);
   const [showTextOverlay, setShowTextOverlay] = useState(true);
-  const [overlayOptions, setOverlayOptions] =
+  const [draftOverlayOptions, setDraftOverlayOptions] =
+    useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
+  const [appliedOverlayOptions, setAppliedOverlayOptions] =
     useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
   const [showFinalizePanel, setShowFinalizePanel] = useState(false);
+
+  const hasPendingOverlayChanges =
+    JSON.stringify(draftOverlayOptions) !== JSON.stringify(appliedOverlayOptions);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const typo = getClientTypography(client);
   const fontProps = getTypographyFontProps(typo);
@@ -170,18 +175,18 @@ export default function AssetCard({
   }, [typo.isCustomFont, typo.fontFamily]);
 
   useEffect(() => {
-    if (!overlayOptions.qrUrl || !overlayOptions.showQr) {
+    if (!appliedOverlayOptions.qrUrl || !appliedOverlayOptions.showQr) {
       setQrDataUrl(null);
       return;
     }
-    QRCode.toDataURL(overlayOptions.qrUrl, {
+    QRCode.toDataURL(appliedOverlayOptions.qrUrl, {
       width: 80,
       margin: 1,
       color: { dark: "#000000", light: "#ffffff" },
     })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(null));
-  }, [overlayOptions.qrUrl, overlayOptions.showQr]);
+  }, [appliedOverlayOptions.qrUrl, appliedOverlayOptions.showQr]);
 
   useEffect(() => {
     if (!localAsset.storage_url) return;
@@ -305,7 +310,7 @@ export default function AssetCard({
     const res = await fetch(`/api/sm/assets/${localAsset.id}/download`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ overlay_options: overlayOptions }),
+      body: JSON.stringify({ overlay_options: appliedOverlayOptions }),
     });
     if (!res.ok) return;
     const blob = await res.blob();
@@ -365,8 +370,8 @@ export default function AssetCard({
                   brandColor
                 );
                 const useBand = Boolean(overlay.bandPosition);
-                const textAtTop = !useBand && overlayOptions.textPosition === "top";
-                const textAtBottom = !useBand && overlayOptions.textPosition === "bottom";
+                const textAtTop = appliedOverlayOptions.textPosition === "top";
+                const textAtBottom = appliedOverlayOptions.textPosition === "bottom";
                 const gradientAnchor = useBand
                   ? "none"
                   : textAtTop
@@ -381,16 +386,30 @@ export default function AssetCard({
                     : textAtBottom && overlay.gradientAnchor === "top"
                       ? "absolute bottom-0 left-0 right-0"
                       : overlay.wrapperClass;
-                const sizes = TEXT_SIZE_MAP[overlayOptions.textSize];
+                const sizes = TEXT_SIZE_MAP[appliedOverlayOptions.textSize];
                 const setupWeight = Math.max(typo.fontWeight - 200, 300);
                 const punchWeight = Math.min(typo.fontWeight + 200, 900);
                 const accentColor = getReadableBrandAccent(client);
+                const logoClearsText =
+                  useBand &&
+                  overlay.logoInBand &&
+                  overlay.logoPosition.startsWith("top") &&
+                  textAtTop;
+                const bandContainerClass = useBand
+                  ? `${overlay.containerClass} ${
+                      textAtTop
+                        ? `justify-start ${logoClearsText ? "pt-16" : "pt-8"}`
+                        : overlay.bandPosition === "bottom"
+                          ? "justify-center"
+                          : "justify-end pb-4"
+                    }`
+                  : overlay.containerClass;
 
                 const textBlock = (
-                  <div className={overlay.containerClass}>
+                  <div className={`${bandContainerClass} max-w-full overflow-hidden`}>
                     {tiers.setup && (
                       <p
-                        className={`${fontProps.className} mb-0.5`}
+                        className={`${fontProps.className} mb-0.5 break-words`}
                         style={{
                           color: overlay.setupColor,
                           fontWeight: setupWeight,
@@ -400,6 +419,7 @@ export default function AssetCard({
                           lineHeight: 1.25,
                           textShadow: overlay.setupShadow,
                           fontFamily: fontProps.fontFamily,
+                          wordBreak: "break-word",
                         }}
                       >
                         {tiers.setup}
@@ -409,7 +429,7 @@ export default function AssetCard({
                       punch={tiers.punch}
                       emphasisWord={headlineMeta?.emphasis_word}
                       accentColor={accentColor}
-                      cssClass={fontProps.className}
+                      cssClass={`${fontProps.className} break-words`}
                       fontWeight={punchWeight}
                       letterSpacing={
                         typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
@@ -446,7 +466,7 @@ export default function AssetCard({
                     {textBlock}
                     {logoUrl && overlay.logoInBand && (
                       <div
-                        className={`absolute ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(overlayOptions.logoBg)}`}
+                        className={`absolute z-20 ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg, useBand)}`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -471,7 +491,7 @@ export default function AssetCard({
                 if (overlay.logoInBand) return null;
                 return (
                   <div
-                    className={`absolute ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(overlayOptions.logoBg)}`}
+                    className={`absolute z-20 ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg)}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -482,9 +502,9 @@ export default function AssetCard({
                   </div>
                 );
               })()}
-            {overlayOptions.showExtraText && overlayOptions.extraText && (
+            {appliedOverlayOptions.showExtraText && appliedOverlayOptions.extraText && (
               <div
-                className={`absolute z-20 ${EXTRA_TEXT_POSITION_CLASSES[overlayOptions.extraTextPosition]}`}
+                className={`absolute z-20 ${EXTRA_TEXT_POSITION_CLASSES[appliedOverlayOptions.extraTextPosition]}`}
               >
                 <p
                   style={{
@@ -496,25 +516,25 @@ export default function AssetCard({
                     letterSpacing: "0.05em",
                   }}
                 >
-                  {overlayOptions.extraText}
+                  {appliedOverlayOptions.extraText}
                 </p>
               </div>
             )}
-            {overlayOptions.showQr && qrDataUrl && (
-              <div className={`absolute z-20 ${CORNER_CLASSES[overlayOptions.qrPosition]}`}>
+            {appliedOverlayOptions.showQr && qrDataUrl && (
+              <div className={`absolute z-20 ${CORNER_CLASSES[appliedOverlayOptions.qrPosition]}`}>
                 <div className="rounded-lg bg-white p-1.5 shadow-md">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={qrDataUrl} alt="QR" className="block h-14 w-14" />
                 </div>
               </div>
             )}
-            {overlayOptions.showPip && overlayOptions.pipImageUrl && (
+            {appliedOverlayOptions.showPip && appliedOverlayOptions.pipImageUrl && (
               <div
-                className={`absolute z-20 overflow-hidden rounded-xl border-2 border-white/30 shadow-lg ${CORNER_CLASSES[overlayOptions.pipPosition]} ${PIP_SIZE_CLASS[overlayOptions.pipSize]}`}
+                className={`absolute z-20 overflow-hidden rounded-xl border-2 border-white/30 shadow-lg ${CORNER_CLASSES[appliedOverlayOptions.pipPosition]} ${PIP_SIZE_CLASS[appliedOverlayOptions.pipSize]}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={overlayOptions.pipImageUrl}
+                  src={appliedOverlayOptions.pipImageUrl}
                   alt="Secondary image"
                   className="h-full w-full object-cover"
                 />
@@ -558,7 +578,12 @@ export default function AssetCard({
       {localAsset.status === "done" && localAsset.storage_url && !isTextOnly && (
         <button
           type="button"
-          onClick={() => setShowFinalizePanel((prev) => !prev)}
+          onClick={() => {
+            setShowFinalizePanel((prev) => {
+              if (!prev) setDraftOverlayOptions(appliedOverlayOptions);
+              return !prev;
+            });
+          }}
           className={`w-full border-t py-2 text-xs transition-colors ${
             showFinalizePanel
               ? "border-violet-500/30 bg-violet-500/5 text-violet-400"
@@ -570,7 +595,12 @@ export default function AssetCard({
       )}
 
       {showFinalizePanel && (
-        <CreativeFinalizePanel options={overlayOptions} onChange={setOverlayOptions} />
+        <CreativeFinalizePanel
+          options={draftOverlayOptions}
+          onChange={setDraftOverlayOptions}
+          hasPendingChanges={hasPendingOverlayChanges}
+          onApply={() => setAppliedOverlayOptions(draftOverlayOptions)}
+        />
       )}
 
       {localAsset.headline && (

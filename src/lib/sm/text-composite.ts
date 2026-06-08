@@ -112,11 +112,25 @@ export async function compositeTextOntoImage(
   let textX = paddingX;
 
   if (layout === "brand_band_bottom") {
-    textBlockBottom = height - Math.round(height * 0.175);
     textX = paddingX;
+    if (options?.text_position === "top") {
+      textBlockBottom =
+        Math.round(height * 0.65) +
+        paddingY +
+        punchSize +
+        (tiers.setup ? setupSize + punchSize * 0.3 : 0);
+    } else {
+      textBlockBottom = height - Math.round(height * 0.175);
+    }
   } else if (layout === "brand_band_left") {
-    textX = Math.round(width * 0.05);
-    textBlockBottom = height - paddingY;
+    const bandWidth = Math.round(width * 0.4);
+    textX = Math.round(bandWidth * 0.1);
+    if (options?.text_position === "top") {
+      textBlockBottom =
+        paddingY + punchSize + (tiers.setup ? setupSize + punchSize * 0.3 : 0);
+    } else {
+      textBlockBottom = height - paddingY;
+    }
   } else if (!useBand && textAtTop) {
     textBlockBottom = paddingY + punchSize + (tiers.setup ? setupSize + punchSize * 0.3 : 0);
   } else if (!useBand && (layout === "type_forward" || layout === "full_bleed_top_text")) {

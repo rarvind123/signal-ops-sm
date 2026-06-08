@@ -1,15 +1,19 @@
 "use client";
 
 import type React from "react";
-import { field } from "@/lib/sm/ui";
+import { btnPrimary, field } from "@/lib/sm/ui";
 import type { OverlayOptions } from "@/lib/sm/overlay-options";
 
 export default function CreativeFinalizePanel({
   options,
   onChange,
+  hasPendingChanges = false,
+  onApply,
 }: {
   options: OverlayOptions;
   onChange: React.Dispatch<React.SetStateAction<OverlayOptions>>;
+  hasPendingChanges?: boolean;
+  onApply?: () => void;
 }) {
   const set = (patch: Partial<OverlayOptions>) =>
     onChange((prev) => ({ ...prev, ...patch }));
@@ -287,6 +291,16 @@ export default function CreativeFinalizePanel({
           </div>
         )}
       </div>
+
+      {hasPendingChanges && onApply && (
+        <button
+          type="button"
+          onClick={onApply}
+          className={`${btnPrimary} w-full py-2.5 text-sm`}
+        >
+          Apply changes
+        </button>
+      )}
     </div>
   );
 }

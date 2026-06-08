@@ -4,8 +4,19 @@ import { getReplicate, isReplicateConfigured } from "@/lib/replicate";
 import { supabase } from "@/lib/supabase";
 import type { SMAssetType, SMPlatform } from "@/types/sm";
 
-const FLUX_MODEL = "black-forest-labs/flux-1.1-pro-ultra";
+const FLUX_ULTRA = "black-forest-labs/flux-1.1-pro-ultra";
+const FLUX_PRO = "black-forest-labs/flux-1.1-pro";
 const BUCKET = "sm-assets";
+
+type FluxInput = {
+  prompt: string;
+  aspect_ratio: FluxAspectRatio;
+  output_format: "jpg" | "png";
+  output_quality: number;
+  raw?: boolean;
+  safety_tolerance?: number;
+  prompt_upsampling?: boolean;
+};
 
 export type FluxAspectRatio = "1:1" | "9:16" | "16:9" | "4:5" | "3:4";
 export type AspectRatio = FluxAspectRatio;
@@ -78,7 +89,23 @@ export function formatSmImageError(error: unknown): string {
     return "Image generation unavailable: Replicate account has insufficient credit. Add billing at https://replicate.com/account/billing, wait a few minutes, then retry.";
   }
 
+  if (message.toLowerCase().includes("nsfw")) {
+    return "Image blocked by safety filter. Try Redo with a different scene direction, or simplify the brief (avoid skin-heavy close-ups).";
+  }
+
   return status ? `${message} (HTTP ${status})` : message;
+}
+
+function isNsfwError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("nsfw");
+}
+
+async function runFluxModel(model: string, input: FluxInput): Promise<Buffer> {
+  const replicate = getReplicate();
+  const output = await replicate.run(model as `${string}/${string}`, { input });
+  return resolveReplicateOutputToBuffer(output);
 }
 
 export function logSmImageError(
@@ -119,18 +146,63 @@ export async function generateMarketingImageBytes(
     );
   }
 
-  const replicate = getReplicate();
-  const output = await replicate.run(FLUX_MODEL, {
-    input: {
-      prompt: prompt.slice(0, 3800),
-      aspect_ratio: aspectRatio,
-      output_format: "jpg",
-      output_quality: 95,  // Ultra supports higher quality
-      raw: true,            // Raw mode = more photorealistic, less AI-processed look
+  const trimmedPrompt = prompt.slice(0, 3800);
+  const attempts: Array<{ model: string; input: FluxInput; label: string }> = [
+    {
+      model: FLUX_ULTRA,
+      label: "ultra-raw",
+      input: {
+        prompt: trimmedPrompt,
+        aspect_ratio: aspectRatio,
+        output_format: "jpg",
+        output_quality: 95,
+        raw: true,
+        safety_tolerance: 5,
+      },
     },
-  });
+    {
+      model: FLUX_ULTRA,
+      label: "ultra-standard",
+      input: {
+        prompt: trimmedPrompt,
+        aspect_ratio: aspectRatio,
+        output_format: "jpg",
+        output_quality: 92,
+        raw: false,
+        safety_tolerance: 6,
+      },
+    },
+    {
+      model: FLUX_PRO,
+      label: "pro-fallback",
+      input: {
+        prompt: trimmedPrompt,
+        aspect_ratio: aspectRatio,
+        output_format: "jpg",
+        output_quality: 90,
+        safety_tolerance: 6,
+        prompt_upsampling: true,
+      },
+    },
+  ];
 
-  return resolveReplicateOutputToBuffer(output);
+  let lastError: unknown;
+
+  for (const attempt of attempts) {
+    try {
+      return await runFluxModel(attempt.model, attempt.input);
+    } catch (error) {
+      lastError = error;
+      if (!isNsfwError(error)) throw error;
+      console.warn(
+        `[image-gen] NSFW block on ${attempt.label}, trying next strategy…`
+      );
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Image generation failed after safety-filter retries");
 }
 
 export async function generateAndStoreImage(

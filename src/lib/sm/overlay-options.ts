@@ -71,12 +71,19 @@ export const CORNER_CLASSES: Record<CornerPosition, string> = {
   "top-left": "top-12 left-3",
 };
 
-export function logoBgClass(logoBg: OverlayOptions["logoBg"]): string {
+export function logoBgClass(
+  logoBg: OverlayOptions["logoBg"],
+  onSolidBand = false
+): string {
   if (logoBg === "pill") {
-    return "rounded-lg bg-white/80 backdrop-blur-sm px-2 py-1.5 shadow-md";
+    return onSolidBand
+      ? "rounded-lg bg-white/95 px-2 py-1.5 shadow-sm"
+      : "rounded-lg bg-white/80 backdrop-blur-sm px-2 py-1.5 shadow-md";
   }
   if (logoBg === "circle") {
-    return "rounded-full bg-white/80 backdrop-blur-sm p-1.5 shadow-md";
+    return onSolidBand
+      ? "rounded-full bg-white/95 p-1.5 shadow-sm"
+      : "rounded-full bg-white/80 backdrop-blur-sm p-1.5 shadow-md";
   }
   return "";
 }

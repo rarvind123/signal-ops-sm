@@ -57,7 +57,7 @@ function layoutOverlayConfig(
       return {
         gradientStyle: "none",
         wrapperClass: "absolute bottom-0 left-0 right-0 h-[35%]",
-        containerClass: "relative flex h-full flex-col justify-center px-5",
+        containerClass: "relative flex h-full min-h-0 flex-col px-5",
         gradientAnchor: "none",
         setupColor: bandText.setup,
         punchColor: bandText.punch,
@@ -74,15 +74,15 @@ function layoutOverlayConfig(
     case "brand_band_left":
       return {
         gradientStyle: "none",
-        wrapperClass: "absolute top-0 left-0 bottom-0 w-2/5",
-        containerClass: "relative flex h-full flex-col justify-end p-4",
+        wrapperClass: "absolute top-0 left-0 bottom-0 w-2/5 z-10",
+        containerClass: "relative flex h-full min-h-0 flex-col p-4",
         gradientAnchor: "none",
         setupColor: bandText.setup,
         punchColor: bandText.punch,
         fontSize,
         setupShadow: "none",
         punchShadow: "none",
-        logoPosition: "bottom-left",
+        logoPosition: "top-left",
         bandColor: brandColor,
         bandPosition: "left",
         imageClass: "absolute top-0 right-0 bottom-0 w-3/5 object-cover",
