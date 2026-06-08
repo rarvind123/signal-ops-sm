@@ -136,6 +136,48 @@ export default function SignalOpsInsightsCard({
         <p className="text-sm text-zinc-200">{output.theme}</p>
       </Panel>
 
+      {output.creative_analogy?.chosen_analogy && (
+        <div className="mb-4 rounded-xl border border-amber-500/20 bg-zinc-900 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-sm text-amber-400">💡</span>
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+              Creative Analogy
+            </p>
+            <span className="ml-auto text-xs capitalize text-zinc-600">
+              {output.creative_analogy.analogy_domain}
+            </span>
+          </div>
+
+          <p className="mb-2 text-xs text-zinc-500">
+            {output.creative_analogy.brand_truth_distilled}
+          </p>
+
+          <p className="mb-3 text-sm font-medium leading-relaxed text-white">
+            {output.creative_analogy.chosen_analogy}
+          </p>
+
+          <p className="border-t border-zinc-800 pt-2 text-xs italic text-zinc-500">
+            {output.creative_analogy.no_explanation_test}
+          </p>
+
+          {output.creative_analogy.analogies_considered?.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-500">
+                ↓ Analogies considered and rejected (
+                {output.creative_analogy.analogies_considered.length})
+              </summary>
+              <ul className="mt-1.5 flex flex-col gap-1">
+                {output.creative_analogy.analogies_considered.map((a, i) => (
+                  <li key={i} className="pl-2 text-xs text-zinc-600 line-through">
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
       {output.be_trigger?.label && (
         <Panel title="Psychological trigger">
           <p className="text-sm font-medium text-zinc-200">{output.be_trigger.label}</p>

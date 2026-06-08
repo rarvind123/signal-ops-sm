@@ -5,6 +5,7 @@ import { getAdSize } from "@/lib/sm/ad-sizes";
 import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
 import type {
+  SMCreativeAnalogy,
   SMClient,
   SMCreativeRequest,
   SMLayoutTemplate,
@@ -137,7 +138,7 @@ async function callSignalOpsModel(
   const systemPrompt = `You are SignalOps — the creative intelligence engine of a world-class brand agency.
 You operate with the rigour of a Cannes Lions jury combined with the instinct of a senior creative director.
 
-Your philosophy has five pillars (sourced from Cannes Lions):
+Your philosophy has seven pillars (sourced from Cannes Lions):
 
 PILLAR 1 — THE INSIGHT BRIDGE
 Before writing any creative direction, you must articulate:
@@ -369,6 +370,64 @@ SELECTION RULES:
 3. brand_band_left is the most "magazine" and differentiating — use it more than expected
 4. type_forward should only be chosen when the headline is 7 words or fewer and very strong
 5. Check what layouts were recently used for this client and pick an underused one
+
+PILLAR 7 — THE PERFECT ANALOGY (The Creative Leap)
+
+This is the most important step. Before writing scene_description, you must find the perfect analogy.
+
+THE PROCESS:
+1. Distill the brand's deepest truth into ONE sharp sentence. Not the tagline. The actual truth.
+2. Search OUTSIDE the category for a real-world phenomenon, human experience, or natural fact that perfectly embodies this truth — something that would need zero explanation once seen.
+3. The analogy must be:
+   - From a completely different domain (nature, biology, sport, science, history, art, mathematics)
+   - Immediately recognisable to the audience
+   - So perfectly aligned with the brand truth that the connection is felt before it's understood
+   - Never previously used for this brand (check obvious_ideas_rejected)
+
+THE TWINS EXAMPLE:
+Brand: Fevicol
+Brand truth: Some bonds cannot be broken — not by force, not by time, not by design.
+Analogy search:
+  - Magnets? Too technical, too mechanical
+  - Siamese twins? Too medical, too uncomfortable
+  - Identical twins? YES — nature's own version of an unbreakable bond. Same DNA. Inseparable by design. No glue needed. No explanation needed.
+Analogy domain: human biology
+No-explanation test: A viewer who has never heard of Fevicol would feel "these two can never be apart" — which is exactly Fevicol's promise.
+
+MORE EXAMPLES OF THIS THINKING:
+- Himalaya baby (a mother's protective instinct) → A lioness sleeping with her cubs in golden afternoon light: ancient, fierce, gentle protection — no product needed
+- A savings brand (small actions compound) → A single drop of water that has carved a canyon over centuries: patience made visible
+- A coffee brand (clarity at the moment it matters) → A surgeon's steady hands at 6am under operating lights: peak alertness at highest stakes
+- A gym brand (invisible transformation) → A chrysalis: the most dramatic change in the world happens in complete silence and darkness
+- A data backup brand (things you can't afford to lose) → A mother's handwriting in an old recipe book: irreplaceable, irreproducible
+
+DOMAIN GUIDE (search here, not in the category):
+- NATURE: animals, weather, geology, plants, ecosystems
+- HUMAN BIOLOGY: twins, heartbeat, memory, instinct, reflex, sleep
+- SPORT: the moment before the whistle, the last mile, the weight training no one sees
+- SCIENCE: gravity, magnetism, entropy, crystallisation, photosynthesis
+- MATHEMATICS: prime numbers, fractals, infinity
+- HISTORY: the handshake that ended a war, the letter that wasn't sent
+- ART: the canvas before the first brushstroke, the rest in music
+
+THE NO-EXPLANATION TEST:
+Your chosen analogy must pass this: "A viewer who has never heard of [brand] would feel [exact brand emotion] when seeing [analogy]."
+If they would feel something else — try again.
+
+OUTPUT FORMAT for creative_analogy:
+{
+  "brand_truth_distilled": "One sentence — the actual brand truth, not the tagline",
+  "analogies_considered": [
+    "Analogy 1 — rejected because: [reason]",
+    "Analogy 2 — rejected because: [reason]",
+    "Analogy 3 — rejected because: [reason]"
+  ],
+  "chosen_analogy": "The selected analogy and exactly why it passes the no-explanation test",
+  "analogy_domain": "nature | human_biology | sport | science | history | art | mathematics",
+  "no_explanation_test": "A viewer who has never heard of [brand] would feel [X] when seeing [analogy]"
+}
+
+IMPORTANT: The scene_description MUST be built from the chosen analogy. Not from a general visual direction. The analogy IS the concept.
 ${contextBlock ? `\n---\n${contextBlock}\n---` : ""}
 
 OUTPUT RULES:
@@ -422,6 +481,14 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
     "sensitivity_flags": ["Any cultural, religious, social, or regional sensitivity that must be considered — empty array if none"]
   },
 
+  "creative_analogy": {
+    "brand_truth_distilled": "...",
+    "analogies_considered": ["...", "...", "..."],
+    "chosen_analogy": "...",
+    "analogy_domain": "nature | human_biology | sport | science | history | art | mathematics",
+    "no_explanation_test": "..."
+  },
+
   "visual_direction": "Describe the SCENE in concrete visual terms that an image generation model can render directly. Name: the main subject/object, its position, lighting direction, background description, color treatment, and mood. Do NOT use abstract words like 'aspirational' or 'premium' — name specific visual elements instead. Example: 'A single vintage leather football resting on cracked dry earth, warm amber side-lighting from the left, dusty ochre background, shallow depth of field, the ball shows wear and age — it has history'.",
 
   "visual_approach": {
@@ -432,7 +499,7 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
       "The second obvious visual — the stock photo version",
       "The third obvious visual — what any junior designer would do"
     ],
-    "scene_description": "The scene you WILL generate — it must not resemble any of the three rejected ideas. This is the scene that makes a creative director lean forward. Describe it in specific physical terms: what is in the frame, where, how it is lit, what it implies. Concrete, FLUX-renderable, no abstract adjectives.",
+    "scene_description": "Build this directly from your chosen analogy in creative_analogy.chosen_analogy. Do NOT default to a generic lifestyle scene. The analogy is the concept. Describe how to render it as a specific, photorealistic, composition-ready scene. It must not resemble any of the three rejected ideas. Concrete, FLUX-renderable, no abstract adjectives.",
     "product_visible": false,
     "brave_score": 8
   },
@@ -493,7 +560,7 @@ Return ONLY valid JSON.${retryNote}`;
 
   const response = await completeText(systemPrompt, userPrompt, "claude-sonnet-4-6", {
     maxTokens: 8192,
-    temperature: 0.7,
+    temperature: 0.92,
   });
 
   console.log("[SignalOps] Raw AI response length:", response.length);
@@ -595,6 +662,7 @@ function normalizeSignalOpsOutput(parsed: RawSignalOpsPayload): SignalOpsPayload
         : [],
     },
     visual_direction: parsed.visual_direction ?? "",
+    creative_analogy: normalizeCreativeAnalogy(parsed.creative_analogy),
     visual_approach: normalizeVisualApproach(parsed.visual_approach, parsed.visual_direction),
     headlines: Array.isArray(parsed.headlines)
       ? parsed.headlines.map((h) => ({
@@ -644,6 +712,23 @@ const VALID_VISUAL_APPROACH_MODES: SMVisualApproachMode[] = [
   "effects_visible",
   "visual_tension",
 ];
+
+function normalizeCreativeAnalogy(
+  raw: Partial<SMCreativeAnalogy> | undefined
+): SMCreativeAnalogy {
+  return {
+    brand_truth_distilled: raw?.brand_truth_distilled?.trim() ?? "",
+    analogies_considered: Array.isArray(raw?.analogies_considered)
+      ? raw.analogies_considered
+          .filter((a): a is string => typeof a === "string")
+          .map((a) => a.trim())
+          .filter(Boolean)
+      : [],
+    chosen_analogy: raw?.chosen_analogy?.trim() ?? "",
+    analogy_domain: raw?.analogy_domain?.trim() ?? "",
+    no_explanation_test: raw?.no_explanation_test?.trim() ?? "",
+  };
+}
 
 function normalizeVisualApproach(
   raw: Partial<SMVisualApproach> | undefined,

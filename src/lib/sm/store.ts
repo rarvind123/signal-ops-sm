@@ -15,6 +15,7 @@ import type {
   SMCampaignCalendarItem,
   SMCampaignStrategy,
   SMCreativeBrief,
+  SMCreativeAnalogy,
   SMCreativeRequest,
   SMGeneratedAsset,
   SMPublishJob,
@@ -30,6 +31,14 @@ const DEFAULT_VISUAL_APPROACH: SMVisualApproach = {
   scene_description: "",
   product_visible: false,
   brave_score: 5,
+};
+
+const DEFAULT_CREATIVE_ANALOGY: SMCreativeAnalogy = {
+  brand_truth_distilled: "",
+  analogies_considered: [],
+  chosen_analogy: "",
+  analogy_domain: "",
+  no_explanation_test: "",
 };
 
 function throwIfError(error: { message: string } | null): void {
@@ -228,6 +237,8 @@ function mapSignalOpsOutput(row: Record<string, unknown>): SMSignalOpsOutput {
       improvement_note: "",
     },
     visual_approach: (row.visual_approach as SMVisualApproach) ?? DEFAULT_VISUAL_APPROACH,
+    creative_analogy:
+      (row.creative_analogy as SMCreativeAnalogy) ?? DEFAULT_CREATIVE_ANALOGY,
     layout_template:
       (row.layout_template as SMSignalOpsOutput["layout_template"]) ?? "full_bleed_gradient",
     layout_rationale: row.layout_rationale ? String(row.layout_rationale) : "",
@@ -562,6 +573,7 @@ export async function saveSignalOpsOutput(
       cultural_resonance: input.cultural_resonance,
       lions_score: input.lions_score,
       visual_approach: input.visual_approach ?? DEFAULT_VISUAL_APPROACH,
+      creative_analogy: input.creative_analogy ?? DEFAULT_CREATIVE_ANALOGY,
       layout_template: input.layout_template ?? "full_bleed_gradient",
       layout_rationale: input.layout_rationale ?? "",
     })

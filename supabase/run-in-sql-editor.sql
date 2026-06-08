@@ -31,3 +31,6 @@ ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS market_context TEXT;
 -- Print / outdoor ad sizes
 ALTER TABLE sm_creative_requests ADD COLUMN IF NOT EXISTS ad_size_id TEXT;
 ALTER TABLE sm_generated_assets ADD COLUMN IF NOT EXISTS ad_size_id TEXT;
+
+-- Lateral thinking: perfect analogy layer
+ALTER TABLE sm_signalops_outputs ADD COLUMN IF NOT EXISTS creative_analogy JSONB DEFAULT '{}';

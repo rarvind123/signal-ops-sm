@@ -186,12 +186,21 @@ export interface SMVisualApproach {
   brave_score: number;
 }
 
+export interface SMCreativeAnalogy {
+  brand_truth_distilled: string;
+  analogies_considered: string[];
+  chosen_analogy: string;
+  analogy_domain: string;
+  no_explanation_test: string;
+}
+
 export interface SMSignalOpsOutput {
   id: string;
   request_id: string;
   theme: string;
   visual_direction: string;
   visual_approach: SMVisualApproach;
+  creative_analogy: SMCreativeAnalogy;
   headlines: SMSignalOpsHeadline[];
   color_recommendation: string;
   creative_notes: string;
