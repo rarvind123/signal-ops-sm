@@ -129,6 +129,8 @@ CREATE TABLE IF NOT EXISTS sm_campaigns (
   platforms        JSONB DEFAULT '[]',
   mandatory_ctas   JSONB DEFAULT '[]',
   additional_notes TEXT,
+  review_token     TEXT UNIQUE,
+  review_enabled   BOOLEAN DEFAULT FALSE,
   status           TEXT DEFAULT 'drafting',
   created_at       TIMESTAMPTZ DEFAULT NOW(),
   updated_at       TIMESTAMPTZ DEFAULT NOW()

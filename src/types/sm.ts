@@ -120,6 +120,8 @@ export interface SMCreativeRequest {
   must_exclude?: string;
   creative_format?: SMCreativeFormat;
   creative_lens?: SMCreativeLens;
+  market_context?: string;
+  ad_size_id?: string;
   status: "pending" | "processing" | "done" | "failed";
   created_at: string;
 }
@@ -168,6 +170,13 @@ export type SMVisualApproachMode =
   | "effects_visible"
   | "visual_tension";
 
+export type SMLayoutTemplate =
+  | "full_bleed_gradient"
+  | "brand_band_bottom"
+  | "brand_band_left"
+  | "type_forward"
+  | "full_bleed_top_text";
+
 export interface SMVisualApproach {
   mode: SMVisualApproachMode;
   rationale: string;
@@ -191,6 +200,8 @@ export interface SMSignalOpsOutput {
   be_trigger: SMBeTrigger;
   cultural_resonance: SMCulturalResonance;
   lions_score: SMLionsScore;
+  layout_template: SMLayoutTemplate;
+  layout_rationale: string;
   created_at: string;
 }
 
@@ -205,6 +216,8 @@ export interface SMGeneratedAsset {
   headline?: string;
   cta?: string;
   generation_prompt?: string;
+  layout_template?: SMLayoutTemplate;
+  ad_size_id?: string;
   status: "pending" | "generating" | "done" | "failed";
   error_message?: string;
   created_at: string;

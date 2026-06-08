@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
+import { LAYOUT_TEMPLATE_LABELS } from "@/lib/sm/market-reference";
+import StrategyProtected from "@/components/sm/StrategyProtected";
 import { btnPrimary, btnSecondary, label, sectionTitle, SIGNALOPS_TM } from "@/lib/sm/ui";
 import type { SMCreativeLens, SMSignalOpsOutput } from "@/types/sm";
 
@@ -42,6 +44,7 @@ export default function SignalOpsInsightsCard({
   const [selectedHeadline, setSelectedHeadline] = useState(0);
   const [qualityOverride, setQualityOverride] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const lensName = lens ? CREATIVE_LENSES.find((l) => l.id === lens)?.name : null;
 
   const lionsScore = output.lions_score?.overall ?? 0;
@@ -65,6 +68,7 @@ export default function SignalOpsInsightsCard({
 
   return (
     <div className="flex flex-col gap-6">
+      <StrategyProtected className="flex flex-col gap-6">
       <div className="mb-5 border-b border-zinc-800 pb-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-400">
@@ -145,6 +149,19 @@ export default function SignalOpsInsightsCard({
       <Panel title="Visual direction">
         <p className="text-sm leading-relaxed text-zinc-400">{output.visual_direction}</p>
       </Panel>
+
+      {output.layout_template && (
+        <Panel title="Layout">
+          <p className="text-sm font-medium text-zinc-200">
+            {LAYOUT_TEMPLATE_LABELS[output.layout_template] ?? output.layout_template}
+          </p>
+          {output.layout_rationale && (
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+              {output.layout_rationale}
+            </p>
+          )}
+        </Panel>
+      )}
 
       <Panel title="Headlines">
         <div className="flex flex-col gap-2">
@@ -277,26 +294,89 @@ export default function SignalOpsInsightsCard({
           </div>
         </div>
       )}
+      </StrategyProtected>
 
-      <div className="flex flex-wrap gap-3 pt-2">
-        <button type="button" onClick={onEdit} className={btnSecondary}>
-          Edit brief
-        </button>
-        {onChangeBrand && (
-          <button type="button" onClick={onChangeBrand} className={btnSecondary}>
-            Change brand
+      <div className="flex flex-col gap-3 border-t border-zinc-800 pt-4">
+        <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={onEdit} className={btnSecondary}>
+            Edit brief
           </button>
-        )}
-        {canContinue && (
+          {onChangeBrand && (
+            <button type="button" onClick={onChangeBrand} className={btnSecondary}>
+              Change brand
+            </button>
+          )}
+          {canContinue && (
+            <button
+              type="button"
+              onClick={() => onContinue(selectedHeadline)}
+              className={`${btnPrimary} flex-1 sm:flex-none`}
+            >
+              Continue to creatives
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
-            onClick={() => onContinue(selectedHeadline)}
-            className={`${btnPrimary} flex-1 sm:flex-none`}
+            onClick={() => setShowPremiumModal(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-600 bg-zinc-900/60 px-4 py-2.5 text-sm text-zinc-300 sm:w-auto"
           >
-            Continue to creatives
+            <span aria-hidden>📊</span>
+            <span>Export strategy as .pptx</span>
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400">
+              Premium
+            </span>
           </button>
-        )}
+          <p className="text-center text-xs text-zinc-500 sm:text-right">
+            Strategy is view-only — copying and printing are disabled
+          </p>
+        </div>
       </div>
+
+      {showPremiumModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex w-80 flex-col gap-4 rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs uppercase tracking-wider text-amber-400">Premium feature</p>
+              <h3 className="font-semibold text-white">Export Strategy as PowerPoint</h3>
+              <p className="text-sm text-zinc-400">
+                Download your complete SignalOps strategy — narrative, pillars, content calendar,
+                and creative briefs — as a branded .pptx presentation ready to share with clients.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 text-sm text-zinc-400">
+              <p>✓ Branded with your logo</p>
+              <p>✓ Full campaign strategy deck</p>
+              <p>✓ Content calendar slides</p>
+              <p>✓ Creative brief per post</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPremiumModal(false)}
+                className="flex-1 rounded border border-zinc-700 py-2 text-xs text-zinc-400"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPremiumModal(false);
+                  window.open(
+                    "mailto:hello@inventious.in?subject=SignalOps Premium Upgrade",
+                    "_blank"
+                  );
+                }}
+                className="flex-1 rounded bg-amber-600 py-2 text-xs font-medium text-white hover:bg-amber-500"
+              >
+                Contact us to upgrade
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

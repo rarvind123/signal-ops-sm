@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fluxAspectRatioForAdSize, getAdSize } from "@/lib/sm/ad-sizes";
 import {
   buildImageGenerationPrompt,
   defaultGoalLabel,
@@ -117,6 +118,8 @@ export async function POST(req: Request, context: RouteContext) {
         signalops_id: signalops.id,
         asset_type: assetType,
         platform,
+        layout_template: signalops.layout_template,
+        ad_size_id: request.ad_size_id,
         status: "generating",
       });
 
@@ -143,8 +146,15 @@ export async function POST(req: Request, context: RouteContext) {
           request
         );
 
-        const aspectRatio: FluxAspectRatio =
+        let aspectRatio: FluxAspectRatio =
           format.default_aspect_ratio ?? getAspectRatio(platform, assetType);
+
+        if (request.ad_size_id && request.creative_format) {
+          const size = getAdSize(request.creative_format, request.ad_size_id);
+          if (size) {
+            aspectRatio = fluxAspectRatioForAdSize(size);
+          }
+        }
         const bytes = await generateMarketingImageBytes(prompt, aspectRatio);
         const saved = await saveSmGeneratedImage(pending.id, bytes, ".jpg");
 

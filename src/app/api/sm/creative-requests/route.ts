@@ -59,6 +59,16 @@ export async function POST(req: Request) {
         ? body.must_exclude.trim()
         : undefined;
 
+    const market_context =
+      typeof body.market_context === "string" && body.market_context.trim()
+        ? body.market_context.trim()
+        : undefined;
+
+    const ad_size_id =
+      typeof body.ad_size_id === "string" && body.ad_size_id.trim()
+        ? body.ad_size_id.trim()
+        : undefined;
+
     const request = await createCreativeRequest({
       client_id,
       brief_text,
@@ -69,6 +79,8 @@ export async function POST(req: Request) {
       must_exclude,
       creative_format,
       creative_lens,
+      market_context,
+      ad_size_id,
     });
 
     return request;

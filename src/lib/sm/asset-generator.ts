@@ -1,4 +1,5 @@
 import { completeJson } from "@/lib/ai";
+import { getAdSize } from "@/lib/sm/ad-sizes";
 import { getBrandAccentColor } from "@/lib/sm/typography";
 import type {
   SMClient,
@@ -6,10 +7,29 @@ import type {
   SMCreativeFormat,
   SMCreativeRequest,
   SMGoal,
+  SMLayoutTemplate,
   SMPlatform,
   SMSignalOpsOutput,
   SMVisualApproachMode,
 } from "@/types/sm";
+
+const PORTRAIT_COMPOSITION_RULE =
+  "vertical portrait composition 4:5 aspect ratio, subject positioned center-frame filling majority of vertical space, natural breathing room in upper and lower thirds";
+
+function layoutCompositionNote(layout?: SMLayoutTemplate): string {
+  switch (layout) {
+    case "brand_band_bottom":
+      return "vertical portrait, subject fills top 65% of frame, bottom 35% is deliberately clean and simple — minimal visual detail in the lower section";
+    case "brand_band_left":
+      return "subject positioned in the right 60% of frame, left 40% should have soft background with minimal detail — space for text column";
+    case "type_forward":
+      return "minimal scene, clean background, subject small or partial in lower half — upper half is open, clean, high contrast";
+    case "full_bleed_top_text":
+      return "vertical portrait, strongest visual element in the lower 60% of frame, upper 40% is relatively open sky or background — text will sit at top";
+    default:
+      return "vertical portrait, subject anchored in the middle-to-upper frame, clear negative space in the lower third for text overlay";
+  }
+}
 
 export const PLATFORM_SPECS: Record<
   SMPlatform,
@@ -118,6 +138,7 @@ export function buildBriefImagePrompt(
 
   const parts = [
     sceneDescription,
+    PORTRAIT_COMPOSITION_RULE,
     compositionNote,
     modeInstructions,
     "ultra high quality commercial photography",
@@ -170,6 +191,14 @@ function colorContextForClient(client: SMClient, signalops: SMSignalOpsOutput): 
   return signalops.color_recommendation;
 }
 
+function adSizeCompositionNote(
+  request?: Pick<SMCreativeRequest, "ad_size_id" | "creative_format">
+): string | null {
+  if (!request?.ad_size_id || !request.creative_format) return null;
+  const size = getAdSize(request.creative_format, request.ad_size_id);
+  return size ? size.composition_note : null;
+}
+
 function visualConstraintsForRequest(
   request?: Pick<SMCreativeRequest, "must_include" | "must_exclude">
 ): string {
@@ -192,7 +221,10 @@ export function buildImageGenerationPrompt(
   assetType: SMAssetType,
   _headline: string,
   creativeFormat?: SMCreativeFormat,
-  request?: Pick<SMCreativeRequest, "must_include" | "must_exclude">
+  request?: Pick<
+    SMCreativeRequest,
+    "must_include" | "must_exclude" | "ad_size_id" | "creative_format"
+  >
 ): string {
   const approach = signalops.visual_approach;
   const modeInstructions =
@@ -202,18 +234,26 @@ export function buildImageGenerationPrompt(
     ? PHOTO_STYLE_MAP[client.photo_style]
     : "professional commercial photography";
 
-  const compositionNote =
-    assetType === "story" || assetType === "reel_cover"
-      ? "vertical portrait composition, subject centered"
-      : platform === "linkedin"
-        ? "wide landscape composition, professional setting"
-        : "bold central subject, clear negative space at bottom third";
+  const isVertical =
+    assetType === "story" ||
+    assetType === "reel_cover" ||
+    (platform === "instagram" && assetType === "post");
+
+  const compositionNote = isVertical
+    ? layoutCompositionNote(signalops.layout_template)
+    : platform === "linkedin"
+      ? "wide landscape composition, professional setting"
+      : "bold central subject, clear negative space at bottom third";
+
+  const portraitRule = isVertical ? PORTRAIT_COMPOSITION_RULE : null;
 
   const parts = [
     approach?.scene_description || signalops.visual_direction,
+    portraitRule,
     colorContextForClient(client, signalops),
     photoStyle,
     typographyZoneForFormat(creativeFormat),
+    adSizeCompositionNote(request),
     compositionNote,
     modeInstructions,
     visualConstraintsForRequest(request),

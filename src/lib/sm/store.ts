@@ -1,6 +1,10 @@
 import "server-only";
 
 import { randomBytes } from "crypto";
+import {
+  isReviewColumnError,
+  SCHEMA_MIGRATION_HINT,
+} from "@/lib/sm/apply-schema-migrations";
 import { normalizeCampaignStrategyOutput } from "@/lib/sm/campaign-strategy-utils";
 import { supabase } from "@/lib/supabase";
 import type {
@@ -29,7 +33,23 @@ const DEFAULT_VISUAL_APPROACH: SMVisualApproach = {
 };
 
 function throwIfError(error: { message: string } | null): void {
-  if (error) throw new Error(error.message);
+  if (!error) return;
+  if (isReviewColumnError(error.message)) {
+    throw new Error(`${SCHEMA_MIGRATION_HINT} (${error.message})`);
+  }
+  throw new Error(error.message);
+}
+
+function campaignPatchForDb(
+  patch: Partial<Omit<SMCampaign, "id" | "created_at">>,
+  options?: { includeReviewFields?: boolean }
+): Record<string, unknown> {
+  const row: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
+  if (!options?.includeReviewFields) {
+    delete row.review_enabled;
+    delete row.review_token;
+  }
+  return row;
 }
 
 function mapClient(row: Record<string, unknown>): SMClient {
@@ -165,6 +185,8 @@ function mapCreativeRequest(row: Record<string, unknown>): SMCreativeRequest {
     creative_format:
       (row.creative_format as SMCreativeRequest["creative_format"]) ?? "social_media",
     creative_lens: (row.creative_lens as SMCreativeRequest["creative_lens"]) ?? "signalops",
+    market_context: row.market_context ? String(row.market_context) : undefined,
+    ad_size_id: row.ad_size_id ? String(row.ad_size_id) : undefined,
     status: row.status as SMCreativeRequest["status"],
     created_at: String(row.created_at),
   };
@@ -206,6 +228,9 @@ function mapSignalOpsOutput(row: Record<string, unknown>): SMSignalOpsOutput {
       improvement_note: "",
     },
     visual_approach: (row.visual_approach as SMVisualApproach) ?? DEFAULT_VISUAL_APPROACH,
+    layout_template:
+      (row.layout_template as SMSignalOpsOutput["layout_template"]) ?? "full_bleed_gradient",
+    layout_rationale: row.layout_rationale ? String(row.layout_rationale) : "",
     created_at: String(row.created_at),
   };
 }
@@ -222,6 +247,10 @@ function mapGeneratedAsset(row: Record<string, unknown>): SMGeneratedAsset {
     headline: row.headline ? String(row.headline) : undefined,
     cta: row.cta ? String(row.cta) : undefined,
     generation_prompt: row.generation_prompt ? String(row.generation_prompt) : undefined,
+    layout_template: row.layout_template
+      ? (row.layout_template as SMGeneratedAsset["layout_template"])
+      : undefined,
+    ad_size_id: row.ad_size_id ? String(row.ad_size_id) : undefined,
     status: row.status as SMGeneratedAsset["status"],
     error_message: row.error_message ? String(row.error_message) : undefined,
     created_at: String(row.created_at),
@@ -467,6 +496,8 @@ export async function createCreativeRequest(
       must_exclude: input.must_exclude ?? null,
       creative_format: input.creative_format ?? "social_media",
       creative_lens: input.creative_lens ?? "signalops",
+      market_context: input.market_context ?? null,
+      ad_size_id: input.ad_size_id ?? null,
       status: "pending",
     })
     .select("*")
@@ -531,6 +562,8 @@ export async function saveSignalOpsOutput(
       cultural_resonance: input.cultural_resonance,
       lions_score: input.lions_score,
       visual_approach: input.visual_approach ?? DEFAULT_VISUAL_APPROACH,
+      layout_template: input.layout_template ?? "full_bleed_gradient",
+      layout_rationale: input.layout_rationale ?? "",
     })
     .select("*")
     .single();
@@ -602,6 +635,8 @@ export async function createGeneratedAsset(
       headline: input.headline ?? null,
       cta: input.cta ?? null,
       generation_prompt: input.generation_prompt ?? null,
+      layout_template: input.layout_template ?? null,
+      ad_size_id: input.ad_size_id ?? null,
       status: input.status ?? "pending",
       error_message: input.error_message ?? null,
     })
@@ -722,8 +757,6 @@ export async function createCampaign(
       platforms: data.platforms ?? [],
       mandatory_ctas: data.mandatory_ctas ?? [],
       additional_notes: data.additional_notes ?? null,
-      review_token: randomBytes(16).toString("hex"),
-      review_enabled: false,
       status: "drafting",
       created_at: now,
       updated_at: now,
@@ -756,11 +789,12 @@ export async function listCampaigns(clientId: string): Promise<SMCampaign[]> {
 
 export async function updateCampaign(
   id: string,
-  patch: Partial<Omit<SMCampaign, "id" | "created_at">>
+  patch: Partial<Omit<SMCampaign, "id" | "created_at">>,
+  options?: { includeReviewFields?: boolean }
 ): Promise<SMCampaign | null> {
   const { data, error } = await supabase
     .from("sm_campaigns")
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update(campaignPatchForDb(patch, options))
     .eq("id", id)
     .select("*")
     .maybeSingle();
@@ -998,7 +1032,7 @@ export async function enableCampaignReview(campaignId: string): Promise<SMCampai
     patch.review_token = randomBytes(16).toString("hex");
   }
 
-  return updateCampaign(campaignId, patch);
+  return updateCampaign(campaignId, patch, { includeReviewFields: true });
 }
 
 export async function updateCalendarItemStatus(

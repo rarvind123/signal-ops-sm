@@ -1,11 +1,13 @@
 import { completeText } from "@/lib/ai";
 import { cleanJsonResponse } from "@/lib/json-sanitize";
 import { supabase } from "@/lib/supabase";
+import { getAdSize } from "@/lib/sm/ad-sizes";
 import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
 import type {
   SMClient,
   SMCreativeRequest,
+  SMLayoutTemplate,
   SMSignalOpsOutput,
   SMVisualApproach,
   SMVisualApproachMode,
@@ -66,7 +68,7 @@ async function getRecentCreativeSignatures(clientId: string): Promise<string> {
 
   const { data: signalopsData } = await supabase
     .from("sm_signalops_outputs")
-    .select("visual_approach, color_recommendation, theme")
+    .select("visual_approach, color_recommendation, theme, layout_template")
     .in("request_id", requestIds)
     .order("created_at", { ascending: false })
     .limit(5);
@@ -91,14 +93,23 @@ async function getRecentCreativeSignatures(clientId: string): Promise<string> {
     .map((s) => s.theme)
     .filter(Boolean)
     .slice(0, 3);
+  const layouts = [
+    ...new Set(
+      signalopsData
+        .map((s) => s.layout_template as string | null)
+        .filter(Boolean)
+    ),
+  ];
 
   return `
 RECENT CREATIVE HISTORY FOR THIS CLIENT (do NOT repeat these):
 Visual approach modes used recently: ${modes.join(", ")}
+Layout templates used recently: ${layouts.length ? layouts.join(", ") : "none yet"}
 Color palettes used recently: ${colors.join(" | ")}
 Campaign themes used recently: ${themes.join(" | ")}
 
 Your output MUST use a DIFFERENT visual approach mode from the ones listed above.
+Your layout_template MUST differ from the most recently used layout.
 Your color direction MUST feel distinct from the recent palettes.
 Your theme MUST offer a fresh angle — not a variation of recent themes.
 If all 5 modes have been used recently, pick the one least recently used.`;
@@ -279,6 +290,29 @@ After writing the scene_description, verify it by underlining every noun.
 Count the nouns that are primary subjects (things the eye goes to first).
 If more than one — remove the weakest.
 
+PORTRAIT COMPOSITION RULES (applies to all social media creatives):
+
+Instagram and social media posts are vertical (4:5 or 9:16 ratio). You are always generating for a vertical portrait frame.
+
+VERTICAL COMPOSITION REQUIREMENTS — your scene_description must follow these:
+
+1. SUBJECT PLACEMENT: The main subject must be positioned in the CENTER or LOWER-CENTER of the vertical frame. Never describe a subject "in the distance" or "small in the frame" — they will disappear in portrait crop.
+
+2. UPPER THIRD: The upper third of the frame should be intentionally described. Options:
+   - Open sky (warm, cool, dramatic — specific)
+   - Architectural element (doorway top, ceiling, wall)
+   - Natural canopy (branches, leaves, light through trees)
+   - Clean gradient background
+   Avoid: putting important visual elements in the upper third (they may be cropped)
+
+3. LOWER THIRD: This is where text will sit. Always describe the lower portion of the scene as having natural breathing room — not the most detailed or busy part of the image.
+
+4. DEPTH: Describe foreground-to-background depth. A subject in the mid-ground with a soft background creates better portrait compositions than a subject far in the background.
+
+5. COMPOSITION WORDS TO USE: "fills the center of the frame", "positioned in the lower-center", "close portrait crop", "subject is primary focus from shoulder height", "vertical composition"
+
+COMPOSITION TEST: Read your scene_description aloud. Could a photographer understand exactly where to stand, where to aim, and what the vertical crop would capture? If not, add positional specificity.
+
 MODE 2 — PRODUCT TRANSFORMED (Product appears but impossibly reimagined)
 When to use: The product's physical form has creative potential — it can become something else.
 The product appears but in an unexpected, impossible, or conceptual way.
@@ -312,6 +346,29 @@ DECISION RULES:
 4. Rate the brave_score honestly — if it's below 5, the mode is safe. Ask: would a conservative client accept this immediately? If yes, score ≤4.
 
 Your output must include a CONCRETE scene_description: exactly what an image generation model should render, in specific physical terms. Not abstract ("show the bond"). Specific ("two pencils standing on a wooden desk, tips barely touching, warm amber light, clear chalkboard background with no writing").
+
+PILLAR 6 — LAYOUT SELECTION
+
+Every creative has a compositional structure. You must choose one — and vary it across creatives for the same brand.
+
+LAYOUT OPTIONS:
+
+FULL BLEED GRADIENT — Image fills the entire frame. Text overlaid in the lower third with a gradient. Logo top-right. Best for: concept-first, effects-visible, emotional scenes. Most versatile.
+
+BRAND BAND BOTTOM — Image fills top 65% of frame. Brand's primary color as a solid band in the bottom 35%. White text in the band. Logo in the band. Best for: product-adjacent content, campaigns with strong color identity, warm/premium brands.
+
+BRAND BAND LEFT — Image fills the right 60% of frame. Brand's primary color as a vertical column on the left 40%. Text in the left column, stacked vertically. Logo at bottom-left. Best for: documentary, professional, LinkedIn-first content.
+
+TYPE FORWARD — Large headline dominates the top 50% of the frame (over a clean/minimal background). Small supporting image in the bottom 50%. Best for: text-heavy concept, bold/urgent brands, when the headline IS the idea.
+
+FULL BLEED TOP TEXT — Image fills the entire frame. Text anchored at the top with a reversed gradient (dark from top, fades down). Logo bottom-right. Best for: when the image's lower half is the strongest visual element, outdoor-inspired.
+
+SELECTION RULES:
+1. Never select the same layout twice in a row for the same client
+2. brand_band_bottom should use the brand's actual primary color — not white
+3. brand_band_left is the most "magazine" and differentiating — use it more than expected
+4. type_forward should only be chosen when the headline is 7 words or fewer and very strong
+5. Check what layouts were recently used for this client and pick an underused one
 ${contextBlock ? `\n---\n${contextBlock}\n---` : ""}
 
 OUTPUT RULES:
@@ -408,6 +465,9 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
   ],
 
   "color_recommendation": "Specific palette tied to brand colours and the emotional mood. Name actual hex codes or colour descriptions, not just 'warm tones'.",
+
+  "layout_template": "full_bleed_gradient | brand_band_bottom | brand_band_left | type_forward | full_bleed_top_text",
+  "layout_rationale": "Why this layout fits this brief and brand — reference the visual strength of the scene and headline",
 
   "creative_notes": "2–3 strategic notes. Include: one thing NOT to do (the tempting generic version of this idea), one cultural or audience nuance to respect, one craft principle that would elevate this specific execution.",
 
@@ -557,7 +617,24 @@ function normalizeSignalOpsOutput(parsed: RawSignalOpsPayload): SignalOpsPayload
       overall,
       improvement_note: parsed.lions_score?.improvement_note ?? "",
     },
+    layout_template: normalizeLayoutTemplate(parsed.layout_template),
+    layout_rationale: parsed.layout_rationale?.trim() ?? "",
   };
+}
+
+const VALID_LAYOUT_TEMPLATES: SMLayoutTemplate[] = [
+  "full_bleed_gradient",
+  "brand_band_bottom",
+  "brand_band_left",
+  "type_forward",
+  "full_bleed_top_text",
+];
+
+function normalizeLayoutTemplate(raw?: string): SMLayoutTemplate {
+  if (raw && VALID_LAYOUT_TEMPLATES.includes(raw as SMLayoutTemplate)) {
+    return raw as SMLayoutTemplate;
+  }
+  return "full_bleed_gradient";
 }
 
 const VALID_VISUAL_APPROACH_MODES: SMVisualApproachMode[] = [
@@ -663,6 +740,18 @@ function buildBriefContext(request: SMCreativeRequest): string {
     request.uploaded_image_urls.length > 0
       ? `Uploaded images: ${request.uploaded_image_urls.join(", ")}`
       : null,
+    request.market_context
+      ? `\nMARKET REFERENCE — What competitors are currently running in India (differentiate from these):\n${request.market_context}`
+      : null,
   ];
+
+  if (request.ad_size_id && request.creative_format) {
+    const size = getAdSize(request.creative_format, request.ad_size_id);
+    if (size) {
+      lines.push(`\nAD SIZE: ${size.label} (${size.dimensions})`);
+      lines.push(`COMPOSITION REQUIREMENT: ${size.composition_note}`);
+    }
+  }
+
   return lines.filter(Boolean).join("\n");
 }

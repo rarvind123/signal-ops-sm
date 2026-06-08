@@ -1,13 +1,25 @@
 "use client";
 
+import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import CreativeFinalizePanel from "@/components/sm/CreativeFinalizePanel";
+import { getAdSize } from "@/lib/sm/ad-sizes";
 import {
   brightnessFromPalette,
   getImageRegionBrightness,
   selectLogoForFormat,
 } from "@/lib/sm/logo-selector";
-import { getOverlayConfig } from "@/lib/sm/overlay-config";
 import {
+  CORNER_CLASSES,
+  DEFAULT_OVERLAY_OPTIONS,
+  logoBgClass,
+  PIP_SIZE_CLASS,
+  TEXT_SIZE_MAP,
+  type OverlayOptions,
+} from "@/lib/sm/overlay-options";
+import { getOverlayConfig, type LogoPosition } from "@/lib/sm/overlay-config";
+import {
+  getBrandAccentColor,
   getClientTypography,
   getReadableBrandAccent,
   getTypographyFontProps,
@@ -22,6 +34,15 @@ import type {
   SMSignalOpsHeadline,
 } from "@/types/sm";
 import PublishModal from "./PublishModal";
+
+const EXTRA_TEXT_POSITION_CLASSES: Record<
+  OverlayOptions["extraTextPosition"],
+  string
+> = {
+  "bottom-left": "bottom-3 left-4",
+  "bottom-right": "bottom-3 right-4",
+  "bottom-center": "bottom-3 left-0 right-0 text-center",
+};
 
 function PunchLine({
   punch,
@@ -94,6 +115,13 @@ function PunchLine({
   );
 }
 
+const LOGO_POSITION_CLASSES: Record<LogoPosition, string> = {
+  "top-right": "right-3 top-3",
+  "top-left": "left-3 top-3",
+  "bottom-right": "right-3 bottom-3",
+  "bottom-left": "left-3 bottom-3",
+};
+
 export default function AssetCard({
   asset,
   client,
@@ -117,6 +145,10 @@ export default function AssetCard({
   );
   const [localAsset, setLocalAsset] = useState(asset);
   const [showTextOverlay, setShowTextOverlay] = useState(true);
+  const [overlayOptions, setOverlayOptions] =
+    useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
+  const [showFinalizePanel, setShowFinalizePanel] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const typo = getClientTypography(client);
   const fontProps = getTypographyFontProps(typo);
 
@@ -136,6 +168,20 @@ export default function AssetCard({
       document.head.removeChild(link);
     };
   }, [typo.isCustomFont, typo.fontFamily]);
+
+  useEffect(() => {
+    if (!overlayOptions.qrUrl || !overlayOptions.showQr) {
+      setQrDataUrl(null);
+      return;
+    }
+    QRCode.toDataURL(overlayOptions.qrUrl, {
+      width: 80,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null));
+  }, [overlayOptions.qrUrl, overlayOptions.showQr]);
 
   useEffect(() => {
     if (!localAsset.storage_url) return;
@@ -164,14 +210,32 @@ export default function AssetCard({
       return;
     }
 
+    const layout = localAsset.layout_template ?? "full_bleed_gradient";
+    const overlay = getOverlayConfig(
+      creativeFormat,
+      5,
+      layout,
+      getBrandAccentColor(client)
+    );
+
+    if (overlay.logoInBand) {
+      setLogoUrl(selectLogoForFormat(logos, creativeFormat) ?? logos.primary ?? null);
+      return;
+    }
+
     const imageSrc = `${localAsset.storage_url}?v=${refreshKey}`;
     const paletteBrightness = brightnessFromPalette(client.color_palette);
+    const region =
+      overlay.logoPosition === "bottom-right"
+        ? { x: 240, y: 320, w: 160, h: 80 }
+        : overlay.logoPosition === "bottom-left"
+          ? { x: 0, y: 320, w: 160, h: 80 }
+          : overlay.logoPosition === "top-left"
+            ? { x: 0, y: 0, w: 160, h: 80 }
+            : { x: 240, y: 0, w: 160, h: 80 };
 
     void getImageRegionBrightness(imageSrc, {
-      x: 240,
-      y: 0,
-      w: 160,
-      h: 80,
+      ...region,
       imgW: 400,
       imgH: 400,
     }).then((brightness) => {
@@ -193,12 +257,25 @@ export default function AssetCard({
     client.id,
     creativeFormat,
     refreshKey,
+    localAsset.layout_template,
   ]);
 
   const isTextOnly =
     localAsset.status === "done" && !localAsset.storage_url && Boolean(localAsset.copy);
   const platformLabel = localAsset.platform.charAt(0).toUpperCase() + localAsset.platform.slice(1);
   const typeLabel = isTextOnly ? "TV Script" : localAsset.asset_type.replace("_", " ");
+
+  const formatLabel = (() => {
+    if (creativeFormat === "print_ad" && localAsset.ad_size_id) {
+      const size = getAdSize("print_ad", localAsset.ad_size_id);
+      return size ? `PRINT · ${size.label.toUpperCase()}` : "PRINT AD";
+    }
+    if (creativeFormat === "outdoor" && localAsset.ad_size_id) {
+      const size = getAdSize("outdoor", localAsset.ad_size_id);
+      return size ? `OOH · ${size.label.toUpperCase()}` : "OUTDOOR";
+    }
+    return `${platformLabel.toUpperCase()} · ${typeLabel.toUpperCase()}`;
+  })();
 
   async function handleRedo() {
     setRegenerating(true);
@@ -225,7 +302,11 @@ export default function AssetCard({
       return;
     }
 
-    const res = await fetch(`/api/sm/assets/${localAsset.id}/download`);
+    const res = await fetch(`/api/sm/assets/${localAsset.id}/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overlay_options: overlayOptions }),
+    });
     if (!res.ok) return;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -255,80 +336,190 @@ export default function AssetCard({
             <img
               src={`${localAsset.storage_url}?v=${refreshKey}`}
               alt={`${platformLabel} ${typeLabel}`}
-              className="h-full w-full object-cover"
+              className={
+                (() => {
+                  const layout = localAsset.layout_template ?? "full_bleed_gradient";
+                  const overlay = getOverlayConfig(
+                    creativeFormat,
+                    5,
+                    layout,
+                    getBrandAccentColor(client)
+                  );
+                  return overlay.imageClass;
+                })()
+              }
             />
-            {logoUrl && localAsset.status === "done" && (
-              <div className="absolute right-3 top-3 rounded-lg bg-white/80 backdrop-blur-sm px-2 py-1.5 shadow-md">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={logoUrl}
-                  alt={client.name}
-                  className="h-8 w-auto max-w-[110px] object-contain"
-                />
-              </div>
-            )}
-            {localAsset.status === "done" &&
-              localAsset.storage_url &&
-              localAsset.headline &&
+            {localAsset.headline &&
               showTextOverlay &&
               (() => {
                 const tiers = resolveHeadlineTiers(localAsset.headline, headlineMeta);
                 if (!tiers) return null;
 
                 const punchWordCount = tiers.punch.split(" ").length;
-                const overlay = getOverlayConfig(creativeFormat, punchWordCount);
+                const layout = localAsset.layout_template ?? "full_bleed_gradient";
+                const brandColor = getBrandAccentColor(client);
+                const overlay = getOverlayConfig(
+                  creativeFormat,
+                  punchWordCount,
+                  layout,
+                  brandColor
+                );
+                const useBand = Boolean(overlay.bandPosition);
+                const textAtTop = !useBand && overlayOptions.textPosition === "top";
+                const textAtBottom = !useBand && overlayOptions.textPosition === "bottom";
+                const gradientAnchor = useBand
+                  ? "none"
+                  : textAtTop
+                    ? "top"
+                    : textAtBottom
+                      ? "bottom"
+                      : overlay.gradientAnchor;
+                const wrapperClass = useBand
+                  ? overlay.wrapperClass
+                  : textAtTop
+                    ? "absolute top-0 left-0 right-0"
+                    : textAtBottom && overlay.gradientAnchor === "top"
+                      ? "absolute bottom-0 left-0 right-0"
+                      : overlay.wrapperClass;
+                const sizes = TEXT_SIZE_MAP[overlayOptions.textSize];
                 const setupWeight = Math.max(typo.fontWeight - 200, 300);
                 const punchWeight = Math.min(typo.fontWeight + 200, 900);
                 const accentColor = getReadableBrandAccent(client);
 
+                const textBlock = (
+                  <div className={overlay.containerClass}>
+                    {tiers.setup && (
+                      <p
+                        className={`${fontProps.className} mb-0.5`}
+                        style={{
+                          color: overlay.setupColor,
+                          fontWeight: setupWeight,
+                          letterSpacing: typo.letterSpacing,
+                          textTransform: typo.textTransform,
+                          fontSize: sizes.setup,
+                          lineHeight: 1.25,
+                          textShadow: overlay.setupShadow,
+                          fontFamily: fontProps.fontFamily,
+                        }}
+                      >
+                        {tiers.setup}
+                      </p>
+                    )}
+                    <PunchLine
+                      punch={tiers.punch}
+                      emphasisWord={headlineMeta?.emphasis_word}
+                      accentColor={accentColor}
+                      cssClass={fontProps.className}
+                      fontWeight={punchWeight}
+                      letterSpacing={
+                        typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
+                      }
+                      textTransform={typo.textTransform}
+                      fontSize={sizes.punch}
+                      punchColor={overlay.punchColor}
+                      textShadow={overlay.punchShadow}
+                      fontFamily={fontProps.fontFamily}
+                    />
+                  </div>
+                );
+
                 return (
-                  <div className="pointer-events-none absolute bottom-0 left-0 right-0">
-                    {overlay.gradientStyle !== "none" && (
+                  <div
+                    className={`pointer-events-none ${wrapperClass}`}
+                    style={
+                      overlay.bandColor && overlay.bandPosition
+                        ? { background: overlay.bandColor }
+                        : undefined
+                    }
+                  >
+                    {overlay.gradientStyle !== "none" && gradientAnchor !== "none" && (
                       <div
-                        className="absolute bottom-0 left-0 right-0"
+                        className={`absolute left-0 right-0 ${
+                          gradientAnchor === "top" ? "top-0" : "bottom-0"
+                        }`}
                         style={{
                           height: "60%",
                           background: overlay.gradientStyle,
                         }}
                       />
                     )}
-                    <div className={overlay.containerClass}>
-                      {tiers.setup && (
-                        <p
-                          className={`${fontProps.className} mb-0.5`}
-                          style={{
-                            color: overlay.setupColor,
-                            fontWeight: setupWeight,
-                            letterSpacing: typo.letterSpacing,
-                            textTransform: typo.textTransform,
-                            fontSize: overlay.fontSize.setup,
-                            lineHeight: 1.25,
-                            textShadow: overlay.setupShadow,
-                            fontFamily: fontProps.fontFamily,
-                          }}
-                        >
-                          {tiers.setup}
-                        </p>
-                      )}
-                      <PunchLine
-                        punch={tiers.punch}
-                        emphasisWord={headlineMeta?.emphasis_word}
-                        accentColor={accentColor}
-                        cssClass={fontProps.className}
-                        fontWeight={punchWeight}
-                        letterSpacing={
-                          typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
-                        }
-                        textTransform={typo.textTransform}
-                        fontSize={overlay.fontSize.punch}
-                        punchColor={overlay.punchColor}
-                        textShadow={overlay.punchShadow}
-                        fontFamily={fontProps.fontFamily}
-                      />
-                    </div>
+                    {textBlock}
+                    {logoUrl && overlay.logoInBand && (
+                      <div
+                        className={`absolute ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(overlayOptions.logoBg)}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={logoUrl}
+                          alt={client.name}
+                          className="h-7 w-auto max-w-[90px] object-contain"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })()}
+            {logoUrl &&
+              (() => {
+                const layout = localAsset.layout_template ?? "full_bleed_gradient";
+                const overlay = getOverlayConfig(
+                  creativeFormat,
+                  5,
+                  layout,
+                  getBrandAccentColor(client)
+                );
+                if (overlay.logoInBand) return null;
+                return (
+                  <div
+                    className={`absolute ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(overlayOptions.logoBg)}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={logoUrl}
+                      alt={client.name}
+                      className="h-8 w-auto max-w-[110px] object-contain"
+                    />
+                  </div>
+                );
+              })()}
+            {overlayOptions.showExtraText && overlayOptions.extraText && (
+              <div
+                className={`absolute z-20 ${EXTRA_TEXT_POSITION_CLASSES[overlayOptions.extraTextPosition]}`}
+              >
+                <p
+                  style={{
+                    fontFamily: fontProps.fontFamily ?? "inherit",
+                    fontSize: "clamp(10px, 2.5cqi, 14px)",
+                    color: "rgba(255,255,255,0.85)",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+                    fontWeight: 400,
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {overlayOptions.extraText}
+                </p>
+              </div>
+            )}
+            {overlayOptions.showQr && qrDataUrl && (
+              <div className={`absolute z-20 ${CORNER_CLASSES[overlayOptions.qrPosition]}`}>
+                <div className="rounded-lg bg-white p-1.5 shadow-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrDataUrl} alt="QR" className="block h-14 w-14" />
+                </div>
+              </div>
+            )}
+            {overlayOptions.showPip && overlayOptions.pipImageUrl && (
+              <div
+                className={`absolute z-20 overflow-hidden rounded-xl border-2 border-white/30 shadow-lg ${CORNER_CLASSES[overlayOptions.pipPosition]} ${PIP_SIZE_CLASS[overlayOptions.pipSize]}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={overlayOptions.pipImageUrl}
+                  alt="Secondary image"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -359,10 +550,28 @@ export default function AssetCard({
         )}
 
         <div className="absolute left-2 top-2 rounded bg-black/50 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
-          {platformLabel} · {typeLabel}
+          {formatLabel}
         </div>
 
       </div>
+
+      {localAsset.status === "done" && localAsset.storage_url && !isTextOnly && (
+        <button
+          type="button"
+          onClick={() => setShowFinalizePanel((prev) => !prev)}
+          className={`w-full border-t py-2 text-xs transition-colors ${
+            showFinalizePanel
+              ? "border-violet-500/30 bg-violet-500/5 text-violet-400"
+              : "border-zinc-800 text-zinc-600 hover:text-zinc-400"
+          }`}
+        >
+          {showFinalizePanel ? "↑ Close editor" : "✦ Finalize creative"}
+        </button>
+      )}
+
+      {showFinalizePanel && (
+        <CreativeFinalizePanel options={overlayOptions} onChange={setOverlayOptions} />
+      )}
 
       {localAsset.headline && (
         <div className="px-3 pt-3">

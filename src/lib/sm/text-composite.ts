@@ -3,6 +3,7 @@ import "server-only";
 import sharp from "sharp";
 import { getOverlayConfig } from "@/lib/sm/overlay-config";
 import {
+  getBrandAccentColor,
   getClientTypography,
   getReadableBrandAccent,
   getTierFontSizesPx,
@@ -10,7 +11,8 @@ import {
   resolveHeadlineTiers,
   splitWord,
 } from "@/lib/sm/typography";
-import type { SMCreativeFormat, SMClient } from "@/types/sm";
+import { TEXT_SIZE_PX, type OverlayOptions } from "@/lib/sm/overlay-options";
+import type { SMCreativeFormat, SMClient, SMLayoutTemplate } from "@/types/sm";
 
 function escapeXml(text: string): string {
   return text.replace(/[<>&"]/g, (c) => {
@@ -50,6 +52,22 @@ function buildPunchTspans(
     .join("");
 }
 
+function topGradientDef(id: string): string {
+  return `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="black" stop-opacity="0.72"/>
+    <stop offset="40%" stop-color="black" stop-opacity="0.35"/>
+    <stop offset="100%" stop-color="black" stop-opacity="0"/>
+  </linearGradient>`;
+}
+
+function bottomGradientDef(id: string): string {
+  return `<linearGradient id="${id}" x1="0" y1="1" x2="0" y2="0">
+    <stop offset="0%" stop-color="black" stop-opacity="0.78"/>
+    <stop offset="45%" stop-color="black" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="black" stop-opacity="0"/>
+  </linearGradient>`;
+}
+
 export async function compositeTextOntoImage(
   imageBuffer: Buffer,
   headline: string,
@@ -59,6 +77,9 @@ export async function compositeTextOntoImage(
     punch?: string;
     emphasis_word?: string;
     creative_format?: SMCreativeFormat;
+    layout_template?: SMLayoutTemplate;
+    text_position?: OverlayOptions["textPosition"];
+    text_size?: OverlayOptions["textSize"];
   }
 ): Promise<Buffer> {
   const { width = 1080, height = 1080 } = await sharp(imageBuffer).metadata();
@@ -67,9 +88,17 @@ export async function compositeTextOntoImage(
   if (!tiers) return imageBuffer;
 
   const format = options?.creative_format;
+  const layout = options?.layout_template ?? "full_bleed_gradient";
+  const brandColor = client ? getBrandAccentColor(client) : null;
   const punchWordCount = tiers.punch.split(" ").length;
-  const overlay = getOverlayConfig(format, punchWordCount);
-  const { setup: setupSize, punch: punchSize } = getTierFontSizesPx(punchWordCount, width);
+  const overlay = getOverlayConfig(format, punchWordCount, layout, brandColor);
+  const sizeKey = options?.text_size ?? "md";
+  const tierPx = TEXT_SIZE_PX[sizeKey];
+  const defaultPx = getTierFontSizesPx(punchWordCount, width);
+  const setupSize = Math.round((tierPx.setup / 15) * defaultPx.setup);
+  const punchSize = Math.round((tierPx.punch / 24) * defaultPx.punch);
+  const textAtTop = options?.text_position === "top";
+  const useBand = Boolean(overlay.bandPosition);
   const paddingX = Math.round(width * (format === "print_ad" ? 0.07 : 0.05));
   const paddingY = Math.round(height * 0.05);
   const setupWeight = Math.max(typo.fontWeight - 200, 300);
@@ -78,12 +107,27 @@ export async function compositeTextOntoImage(
 
   const punchLineH = punchSize * 1.1;
   const gradientH = Math.round(height * 0.6);
-  const textBlockBottom = height - paddingY;
+
+  let textBlockBottom = height - paddingY;
+  let textX = paddingX;
+
+  if (layout === "brand_band_bottom") {
+    textBlockBottom = height - Math.round(height * 0.175);
+    textX = paddingX;
+  } else if (layout === "brand_band_left") {
+    textX = Math.round(width * 0.05);
+    textBlockBottom = height - paddingY;
+  } else if (!useBand && textAtTop) {
+    textBlockBottom = paddingY + punchSize + (tiers.setup ? setupSize + punchSize * 0.3 : 0);
+  } else if (!useBand && (layout === "type_forward" || layout === "full_bleed_top_text")) {
+    textBlockBottom = paddingY + punchSize + (tiers.setup ? setupSize + punchSize * 0.3 : 0);
+  }
+
   const punchY = textBlockBottom - punchSize * 0.2;
   const setupY = punchY - punchLineH - (tiers.setup ? setupSize * 0.3 : 0);
 
   const setupText = tiers.setup
-    ? `<text x="${paddingX}" y="${setupY}"
+    ? `<text x="${textX}" y="${setupY}"
       font-family="${typo.fontStack}" font-size="${setupSize}" font-weight="${setupWeight}"
       letter-spacing="${typo.letterSpacing}"
       fill="${overlay.setupColor}" filter="url(#shadow)">${escapeXml(tiers.setup)}</text>`
@@ -92,7 +136,7 @@ export async function compositeTextOntoImage(
   const punchLetterSpacing =
     typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing;
 
-  const punchText = `<text x="${paddingX}" y="${punchY}"
+  const punchText = `<text x="${textX}" y="${punchY}"
       font-family="${typo.fontStack}" font-size="${punchSize}" font-weight="${punchWeight}"
       letter-spacing="${punchLetterSpacing}"
       filter="url(#shadow)">${buildPunchTspans(
@@ -108,23 +152,41 @@ export async function compositeTextOntoImage(
       ? `<rect x="0" y="${height - Math.round(height * 0.22)}" width="${width}" height="${Math.round(height * 0.22)}" fill="white"/>`
       : "";
 
-  const gradientRect =
-    overlay.gradientStyle !== "none"
-      ? `<rect x="0" y="${height - gradientH}" width="${width}" height="${gradientH}" fill="url(#grad)"/>`
+  const brandBandBottom =
+    layout === "brand_band_bottom" && overlay.bandColor
+      ? `<rect x="0" y="${Math.round(height * 0.65)}" width="${width}" height="${Math.round(height * 0.35)}" fill="${overlay.bandColor}"/>`
       : "";
+
+  const brandBandLeft =
+    layout === "brand_band_left" && overlay.bandColor
+      ? `<rect x="0" y="0" width="${Math.round(width * 0.4)}" height="${height}" fill="${overlay.bandColor}"/>`
+      : "";
+
+  const gradientAnchor =
+    !useBand && textAtTop
+      ? "top"
+      : !useBand && options?.text_position === "bottom"
+        ? "bottom"
+        : overlay.gradientAnchor;
+
+  let gradientRect = "";
+  if (overlay.gradientStyle !== "none" && gradientAnchor === "bottom") {
+    gradientRect = `<rect x="0" y="${height - gradientH}" width="${width}" height="${gradientH}" fill="url(#gradBottom)"/>`;
+  } else if (overlay.gradientStyle !== "none" && gradientAnchor === "top") {
+    gradientRect = `<rect x="0" y="0" width="${width}" height="${gradientH}" fill="url(#gradTop)"/>`;
+  }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
     <defs>
-      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="black" stop-opacity="0"/>
-        <stop offset="45%" stop-color="black" stop-opacity="0.4"/>
-        <stop offset="100%" stop-color="black" stop-opacity="0.78"/>
-      </linearGradient>
+      ${bottomGradientDef("gradBottom")}
+      ${topGradientDef("gradTop")}
       <filter id="shadow">
         <feDropShadow dx="0" dy="1" stdDeviation="3" flood-opacity="0.6"/>
       </filter>
     </defs>
     ${whiteBand}
+    ${brandBandBottom}
+    ${brandBandLeft}
     ${gradientRect}
     ${setupText}
     ${punchText}

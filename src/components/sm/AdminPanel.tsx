@@ -41,6 +41,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [migrateStatus, setMigrateStatus] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -108,6 +110,44 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             {error}
           </p>
         )}
+
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-4 py-4">
+          <p className={`${label} mb-2`}>Database schema</p>
+          <p className="mb-3 text-xs leading-relaxed text-zinc-500">
+            If you see &ldquo;review_enabled column not found&rdquo;, apply pending migrations.
+            Requires <code className="text-zinc-400">DATABASE_URL</code> in Vercel env, or run{" "}
+            <code className="text-zinc-400">supabase/run-in-sql-editor.sql</code> in Supabase SQL
+            Editor.
+          </p>
+          <button
+            type="button"
+            disabled={migrating}
+            onClick={async () => {
+              setMigrating(true);
+              setMigrateStatus(null);
+              try {
+                const res = await fetch("/api/admin/migrate-schema", {
+                  method: "POST",
+                  headers: { "x-admin-key": ADMIN_KEY },
+                });
+                const json = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+                setMigrateStatus(
+                  res.ok ? (json.message ?? "Migrations applied") : (json.error ?? "Migration failed")
+                );
+              } catch {
+                setMigrateStatus("Migration request failed");
+              } finally {
+                setMigrating(false);
+              }
+            }}
+            className="rounded border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-600"
+          >
+            {migrating ? "Applying…" : "Apply schema migrations"}
+          </button>
+          {migrateStatus && (
+            <p className="mt-2 text-xs text-zinc-400">{migrateStatus}</p>
+          )}
+        </div>
 
         {!loading && !error && (
           <>

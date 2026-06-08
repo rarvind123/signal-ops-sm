@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  buildMarketContextSummary,
+  type MetaMarketAd,
+} from "@/lib/sm/market-reference";
+import { getSizesForFormat } from "@/lib/sm/ad-sizes";
 import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
 import {
   btnPrimary,
@@ -49,6 +54,8 @@ export default function CreativeBriefForm({
   onSubmit: (request: SMCreativeRequest) => Promise<void>;
 }) {
   const isSocial = activeFormat === "social_media";
+  const needsAdSize = activeFormat === "print_ad" || activeFormat === "outdoor";
+  const [selectedSizeId, setSelectedSizeId] = useState("");
   const [brief, setBrief] = useState("");
   const [mustInclude, setMustInclude] = useState("");
   const [mustExclude, setMustExclude] = useState("");
@@ -58,8 +65,41 @@ export default function CreativeBriefForm({
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [marketAds, setMarketAds] = useState<MetaMarketAd[]>([]);
+  const [loadingMarket, setLoadingMarket] = useState(false);
+  const [marketSearched, setMarketSearched] = useState(false);
 
   const selectedLens = CREATIVE_LENSES.find((l) => l.id === creativeLens);
+
+  async function searchMarketAds() {
+    if (!client.name || marketSearched) return;
+    setLoadingMarket(true);
+    try {
+      const params = new URLSearchParams({
+        brand: client.name,
+        category: client.usp ?? "",
+      });
+      const res = await fetch(`/api/sm/market-reference?${params}`);
+      const data = (await res.json()) as { ads?: MetaMarketAd[] };
+      setMarketAds(data.ads ?? []);
+      setMarketSearched(true);
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingMarket(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (brief.length > 20 && !marketSearched) void searchMarketAds();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [brief, marketSearched, client.name]);
+
+  useEffect(() => {
+    setSelectedSizeId("");
+  }, [activeFormat]);
 
   const togglePlatform = (p: SMPlatform) =>
     setPlatforms((prev) =>
@@ -68,7 +108,12 @@ export default function CreativeBriefForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!brief.trim() || (isSocial && platforms.length === 0)) return;
+    if (
+      !brief.trim() ||
+      (isSocial && platforms.length === 0) ||
+      (needsAdSize && !selectedSizeId)
+    )
+      return;
     setLoading(true);
     setError(null);
     try {
@@ -87,6 +132,9 @@ export default function CreativeBriefForm({
           must_exclude: mustExclude.trim() || undefined,
           creative_lens: creativeLens,
           creative_format: activeFormat,
+          market_context:
+            marketAds.length > 0 ? buildMarketContextSummary(marketAds) : undefined,
+          ad_size_id: selectedSizeId || undefined,
         }),
       });
       const request = (await res.json()) as SMCreativeRequest & { error?: string };
@@ -106,6 +154,43 @@ export default function CreativeBriefForm({
         <p className={`${sectionSub} mt-1`}>{client.name}</p>
       </div>
 
+      {needsAdSize && (
+        <div className="flex flex-col gap-2">
+          <span className={label}>
+            {activeFormat === "print_ad" ? "Print size" : "Format / size"}
+          </span>
+          <div className="grid grid-cols-2 gap-2">
+            {getSizesForFormat(activeFormat).map((size) => (
+              <button
+                key={size.id}
+                type="button"
+                onClick={() => setSelectedSizeId(size.id)}
+                className={`rounded-lg border px-3 py-2.5 text-left transition-all ${
+                  selectedSizeId === size.id
+                    ? "border-violet-500 bg-violet-500/10"
+                    : "border-zinc-700 hover:border-zinc-600"
+                }`}
+              >
+                <p
+                  className={`text-xs font-medium ${
+                    selectedSizeId === size.id ? "text-violet-300" : "text-zinc-300"
+                  }`}
+                >
+                  {size.label}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-600">{size.dimensions}</p>
+                <p className="mt-0.5 truncate text-xs text-zinc-700">{size.common_use}</p>
+              </button>
+            ))}
+          </div>
+          {selectedSizeId && (
+            <p className="text-xs text-zinc-600">
+              ↳ {getSizesForFormat(activeFormat).find((s) => s.id === selectedSizeId)?.common_use}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <label htmlFor="brief-text" className={label}>
           What do you want to create?
@@ -119,6 +204,34 @@ export default function CreativeBriefForm({
           required
           className={`${field} resize-none`}
         />
+        {loadingMarket && (
+          <p className="text-xs text-zinc-600">Checking what&apos;s running in market…</p>
+        )}
+        {marketAds.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-zinc-500">
+              What&apos;s currently running — SignalOps will differentiate from these
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {marketAds.slice(0, 6).map((ad) => (
+                <div
+                  key={ad.id}
+                  className="flex-shrink-0 w-20 overflow-hidden rounded border border-zinc-700 bg-zinc-800"
+                >
+                  {ad.snapshot?.images?.[0]?.original_image_url && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={ad.snapshot.images[0].original_image_url}
+                      alt=""
+                      className="h-20 w-full object-cover"
+                    />
+                  )}
+                  <p className="truncate px-1.5 py-1 text-xs text-zinc-500">{ad.page_name}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -226,7 +339,12 @@ export default function CreativeBriefForm({
 
       <button
         type="submit"
-        disabled={loading || !brief.trim() || (isSocial && platforms.length === 0)}
+        disabled={
+          loading ||
+          !brief.trim() ||
+          (isSocial && platforms.length === 0) ||
+          (needsAdSize && !selectedSizeId)
+        }
         className={`${btnPrimary} w-fit`}
       >
         {loading ? "Analyzing…" : `Run ${SIGNALOPS_TM}`}

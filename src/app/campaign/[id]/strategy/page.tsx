@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CampaignNav from "@/components/sm/CampaignNav";
 import CampaignStrategyCard from "@/components/sm/CampaignStrategyCard";
+import StrategyProtected from "@/components/sm/StrategyProtected";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
 import {
   contentMixTotal,
@@ -148,21 +149,23 @@ export default function CampaignStrategyPage() {
           </div>
         )}
 
-        <CampaignStrategyCard
-          strategy={strategy}
-          onGenerateCalendar={() => void handleGenerateCalendar()}
-          calendarLoading={calendarLoading}
-          hasCalendar={calendarCount > 0}
-          canGenerateCalendar={!isStrategyBroken(strategy)}
-        />
-        {calendarCount > 0 && (
-          <Link
-            href={`/campaign/${id}/calendar`}
-            className="text-sm text-zinc-500 hover:text-zinc-300"
-          >
-            View calendar →
-          </Link>
-        )}
+        <StrategyProtected className="flex flex-col gap-8">
+          <CampaignStrategyCard
+            strategy={strategy}
+            onGenerateCalendar={() => void handleGenerateCalendar()}
+            calendarLoading={calendarLoading}
+            hasCalendar={calendarCount > 0}
+            canGenerateCalendar={!isStrategyBroken(strategy)}
+          />
+          {calendarCount > 0 && (
+            <Link
+              href={`/campaign/${id}/calendar`}
+              className="text-sm text-zinc-500 hover:text-zinc-300"
+            >
+              View calendar →
+            </Link>
+          )}
+        </StrategyProtected>
       </div>
     </div>
   );
