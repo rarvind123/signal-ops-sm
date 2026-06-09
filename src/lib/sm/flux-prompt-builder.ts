@@ -1,5 +1,18 @@
 import type { SMClient, SMSignalOpsOutput } from "@/types/sm";
 
+/** Permanent FLUX exclusions — FLUX must never render brand products (hallucinated packaging). */
+export const FLUX_PRODUCT_EXCLUSIONS = [
+  "no product packaging",
+  "no product tubes",
+  "no product tins",
+  "no product bottles",
+  "no product containers",
+  "no brand packaging",
+  "no labeled products",
+  "no product shots",
+  "no merchandise",
+].join(", ");
+
 export function buildFluxPrompt(
   signalops: SMSignalOpsOutput,
   client: SMClient
@@ -20,9 +33,9 @@ export function buildFluxPrompt(
         : "Subject in upper-left two-thirds. Right side or bottom third open with soft background — space for headline.";
 
   const productNote =
-    approach.product_placement === "in_scene"
-      ? `${client.name} product appears naturally in the scene as described above.`
-      : "No product packaging in frame.";
+    approach.product_placement === "corner_stamp"
+      ? "No product packaging in frame. Real brand asset is overlaid after generation."
+      : "No product packaging in frame. No product of any kind in the scene.";
 
   return [
     approach.impossible_element
@@ -31,6 +44,7 @@ export function buildFluxPrompt(
     conceptCore,
     compositionGuide,
     productNote,
+    FLUX_PRODUCT_EXCLUSIONS,
     "Commercial photography. 50mm lens equivalent. Natural or single-source studio light.",
     "No text on any surface. No numbers. No words. No dates. No signage with readable text.",
     "No stock photo clichés: no hands holding product, no smiling people looking at camera, no white seamless background.",

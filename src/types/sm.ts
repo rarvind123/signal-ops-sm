@@ -179,7 +179,7 @@ export type SMLayoutTemplate =
 
 export type SMCopyDependency = 1 | 2 | 3 | 4 | 5;
 
-export type SMProductPlacement = "in_scene" | "corner_stamp" | "none";
+export type SMProductPlacement = "corner_stamp" | "none";
 
 export interface SMVisualApproach {
   mode: SMVisualApproachMode;

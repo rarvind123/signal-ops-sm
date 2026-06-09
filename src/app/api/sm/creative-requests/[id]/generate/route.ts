@@ -81,7 +81,7 @@ export async function POST(req: Request, context: RouteContext) {
           mode,
           scene_description:
             sceneDescriptionOverride ?? signalops.visual_approach.scene_description,
-          product_visible: ["product_hero", "product_transformed"].includes(mode),
+          product_visible: false,
         },
       };
     }

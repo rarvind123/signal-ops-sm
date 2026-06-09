@@ -263,16 +263,16 @@ Examples: a thief choosing the cheaper car over the Lamborghini, incompatible el
 BRAVE SCORE: 9-10.
 
 product_transformed:
-The product itself becomes something else entirely — not shown as itself, but as what it does.
+The effect of the product is shown — never the product itself. FLUX cannot render real brand packaging.
 copy_dependency: 2-3
-The product is physically present but unrecognisable as a product. It has become its own promise.
-Examples: a chilli sauce bottle that has burned a hole in everything near it.
+Describe only the physical effect (burn holes, fused materials, impossible residue). Set product_placement to "corner_stamp" so the real brand asset is overlaid after generation.
+Examples: acid-burn holes through a dress shirt where chilli sauce was spilled — no bottle, no tube, no packaging in frame.
 
 product_hero:
-The product is the subject — but it must be framed in a context that is un-stockable.
+The scene proves the product's power through context — never by showing the product in FLUX.
 copy_dependency: 3-4
-The product cannot simply be photographed. It must be placed in a scene that makes its power obvious without words.
-Use only when the product's design or form is itself the concept.
+The environment makes the claim obvious without words. The real product/logo PNG is overlaid as a corner stamp from the brand kit.
+Use only when product visibility is required. Set product_placement to "corner_stamp".
 BRAVE SCORE: 2-5.
 
 effects_visible:
@@ -399,10 +399,24 @@ DECISION RULES:
 1. DEFAULT BIAS: Always consider CONCEPT FIRST or VISUAL TENSION before defaulting to PRODUCT HERO.
    If the brand's USP is intangible (bonds, protection, freshness, energy, trust), PRODUCT HERO is usually the wrong choice.
 2. If the brief involves a cultural moment, newsjacking, or an emotional occasion — CONCEPT FIRST or VISUAL TENSION.
-3. Only choose PRODUCT HERO if: the product's visual is itself the proof of the claim, or the brief explicitly requires product visibility (e.g. a launch, a new variant).
+3. Only choose PRODUCT HERO if: the brief explicitly requires product visibility (e.g. a launch, a new variant). Always set product_placement to "corner_stamp" — FLUX never renders the product.
 4. Rate the brave_score honestly — if it's below 5, the mode is safe. Ask: would a conservative client accept this immediately? If yes, score ≤4.
 
 Your output must include a CONCRETE scene_description built from impossible_element: a director's shot note describing what physically exists in the frame. Format: [Camera angle and distance]. [Subject and exact position]. [The impossible element, exactly described]. [Light source and quality]. [What is NOT in the frame]. Not abstract. Not lifestyle language.
+
+PRODUCT PLACEMENT — STRICT RULE:
+
+NEVER describe a product in the scene_description.
+NEVER include product packaging, tubes, tins, bottles, or containers in the FLUX prompt.
+FLUX does not know what the brand's product looks like. Any product it generates is wrong.
+
+product_placement must always be one of:
+- "corner_stamp": the real product/logo PNG from the brand kit is overlaid by the app after generation
+- "none": no product appears anywhere
+
+product_placement: "in_scene" is DISABLED. Never use it.
+
+If the concept requires a product to be physically present (e.g. a chilli sauce burning holes in a shirt), describe ONLY the effect (the burn holes), never the product itself. The product stamp is applied separately from the brand kit.
 
 PILLAR 6 — LAYOUT SELECTION
 
@@ -556,10 +570,10 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
       "Idea rejected — reason (category cliché)"
     ],
     "impossible_element": "The ONE thing in this scene that cannot physically exist — stated as a single sentence",
-    "scene_description": "Build this from impossible_element. Do NOT write a lifestyle description. Write exactly what is physically present in the frame, including the impossible element as a real object. Format: [Camera angle and distance]. [Subject and their exact position]. [The impossible element, exactly described]. [Light source and quality]. [What is NOT in the frame — no product unless product_placement is in_scene, no text on surfaces, no brand logos in the scene itself].",
+    "scene_description": "Build this from impossible_element. Do NOT write a lifestyle description. Write exactly what is physically present in the frame, including the impossible element as a real object. Format: [Camera angle and distance]. [Subject and their exact position]. [The impossible element, exactly described]. [Light source and quality]. [What is NOT in the frame — no product packaging, tubes, tins, bottles, or containers ever, no text on surfaces, no brand logos in the scene itself].",
     "copy_dependency": 1,
     "image_is_the_ad": true,
-    "product_placement": "in_scene | corner_stamp | none",
+    "product_placement": "corner_stamp | none",
     "product_visible": false,
     "brave_score": 9,
     "unstockable_test": "A Getty Images search for [realistic scene keywords] would never return this image because [the impossible element]."
@@ -814,10 +828,12 @@ function normalizeProductPlacement(
   raw: unknown,
   mode: SMVisualApproachMode
 ): SMProductPlacement {
-  if (raw === "in_scene" || raw === "corner_stamp" || raw === "none") {
+  if (raw === "corner_stamp" || raw === "none") {
     return raw;
   }
-  if (mode === "product_hero" || mode === "product_transformed") return "in_scene";
+  // Legacy "in_scene" from older outputs → corner stamp (real PNG overlay, never FLUX)
+  if (raw === "in_scene") return "corner_stamp";
+  if (mode === "product_hero" || mode === "product_transformed") return "corner_stamp";
   if (mode === "concept_first" || mode === "visual_tension") return "none";
   return "corner_stamp";
 }
@@ -854,10 +870,7 @@ function normalizeVisualApproach(
       : [],
     scene_description:
       raw?.scene_description?.trim() || visualDirection?.trim() || "",
-    product_visible:
-      typeof raw?.product_visible === "boolean"
-        ? raw.product_visible
-        : ["product_hero", "product_transformed"].includes(mode),
+    product_visible: false,
     brave_score:
       typeof raw?.brave_score === "number"
         ? Math.min(10, Math.max(1, Math.round(raw.brave_score)))

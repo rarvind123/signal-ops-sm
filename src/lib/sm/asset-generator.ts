@@ -1,6 +1,6 @@
 import { completeJson } from "@/lib/ai";
 import { getAdSize } from "@/lib/sm/ad-sizes";
-import { buildFluxPrompt } from "@/lib/sm/flux-prompt-builder";
+import { buildFluxPrompt, FLUX_PRODUCT_EXCLUSIONS } from "@/lib/sm/flux-prompt-builder";
 import { getBrandAccentColor } from "@/lib/sm/typography";
 import type {
   SMClient,
@@ -78,18 +78,18 @@ const VISUAL_APPROACH_INSTRUCTIONS: Record<string, string> = {
   ].join(", "),
 
   product_transformed: [
-    "the product appears but in a conceptual, impossible, or unexpected way",
-    "the product is reimagined as something else or placed in an impossible context",
+    "show only the physical effect or transformation — never product packaging, tubes, tins, bottles, or containers",
+    "the impossible effect is visible but the product itself is absent from the frame",
     "high-end surrealist commercial photography",
     "the transformation should feel both surprising and inevitable",
   ].join(", "),
 
   product_hero: [
-    "the product is the primary subject of the image",
-    "dramatic product photography, the environment serves the product",
+    "the scene demonstrates product power through context and effect — no product packaging in frame",
+    "dramatic commercial photography where the environment proves the claim",
     "high-end commercial photography quality",
-    "the product occupies at least 40% of the frame",
-    "beautiful lighting that makes the product look premium",
+    "no tins, bottles, tubes, or labeled products visible",
+    "beautiful lighting, premium advertising aesthetic",
   ].join(", "),
 
   effects_visible: [
@@ -103,7 +103,7 @@ const VISUAL_APPROACH_INSTRUCTIONS: Record<string, string> = {
   visual_tension: [
     "create a visual that combines two contradictory or incompatible elements",
     "the impossibility or contradiction should be immediately visible",
-    "no product unless it is part of the tension",
+    "absolutely no product packaging or containers",
     "clean, minimal composition — the tension is the entire point",
     "the image should stop a viewer and demand a second look",
   ].join(", "),
@@ -148,6 +148,7 @@ export function buildBriefImagePrompt(
     "8k resolution",
     "premium advertising aesthetic",
     UNIVERSAL_EXCLUSIONS,
+    FLUX_PRODUCT_EXCLUSIONS,
   ]
     .filter(Boolean)
     .join(", ");
@@ -159,7 +160,7 @@ const PHOTO_STYLE_MAP: Record<string, string> = {
   lifestyle:
     "lifestyle photography with real people in natural settings, candid and authentic",
   product:
-    "clean product photography, controlled lighting, professional studio quality",
+    "premium commercial photography, controlled lighting, no product packaging in frame",
   minimal: "minimal composition, generous white space, restrained and deliberate",
   documentary: "documentary-style photography, raw and real, no posing",
   illustrated: "graphic illustration style, not photorealistic",
@@ -267,8 +268,7 @@ export function buildImageGenerationPrompt(
     "sharp focus",
     "8k resolution",
     UNIVERSAL_EXCLUSIONS,
-    approach?.product_placement === "none" ? "no product packaging" : null,
-    approach?.product_placement === "none" ? "no tins or bottles" : null,
+    FLUX_PRODUCT_EXCLUSIONS,
   ]
     .filter(Boolean)
     .join(", ");

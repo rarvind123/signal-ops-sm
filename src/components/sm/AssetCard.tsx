@@ -532,7 +532,19 @@ export default function AssetCard({
                   </div>
                 );
               })()}
+            {visualApproach?.product_placement === "corner_stamp" && logoUrl && (
+              <div className="absolute bottom-3 right-3 z-20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logoUrl}
+                  alt={client.name}
+                  className="h-10 w-auto object-contain"
+                  style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}
+                />
+              </div>
+            )}
             {logoUrl &&
+              visualApproach?.product_placement !== "corner_stamp" &&
               (() => {
                 const layout = isConceptAd
                   ? "full_bleed_gradient"

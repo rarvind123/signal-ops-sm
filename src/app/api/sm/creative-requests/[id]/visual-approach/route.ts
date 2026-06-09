@@ -13,9 +13,9 @@ const MODE_DESCRIPTIONS: Record<SMVisualApproachMode, string> = {
   concept_first:
     "No product. A metaphorical scene proves the brand truth. Product completely absent. The viewer earns the brand connection themselves.",
   product_transformed:
-    "Product appears but impossibly reimagined — in an unexpected, conceptual, or surrealist way.",
+    "Only the product's effect is visible in the scene — never packaging. Real brand asset overlaid as corner stamp.",
   product_hero:
-    "Product is the dramatic primary subject. Environment serves the product. High-end commercial photography.",
+    "Scene proves product power through context. FLUX never renders the product — real brand asset overlaid as corner stamp.",
   effects_visible:
     "Product completely absent. Show its emotional or physical effect on a person or the world.",
   visual_tension:
