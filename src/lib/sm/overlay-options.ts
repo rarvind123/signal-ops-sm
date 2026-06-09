@@ -1,11 +1,12 @@
 import type { SMOverlaySettings } from "@/types/sm";
 
 export type CornerPosition = "bottom-left" | "bottom-right" | "top-left" | "top-right";
+export type SMLogoStyle = "box" | "shadow" | "plain" | "none";
 
 export interface OverlayOptions {
   textPosition: "bottom" | "top";
   textSize: "sm" | "md" | "lg" | "xl";
-  logoBg: "pill" | "none" | "circle";
+  logoStyle: SMLogoStyle;
   logoSize: "sm" | "md" | "lg" | "xl";
   extraText: string;
   extraTextPosition: "bottom-left" | "bottom-right" | "bottom-center";
@@ -19,13 +20,21 @@ export interface OverlayOptions {
   showPip: boolean;
 }
 
+function migrateLogoStyle(settings: SMOverlaySettings): SMLogoStyle {
+  if (settings.logo_style) return settings.logo_style;
+  const legacy = settings.logo_background;
+  if (legacy === "pill" || legacy === "circle") return "box";
+  if (legacy === "none") return "shadow";
+  return DEFAULT_OVERLAY_OPTIONS.logoStyle;
+}
+
 export function overlaySettingsFromOptions(
   options: OverlayOptions
 ): SMOverlaySettings {
   return {
     typography_position: options.textPosition,
     typography_size: options.textSize,
-    logo_background: options.logoBg,
+    logo_style: options.logoStyle,
     logo_size: options.logoSize,
     extra_text_enabled: options.showExtraText,
     extra_text_content: options.extraText,
@@ -49,7 +58,7 @@ export function overlayOptionsFromSettings(
   return {
     textPosition: settings.typography_position ?? DEFAULT_OVERLAY_OPTIONS.textPosition,
     textSize: settings.typography_size ?? DEFAULT_OVERLAY_OPTIONS.textSize,
-    logoBg: settings.logo_background ?? DEFAULT_OVERLAY_OPTIONS.logoBg,
+    logoStyle: migrateLogoStyle(settings),
     logoSize: settings.logo_size ?? DEFAULT_OVERLAY_OPTIONS.logoSize,
     showExtraText: settings.extra_text_enabled ?? DEFAULT_OVERLAY_OPTIONS.showExtraText,
     extraText: settings.extra_text_content ?? DEFAULT_OVERLAY_OPTIONS.extraText,
@@ -68,7 +77,7 @@ export function overlayOptionsFromSettings(
 export const DEFAULT_OVERLAY_OPTIONS: OverlayOptions = {
   textPosition: "bottom",
   textSize: "md",
-  logoBg: "pill",
+  logoStyle: "box",
   logoSize: "md",
   extraText: "",
   extraTextPosition: "bottom-center",
@@ -83,10 +92,10 @@ export const DEFAULT_OVERLAY_OPTIONS: OverlayOptions = {
 };
 
 export const LOGO_SIZE_PX: Record<OverlayOptions["logoSize"], number> = {
-  sm: 32,
-  md: 48,
-  lg: 64,
-  xl: 88,
+  sm: 28,
+  md: 44,
+  lg: 62,
+  xl: 84,
 };
 
 export const TEXT_SIZE_MAP: Record<
@@ -128,33 +137,36 @@ export const CORNER_CLASSES: Record<CornerPosition, string> = {
   "top-left": "top-12 left-3",
 };
 
-export function logoBgClass(
-  logoBg: OverlayOptions["logoBg"],
+export function logoWrapperClass(
+  logoStyle: SMLogoStyle,
   onSolidBand = false
 ): string {
-  if (logoBg === "pill") {
+  if (logoStyle === "box") {
     return onSolidBand
-      ? "rounded-lg bg-white/95 px-2 py-1.5 shadow-sm"
-      : "rounded-lg bg-white/80 backdrop-blur-sm px-2 py-1.5 shadow-md";
-  }
-  if (logoBg === "circle") {
-    return onSolidBand
-      ? "rounded-full bg-white/95 p-1.5 shadow-sm"
-      : "rounded-full bg-white/80 backdrop-blur-sm p-1.5 shadow-md";
+      ? "rounded-full bg-white/95 px-3 py-1.5"
+      : "rounded-full bg-white/90 backdrop-blur-sm px-3 py-1.5";
   }
   return "";
 }
 
-export function logoImgStyle(
-  logoBg: OverlayOptions["logoBg"],
-  logoSize: OverlayOptions["logoSize"]
-): { height: number; width: string; filter?: string } {
+export function logoWrapperStyle(
+  logoStyle: SMLogoStyle
+): { filter?: string } | undefined {
+  if (logoStyle === "shadow") {
+    return { filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.65))" };
+  }
+  return undefined;
+}
+
+export function logoImgStyle(logoSize: OverlayOptions["logoSize"]): {
+  height: number;
+  width: string;
+  display: string;
+} {
   return {
     height: LOGO_SIZE_PX[logoSize],
     width: "auto",
-    ...(logoBg === "none"
-      ? { filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }
-      : {}),
+    display: "block",
   };
 }
 

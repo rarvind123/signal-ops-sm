@@ -54,7 +54,7 @@ export default function CreativeFinalizePanel({
         </div>
         <div className="flex flex-col gap-1">
           <p className="text-xs uppercase tracking-wider text-zinc-500">Font Size</p>
-          <p className="text-xs text-zinc-600">Controls headline and body copy size</p>
+          <p className="text-xs text-zinc-600">Headline and body copy</p>
           <div className="flex gap-2">
             {(["sm", "md", "lg", "xl"] as const).map((size) => (
               <button
@@ -75,23 +75,24 @@ export default function CreativeFinalizePanel({
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="text-xs uppercase tracking-wider text-zinc-500">Logo background</p>
-        <div className="flex gap-2">
+        <p className="text-xs uppercase tracking-wider text-zinc-500">Logo Style</p>
+        <div className="grid grid-cols-2 gap-2">
           {(
             [
-              { key: "pill" as const, label: "Pill" },
-              { key: "circle" as const, label: "Circle" },
-              { key: "none" as const, label: "None" },
+              { value: "box" as const, label: "With box" },
+              { value: "shadow" as const, label: "Shadow" },
+              { value: "plain" as const, label: "Plain" },
+              { value: "none" as const, label: "No logo" },
             ] as const
           ).map((opt) => (
             <button
-              key={opt.key}
+              key={opt.value}
               type="button"
-              onClick={() => set({ logoBg: opt.key })}
-              className={`flex-1 rounded border py-1.5 text-xs ${
-                options.logoBg === opt.key
-                  ? "border-violet-500 bg-violet-500/10 text-violet-300"
-                  : "border-zinc-700 text-zinc-500"
+              onClick={() => set({ logoStyle: opt.value })}
+              className={`rounded-lg py-2 text-sm font-medium transition-colors ${
+                options.logoStyle === opt.value
+                  ? "bg-white text-black"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
               }`}
             >
               {opt.label}
@@ -100,25 +101,27 @@ export default function CreativeFinalizePanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-xs uppercase tracking-wider text-zinc-500">Logo Size</p>
-        <div className="flex gap-2">
-          {(["sm", "md", "lg", "xl"] as const).map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => set({ logoSize: size })}
-              className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium uppercase transition-colors ${
-                options.logoSize === size
-                  ? "bg-white text-black"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-              }`}
-            >
-              {size}
-            </button>
-          ))}
+      {options.logoStyle !== "none" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs uppercase tracking-wider text-zinc-500">Logo Size</p>
+          <div className="flex gap-2">
+            {(["sm", "md", "lg", "xl"] as const).map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => set({ logoSize: size })}
+                className={`flex-1 rounded-lg py-1.5 text-sm font-medium uppercase transition-colors ${
+                  options.logoSize === size
+                    ? "bg-white text-black"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">

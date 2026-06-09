@@ -226,6 +226,8 @@ export interface SMSignalOpsOutput {
 export interface SMOverlaySettings {
   typography_position?: "bottom" | "top";
   typography_size?: "sm" | "md" | "lg" | "xl";
+  logo_style?: "box" | "shadow" | "plain" | "none";
+  /** @deprecated use logo_style — migrated on read */
   logo_background?: "pill" | "none" | "circle";
   logo_size?: "sm" | "md" | "lg" | "xl";
   extra_text_enabled?: boolean;

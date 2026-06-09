@@ -12,8 +12,9 @@ import {
 import {
   CORNER_CLASSES,
   DEFAULT_OVERLAY_OPTIONS,
-  logoBgClass,
   logoImgStyle,
+  logoWrapperClass,
+  logoWrapperStyle,
   overlayOptionsFromSettings,
   PIP_SIZE_CLASS,
   TEXT_SIZE_MAP,
@@ -518,37 +519,43 @@ export default function AssetCard({
                       />
                     )}
                     {textBlock}
-                    {logoUrl && overlay.logoInBand && (
-                      <div
-                        className={`absolute z-20 ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg, useBand)}`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={logoUrl}
-                          alt={client.name}
-                          className="w-auto max-w-[140px] object-contain"
-                          style={logoImgStyle(
-                            appliedOverlayOptions.logoBg,
-                            appliedOverlayOptions.logoSize
-                          )}
-                        />
-                      </div>
-                    )}
+                    {logoUrl &&
+                      appliedOverlayOptions.logoStyle !== "none" &&
+                      overlay.logoInBand && (
+                        <div
+                          className={`absolute z-20 flex items-center justify-center ${LOGO_POSITION_CLASSES[overlay.logoPosition]} ${logoWrapperClass(appliedOverlayOptions.logoStyle, useBand)}`}
+                          style={logoWrapperStyle(appliedOverlayOptions.logoStyle)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={logoUrl}
+                            alt={client.name}
+                            className="max-w-[140px] object-contain"
+                            style={logoImgStyle(appliedOverlayOptions.logoSize)}
+                          />
+                        </div>
+                      )}
                   </div>
                 );
               })()}
-            {visualApproach?.product_placement === "corner_stamp" && logoUrl && (
-              <div className="absolute bottom-3 right-3 z-20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={logoUrl}
-                  alt={client.name}
-                  className="w-auto object-contain"
-                  style={logoImgStyle("none", appliedOverlayOptions.logoSize)}
-                />
-              </div>
-            )}
+            {visualApproach?.product_placement === "corner_stamp" &&
+              logoUrl &&
+              appliedOverlayOptions.logoStyle !== "none" && (
+                <div
+                  className={`absolute bottom-3 right-3 z-20 flex items-center justify-center ${logoWrapperClass(appliedOverlayOptions.logoStyle)}`}
+                  style={logoWrapperStyle(appliedOverlayOptions.logoStyle)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={logoUrl}
+                    alt={client.name}
+                    className="object-contain"
+                    style={logoImgStyle(appliedOverlayOptions.logoSize)}
+                  />
+                </div>
+              )}
             {logoUrl &&
+              appliedOverlayOptions.logoStyle !== "none" &&
               visualApproach?.product_placement !== "corner_stamp" &&
               (() => {
                 const layout = isConceptAd
@@ -566,17 +573,15 @@ export default function AssetCard({
                   : overlay.logoPosition;
                 return (
                   <div
-                    className={`absolute z-20 ${LOGO_POSITION_CLASSES[logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg, isConceptAd)}`}
+                    className={`absolute z-20 flex items-center justify-center ${LOGO_POSITION_CLASSES[logoPosition]} ${logoWrapperClass(appliedOverlayOptions.logoStyle, isConceptAd)}`}
+                    style={logoWrapperStyle(appliedOverlayOptions.logoStyle)}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={logoUrl}
                       alt={client.name}
-                      className="w-auto max-w-[140px] object-contain"
-                      style={logoImgStyle(
-                        appliedOverlayOptions.logoBg,
-                        appliedOverlayOptions.logoSize
-                      )}
+                      className="max-w-[140px] object-contain"
+                      style={logoImgStyle(appliedOverlayOptions.logoSize)}
                     />
                   </div>
                 );
