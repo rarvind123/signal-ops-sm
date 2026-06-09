@@ -6,6 +6,7 @@ export interface OverlayOptions {
   textPosition: "bottom" | "top";
   textSize: "sm" | "md" | "lg" | "xl";
   logoBg: "pill" | "none" | "circle";
+  logoSize: "sm" | "md" | "lg" | "xl";
   extraText: string;
   extraTextPosition: "bottom-left" | "bottom-right" | "bottom-center";
   showExtraText: boolean;
@@ -25,6 +26,7 @@ export function overlaySettingsFromOptions(
     typography_position: options.textPosition,
     typography_size: options.textSize,
     logo_background: options.logoBg,
+    logo_size: options.logoSize,
     extra_text_enabled: options.showExtraText,
     extra_text_content: options.extraText,
     extra_text_position: options.extraTextPosition,
@@ -48,6 +50,7 @@ export function overlayOptionsFromSettings(
     textPosition: settings.typography_position ?? DEFAULT_OVERLAY_OPTIONS.textPosition,
     textSize: settings.typography_size ?? DEFAULT_OVERLAY_OPTIONS.textSize,
     logoBg: settings.logo_background ?? DEFAULT_OVERLAY_OPTIONS.logoBg,
+    logoSize: settings.logo_size ?? DEFAULT_OVERLAY_OPTIONS.logoSize,
     showExtraText: settings.extra_text_enabled ?? DEFAULT_OVERLAY_OPTIONS.showExtraText,
     extraText: settings.extra_text_content ?? DEFAULT_OVERLAY_OPTIONS.extraText,
     extraTextPosition:
@@ -66,6 +69,7 @@ export const DEFAULT_OVERLAY_OPTIONS: OverlayOptions = {
   textPosition: "bottom",
   textSize: "md",
   logoBg: "pill",
+  logoSize: "md",
   extraText: "",
   extraTextPosition: "bottom-center",
   showExtraText: false,
@@ -76,6 +80,13 @@ export const DEFAULT_OVERLAY_OPTIONS: OverlayOptions = {
   pipPosition: "bottom-right",
   pipSize: "sm",
   showPip: false,
+};
+
+export const LOGO_SIZE_PX: Record<OverlayOptions["logoSize"], number> = {
+  sm: 32,
+  md: 48,
+  lg: 64,
+  xl: 88,
 };
 
 export const TEXT_SIZE_MAP: Record<
@@ -132,6 +143,19 @@ export function logoBgClass(
       : "rounded-full bg-white/80 backdrop-blur-sm p-1.5 shadow-md";
   }
   return "";
+}
+
+export function logoImgStyle(
+  logoBg: OverlayOptions["logoBg"],
+  logoSize: OverlayOptions["logoSize"]
+): { height: number; width: string; filter?: string } {
+  return {
+    height: LOGO_SIZE_PX[logoSize],
+    width: "auto",
+    ...(logoBg === "none"
+      ? { filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }
+      : {}),
+  };
 }
 
 export function cornerCoords(

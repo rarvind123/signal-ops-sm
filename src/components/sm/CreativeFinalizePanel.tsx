@@ -31,46 +31,45 @@ export default function CreativeFinalizePanel({
 
   return (
     <div className="flex flex-col gap-4 border-t border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <p className="text-xs uppercase tracking-wider text-zinc-500">Typography</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-zinc-600">Position</label>
-            <div className="flex gap-1">
-              {(["bottom", "top"] as const).map((pos) => (
-                <button
-                  key={pos}
-                  type="button"
-                  onClick={() => set({ textPosition: pos })}
-                  className={`flex-1 rounded border py-1 text-xs capitalize ${
-                    options.textPosition === pos
-                      ? "border-violet-500 bg-violet-500/10 text-violet-300"
-                      : "border-zinc-700 text-zinc-500"
-                  }`}
-                >
-                  {pos}
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-600">Position</label>
+          <div className="flex gap-1">
+            {(["bottom", "top"] as const).map((pos) => (
+              <button
+                key={pos}
+                type="button"
+                onClick={() => set({ textPosition: pos })}
+                className={`flex-1 rounded border py-1 text-xs capitalize ${
+                  options.textPosition === pos
+                    ? "border-violet-500 bg-violet-500/10 text-violet-300"
+                    : "border-zinc-700 text-zinc-500"
+                }`}
+              >
+                {pos}
+              </button>
+            ))}
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-zinc-600">Size</label>
-            <div className="flex gap-1">
-              {(["sm", "md", "lg", "xl"] as const).map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => set({ textSize: size })}
-                  className={`flex-1 rounded border py-1 text-xs uppercase ${
-                    options.textSize === size
-                      ? "border-violet-500 bg-violet-500/10 text-violet-300"
-                      : "border-zinc-700 text-zinc-500"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-xs uppercase tracking-wider text-zinc-500">Font Size</p>
+          <p className="text-xs text-zinc-600">Controls headline and body copy size</p>
+          <div className="flex gap-2">
+            {(["sm", "md", "lg", "xl"] as const).map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => set({ textSize: size })}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium uppercase transition-colors ${
+                  options.textSize === size
+                    ? "bg-white text-black"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                }`}
+              >
+                {size}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -96,6 +95,26 @@ export default function CreativeFinalizePanel({
               }`}
             >
               {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-xs uppercase tracking-wider text-zinc-500">Logo Size</p>
+        <div className="flex gap-2">
+          {(["sm", "md", "lg", "xl"] as const).map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => set({ logoSize: size })}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium uppercase transition-colors ${
+                options.logoSize === size
+                  ? "bg-white text-black"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+            >
+              {size}
             </button>
           ))}
         </div>

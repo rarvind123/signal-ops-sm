@@ -227,6 +227,7 @@ export interface SMOverlaySettings {
   typography_position?: "bottom" | "top";
   typography_size?: "sm" | "md" | "lg" | "xl";
   logo_background?: "pill" | "none" | "circle";
+  logo_size?: "sm" | "md" | "lg" | "xl";
   extra_text_enabled?: boolean;
   extra_text_content?: string;
   extra_text_position?: "bottom-left" | "bottom-right" | "bottom-center";

@@ -13,6 +13,7 @@ import {
   CORNER_CLASSES,
   DEFAULT_OVERLAY_OPTIONS,
   logoBgClass,
+  logoImgStyle,
   overlayOptionsFromSettings,
   PIP_SIZE_CLASS,
   TEXT_SIZE_MAP,
@@ -525,7 +526,11 @@ export default function AssetCard({
                         <img
                           src={logoUrl}
                           alt={client.name}
-                          className="h-7 w-auto max-w-[90px] object-contain"
+                          className="w-auto max-w-[140px] object-contain"
+                          style={logoImgStyle(
+                            appliedOverlayOptions.logoBg,
+                            appliedOverlayOptions.logoSize
+                          )}
                         />
                       </div>
                     )}
@@ -538,8 +543,8 @@ export default function AssetCard({
                 <img
                   src={logoUrl}
                   alt={client.name}
-                  className="h-10 w-auto object-contain"
-                  style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}
+                  className="w-auto object-contain"
+                  style={logoImgStyle("none", appliedOverlayOptions.logoSize)}
                 />
               </div>
             )}
@@ -559,9 +564,6 @@ export default function AssetCard({
                 const logoPosition = isConceptAd || isBalancedAd
                   ? "bottom-right"
                   : overlay.logoPosition;
-                const logoSizeClass = isConceptAd
-                  ? "h-5 max-w-[80px]"
-                  : "h-8 max-w-[110px]";
                 return (
                   <div
                     className={`absolute z-20 ${LOGO_POSITION_CLASSES[logoPosition]} ${logoBgClass(appliedOverlayOptions.logoBg, isConceptAd)}`}
@@ -570,7 +572,11 @@ export default function AssetCard({
                     <img
                       src={logoUrl}
                       alt={client.name}
-                      className={`w-auto object-contain ${logoSizeClass}`}
+                      className="w-auto max-w-[140px] object-contain"
+                      style={logoImgStyle(
+                        appliedOverlayOptions.logoBg,
+                        appliedOverlayOptions.logoSize
+                      )}
                     />
                   </div>
                 );
