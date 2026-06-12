@@ -55,8 +55,9 @@ export async function GET(req: Request, context: RouteContext) {
 
     let bytes: Buffer | null = null;
     for (const url of candidates) {
-      if (!firstValidLogoUrl(url)) continue;
-      bytes = await loadLogoBytes(url);
+      const validUrl = firstValidLogoUrl(url);
+      if (!validUrl) continue;
+      bytes = await loadLogoBytes(validUrl);
       if (bytes) break;
     }
 
