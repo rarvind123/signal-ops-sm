@@ -457,9 +457,16 @@ export async function deleteClient(id: string): Promise<boolean> {
 }
 
 export async function getClientLogoUrl(clientId: string): Promise<string | null> {
+  const { firstValidLogoUrl } = await import("./logo-url");
   const client = await getClient(clientId);
-  if (client?.logos?.primary) return client.logos.primary;
-  if (client?.logo_url) return client.logo_url;
+  const fromClient = firstValidLogoUrl(
+    client?.logos?.primary,
+    client?.logo_url,
+    client?.logos?.dark,
+    client?.logos?.white,
+    client?.logos?.symbol
+  );
+  if (fromClient) return fromClient;
 
   const { data, error } = await supabase
     .from("sm_brand_assets")

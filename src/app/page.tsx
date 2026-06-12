@@ -157,6 +157,7 @@ export default function Home() {
         throw new Error(json.error ?? "Generation failed");
       }
       setGeneratedAssets(json.assets ?? []);
+      await refreshActiveClient();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     } finally {

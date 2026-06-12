@@ -7,8 +7,8 @@ import { getAdSize } from "@/lib/sm/ad-sizes";
 import {
   brightnessFromPalette,
   getImageRegionBrightness,
-  selectLogoForFormat,
 } from "@/lib/sm/logo-selector";
+import { clientLogoProxyUrl } from "@/lib/sm/logo-url";
 import {
   CORNER_CLASSES,
   DEFAULT_OVERLAY_OPTIONS,
@@ -146,15 +146,15 @@ export default function AssetCard({
   const [showRedoInput, setShowRedoInput] = useState(false);
   const [redoDirection, setRedoDirection] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [logoUrl, setLogoUrl] = useState<string | null>(
-    client.logos?.primary ?? client.logo_url ?? null
-  );
   const [localAsset, setLocalAsset] = useState(asset);
   const [showTextOverlay, setShowTextOverlay] = useState(true);
   const [draftOverlayOptions, setDraftOverlayOptions] =
     useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
   const [appliedOverlayOptions, setAppliedOverlayOptions] =
     useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
+  const [logoUrl, setLogoUrl] = useState<string | null>(
+    clientLogoProxyUrl(client.id, { format: creativeFormat })
+  );
   const [showFinalizePanel, setShowFinalizePanel] = useState(false);
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -204,29 +204,16 @@ export default function AssetCard({
   }, [appliedOverlayOptions.qrUrl, appliedOverlayOptions.showQr]);
 
   useEffect(() => {
-    if (!localAsset.storage_url) return;
-
-    const logos = client.logos ?? {};
-    const hasVariants = Boolean(logos.white || logos.dark);
-    const formatForced =
-      creativeFormat === "print_ad" || creativeFormat === "outdoor";
-
-    if (!hasVariants && !formatForced) {
-      const fallback = logos.primary ?? client.logo_url ?? null;
-      if (fallback) setLogoUrl(fallback);
-      else {
-        fetch(`/api/sm/clients/${client.id}/logo`)
-          .then((r) => r.json())
-          .then((data: { logo_url: string | null }) => {
-            if (data.logo_url) setLogoUrl(data.logo_url);
-          })
-          .catch(() => {});
-      }
+    if (appliedOverlayOptions.logoStyle === "none") {
+      setLogoUrl(null);
       return;
     }
 
-    if (formatForced) {
-      setLogoUrl(selectLogoForFormat(logos, creativeFormat) ?? logos.primary ?? null);
+    const formatForced =
+      creativeFormat === "print_ad" || creativeFormat === "outdoor";
+
+    if (formatForced || !localAsset.storage_url) {
+      setLogoUrl(clientLogoProxyUrl(client.id, { format: creativeFormat }));
       return;
     }
 
@@ -237,11 +224,6 @@ export default function AssetCard({
       layout,
       getBrandAccentColor(client)
     );
-
-    if (overlay.logoInBand) {
-      setLogoUrl(selectLogoForFormat(logos, creativeFormat) ?? logos.primary ?? null);
-      return;
-    }
 
     const imageSrc = `${localAsset.storage_url}?v=${refreshKey}`;
     const paletteBrightness = brightnessFromPalette(client.color_palette);
@@ -264,20 +246,20 @@ export default function AssetCard({
           ? paletteBrightness
           : brightness;
       setLogoUrl(
-        selectLogoForFormat(logos, creativeFormat, effectiveBrightness) ??
-          logos.primary ??
-          client.logo_url ??
-          null
+        clientLogoProxyUrl(client.id, {
+          format: creativeFormat,
+          brightness: effectiveBrightness,
+        })
       );
     });
   }, [
+    appliedOverlayOptions.logoStyle,
     localAsset.storage_url,
-    client.logos,
-    client.logo_url,
     client.id,
     creativeFormat,
     refreshKey,
     localAsset.layout_template,
+    client.color_palette,
   ]);
 
   const isTextOnly =
@@ -334,6 +316,16 @@ export default function AssetCard({
     setShowFinalizePanel(false);
   }
 
+  function handleLogoError() {
+    setLogoUrl((prev) => {
+      if (!prev) return null;
+      if (prev.includes("brightness=")) {
+        return clientLogoProxyUrl(client.id, { format: creativeFormat });
+      }
+      return null;
+    });
+  }
+
   async function handleDownload() {
     if (isTextOnly && localAsset.copy) {
       const blob = new Blob([localAsset.copy], { type: "text/plain" });
@@ -349,7 +341,10 @@ export default function AssetCard({
     const res = await fetch(`/api/sm/assets/${localAsset.id}/download`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ overlay_options: appliedOverlayOptions }),
+      body: JSON.stringify({
+        overlay_options: appliedOverlayOptions,
+        show_text_overlay: showTextOverlay && !isConceptAd,
+      }),
     });
     if (!res.ok) return;
     const blob = await res.blob();
@@ -532,6 +527,7 @@ export default function AssetCard({
                             alt={client.name}
                             className="max-w-[140px] object-contain"
                             style={logoImgStyle(appliedOverlayOptions.logoSize)}
+                            onError={handleLogoError}
                           />
                         </div>
                       )}
@@ -551,6 +547,7 @@ export default function AssetCard({
                     alt={client.name}
                     className="object-contain"
                     style={logoImgStyle(appliedOverlayOptions.logoSize)}
+                    onError={handleLogoError}
                   />
                 </div>
               )}
@@ -582,6 +579,7 @@ export default function AssetCard({
                       alt={client.name}
                       className="max-w-[140px] object-contain"
                       style={logoImgStyle(appliedOverlayOptions.logoSize)}
+                      onError={handleLogoError}
                     />
                   </div>
                 );

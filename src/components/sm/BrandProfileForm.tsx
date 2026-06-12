@@ -16,6 +16,7 @@ import type {
   SMPhotoStyle,
   SMTone,
 } from "@/types/sm";
+import { LOGO_UPLOAD_HINT } from "@/lib/sm/logo-upload";
 import LogoUploader from "./LogoUploader";
 import LogoVariantUploader from "./LogoVariantUploader";
 
@@ -240,6 +241,7 @@ export default function BrandProfileForm({
             {savedClient && (
               <div className="flex flex-col gap-2">
                 <span className={label}>Logo variants</span>
+                <p className="text-xs leading-relaxed text-zinc-600">{LOGO_UPLOAD_HINT}</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {LOGO_VARIANTS.map((variant) => (
                     <LogoVariantUploader

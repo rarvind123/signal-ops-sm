@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import { saveSmUpload } from "@/lib/sm/file-storage";
+import { validateLogoUpload } from "@/lib/sm/logo-upload";
 import { createBrandAsset, getClient, updateClient } from "@/lib/sm/store";
 
 export const runtime = "nodejs";
@@ -24,6 +25,17 @@ export async function POST(req: Request, context: RouteContext) {
     }
     if (!["logo", "image", "video"].includes(type)) {
       throw new Error("type must be logo, image, or video");
+    }
+
+    if (type === "logo") {
+      const check = validateLogoUpload({
+        size: file.size,
+        type: file.type,
+        name: file.name,
+      });
+      if (!check.ok) {
+        return NextResponse.json({ error: check.message }, { status: 400 });
+      }
     }
 
     const saved = await saveSmUpload(clientId, file, "assets");

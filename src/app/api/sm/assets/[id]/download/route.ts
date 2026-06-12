@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { readSmFile, relativePathFromPublicUrl } from "@/lib/sm/file-storage";
 import { compositeLogoOntoImage } from "@/lib/sm/logo-composite";
 import { applyOverlayOptions } from "@/lib/sm/overlay-composite";
-import type { OverlayOptions } from "@/lib/sm/overlay-options";
+import { getOverlayConfig } from "@/lib/sm/overlay-config";
+import {
+  LOGO_SIZE_PX,
+  type OverlayOptions,
+} from "@/lib/sm/overlay-options";
 import { compositeTextOntoImage } from "@/lib/sm/text-composite";
 import { getClientTypography } from "@/lib/sm/typography";
+import sharp from "sharp";
 import { smRouteHandler } from "@/lib/sm/api-auth";
 import {
   getClient,
@@ -13,6 +18,7 @@ import {
   getGeneratedAsset,
   getSignalOpsOutput,
 } from "@/lib/sm/store";
+import type { LogoPosition } from "@/lib/sm/overlay-config";
 
 export const runtime = "nodejs";
 
@@ -31,9 +37,30 @@ async function loadAssetBytes(storageUrl: string): Promise<Buffer> {
   throw new Error("Invalid asset storage URL");
 }
 
+function resolveLogoPosition(
+  layoutTemplate: string,
+  isConceptAd: boolean,
+  isBalancedAd: boolean,
+  creativeFormat?: string
+): LogoPosition {
+  if (isConceptAd || isBalancedAd) return "bottom-right";
+
+  const overlay = getOverlayConfig(
+    creativeFormat as Parameters<typeof getOverlayConfig>[0],
+    5,
+    layoutTemplate as Parameters<typeof getOverlayConfig>[2],
+    null
+  );
+  if (overlay.logoInBand && layoutTemplate === "brand_band_bottom") {
+    return "bottom-right";
+  }
+  return overlay.logoPosition;
+}
+
 async function buildDownloadImage(
   id: string,
-  overlayOptions?: Partial<OverlayOptions>
+  overlayOptions?: Partial<OverlayOptions>,
+  showTextOverlay = true
 ): Promise<{ buffer: Buffer; filename: string } | null> {
   const asset = await getGeneratedAsset(id);
   if (!asset?.storage_url) return null;
@@ -42,38 +69,53 @@ async function buildDownloadImage(
 
   const request = await getCreativeRequest(asset.request_id);
   const client = request ? await getClient(request.client_id) : null;
+  const signalops = request ? await getSignalOpsOutput(request.id) : null;
+  const visualApproach = signalops?.visual_approach;
+
+  const copyDependency = visualApproach?.copy_dependency ?? 3;
+  const isConceptAd =
+    visualApproach?.image_is_the_ad === true || copyDependency <= 2;
+  const isBalancedAd = !isConceptAd && copyDependency === 3;
+  const shouldCompositeText =
+    Boolean(asset.headline) && !isConceptAd && showTextOverlay;
 
   const layoutTemplate = asset.layout_template ?? "full_bleed_gradient";
-  const logoPosition =
-    layoutTemplate === "brand_band_bottom"
-      ? "bottom-right"
-      : layoutTemplate === "brand_band_left"
-        ? "top-left"
-        : layoutTemplate === "full_bleed_top_text"
-          ? "bottom-right"
-          : "top-right";
+  const logoStyle = overlayOptions?.logoStyle ?? "box";
+  const logoSizeKey = overlayOptions?.logoSize ?? "md";
+
+  const logoPosition = resolveLogoPosition(
+    layoutTemplate,
+    isConceptAd,
+    isBalancedAd,
+    request?.creative_format
+  );
   const logoOnSolidBand =
     layoutTemplate === "brand_band_bottom" || layoutTemplate === "brand_band_left";
 
   try {
     const logoUrl = client ? await getClientLogoUrl(client.id) : null;
-    if (logoUrl) {
+    if (logoUrl && logoStyle !== "none") {
+      const { width = 1080 } = await sharp(imageBuffer).metadata();
+      const targetHeight = Math.round(
+        (LOGO_SIZE_PX[logoSizeKey] / 1080) * width
+      );
       imageBuffer = await compositeLogoOntoImage(imageBuffer, logoUrl, logoPosition, {
-        skipGlow: logoOnSolidBand,
+        skipGlow: logoOnSolidBand || logoStyle !== "box",
+        targetHeight,
+        logoStyle,
       });
     }
   } catch (e) {
     console.warn("[download] Logo composite failed, serving without logo:", e);
   }
 
-  if (asset.headline) {
+  if (shouldCompositeText) {
     try {
-      const signalops = request ? await getSignalOpsOutput(request.id) : null;
       const headlineMeta = signalops?.headlines.find((h) => h.text === asset.headline);
 
       imageBuffer = await compositeTextOntoImage(
         imageBuffer,
-        asset.headline,
+        asset.headline!,
         client ?? undefined,
         {
           setup: headlineMeta?.setup,
@@ -99,6 +141,7 @@ async function buildDownloadImage(
   return { buffer: imageBuffer, filename };
 }
 
+
 export async function GET(req: Request, context: RouteContext) {
   return smRouteHandler(req, async () => {
     const { id } = await context.params;
@@ -121,8 +164,9 @@ export async function POST(req: Request, context: RouteContext) {
     const { id } = await context.params;
     const body = await req.json().catch(() => ({}));
     const overlayOptions = body.overlay_options as Partial<OverlayOptions> | undefined;
+    const showTextOverlay = body.show_text_overlay !== false;
 
-    const result = await buildDownloadImage(id, overlayOptions);
+    const result = await buildDownloadImage(id, overlayOptions, showTextOverlay);
     if (!result) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }

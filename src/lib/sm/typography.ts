@@ -100,6 +100,21 @@ export function getClientTypography(client: SMClient): TypographyStyle {
   return getTypography(client.tone);
 }
 
+/** System fonts only — sharp SVG/librsvg cannot load web fonts. */
+export function svgSafeFontStack(typo: TypographyStyle): string {
+  if (typo.isCustomFont) {
+    const primary = typo.fontFamily ?? "";
+    if (/garamond|georgia|times|palatino|lora|merriweather|playfair|serif/i.test(primary)) {
+      return "Georgia, 'Times New Roman', serif";
+    }
+    if (/bebas|oswald|impact|condensed|anton/i.test(primary)) {
+      return "Impact, 'Arial Black', sans-serif";
+    }
+    return "Arial, Helvetica, sans-serif";
+  }
+  return typo.fontStack;
+}
+
 export function getTypographyFontProps(typo: TypographyStyle): {
   className: string;
   fontFamily?: string;

@@ -10,6 +10,7 @@ import {
   getTypography,
   resolveHeadlineTiers,
   splitWord,
+  svgSafeFontStack,
 } from "@/lib/sm/typography";
 import { TEXT_SIZE_PX, type OverlayOptions } from "@/lib/sm/overlay-options";
 import type { SMCreativeFormat, SMClient, SMLayoutTemplate } from "@/types/sm";
@@ -80,10 +81,12 @@ export async function compositeTextOntoImage(
     layout_template?: SMLayoutTemplate;
     text_position?: OverlayOptions["textPosition"];
     text_size?: OverlayOptions["textSize"];
+    skip_bands?: boolean;
   }
 ): Promise<Buffer> {
   const { width = 1080, height = 1080 } = await sharp(imageBuffer).metadata();
   const typo = client ? getClientTypography(client) : getTypography();
+  const fontStack = svgSafeFontStack(typo);
   const tiers = resolveHeadlineTiers(headline, options);
   if (!tiers) return imageBuffer;
 
@@ -142,7 +145,7 @@ export async function compositeTextOntoImage(
 
   const setupText = tiers.setup
     ? `<text x="${textX}" y="${setupY}"
-      font-family="${typo.fontStack}" font-size="${setupSize}" font-weight="${setupWeight}"
+      font-family="${fontStack}" font-size="${setupSize}" font-weight="${setupWeight}"
       letter-spacing="${typo.letterSpacing}"
       fill="${overlay.setupColor}" filter="url(#shadow)">${escapeXml(tiers.setup)}</text>`
     : "";
@@ -151,7 +154,7 @@ export async function compositeTextOntoImage(
     typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing;
 
   const punchText = `<text x="${textX}" y="${punchY}"
-      font-family="${typo.fontStack}" font-size="${punchSize}" font-weight="${punchWeight}"
+      font-family="${fontStack}" font-size="${punchSize}" font-weight="${punchWeight}"
       letter-spacing="${punchLetterSpacing}"
       filter="url(#shadow)">${buildPunchTspans(
         tiers.punch,
@@ -167,12 +170,16 @@ export async function compositeTextOntoImage(
       : "";
 
   const brandBandBottom =
-    layout === "brand_band_bottom" && overlay.bandColor
+    !options?.skip_bands &&
+    layout === "brand_band_bottom" &&
+    overlay.bandColor
       ? `<rect x="0" y="${Math.round(height * 0.65)}" width="${width}" height="${Math.round(height * 0.35)}" fill="${overlay.bandColor}"/>`
       : "";
 
   const brandBandLeft =
-    layout === "brand_band_left" && overlay.bandColor
+    !options?.skip_bands &&
+    layout === "brand_band_left" &&
+    overlay.bandColor
       ? `<rect x="0" y="0" width="${Math.round(width * 0.4)}" height="${height}" fill="${overlay.bandColor}"/>`
       : "";
 

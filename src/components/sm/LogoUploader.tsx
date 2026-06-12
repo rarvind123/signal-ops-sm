@@ -1,6 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import {
+  LOGO_ACCEPT,
+  LOGO_UPLOAD_HINT,
+  validateLogoFile,
+} from "@/lib/sm/logo-upload";
 import { label } from "@/lib/sm/ui";
 
 export default function LogoUploader({
@@ -20,6 +25,13 @@ export default function LogoUploader({
       setError("Save the brand profile first, then upload a logo.");
       return;
     }
+
+    const check = validateLogoFile(file);
+    if (!check.ok) {
+      setError(check.message);
+      return;
+    }
+
     setUploading(true);
     setError(null);
     try {
@@ -43,12 +55,14 @@ export default function LogoUploader({
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
   return (
     <div className="flex flex-col gap-2">
       <span className={label}>Logo</span>
+      <p className="text-xs leading-relaxed text-zinc-600">{LOGO_UPLOAD_HINT}</p>
       <div
         role="button"
         tabIndex={0}
@@ -68,7 +82,7 @@ export default function LogoUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={LOGO_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -78,7 +92,7 @@ export default function LogoUploader({
       {!clientId && (
         <p className="text-xs text-zinc-700">Available after saving the brand.</p>
       )}
-      {error && <p className="text-xs text-red-400/90">{error}</p>}
+      {error && <p className="text-xs leading-relaxed text-red-400/90">{error}</p>}
     </div>
   );
 }
