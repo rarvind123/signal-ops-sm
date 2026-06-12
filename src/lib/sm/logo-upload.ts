@@ -46,3 +46,71 @@ export function validateLogoFile(file: File): { ok: true } | { ok: false; messag
     name: file.name,
   });
 }
+
+export type LogoValidationStatus = "idle" | "checking" | "valid" | "invalid";
+
+export interface LogoValidationState {
+  status: LogoValidationStatus;
+  url?: string;
+  message?: string;
+}
+
+/** Decode-check a local file in the browser before upload. */
+export async function verifyLocalLogoFile(
+  file: File
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const check = validateLogoFile(file);
+  if (!check.ok) return check;
+
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      if (img.naturalWidth < 2 || img.naturalHeight < 2) {
+        resolve({
+          ok: false,
+          message: "This image is too small or empty to use as a logo.",
+        });
+      } else {
+        resolve({ ok: true });
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({
+        ok: false,
+        message:
+          "This file cannot be displayed as an image. Try PNG or SVG with a transparent background.",
+      });
+    };
+    img.src = objectUrl;
+  });
+}
+
+/** Confirm a hosted logo URL actually renders (post-upload). */
+export async function verifyRemoteLogoUrl(
+  url: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth < 2 || img.naturalHeight < 2) {
+        resolve({
+          ok: false,
+          message: "Logo preview failed — the file may be corrupted. Re-upload a PNG or SVG.",
+        });
+      } else {
+        resolve({ ok: true });
+      }
+    };
+    img.onerror = () => {
+      resolve({
+        ok: false,
+        message:
+          "Logo could not be loaded. Re-upload a file under 2 MB (PNG or SVG recommended).",
+      });
+    };
+    img.src = url;
+  });
+}

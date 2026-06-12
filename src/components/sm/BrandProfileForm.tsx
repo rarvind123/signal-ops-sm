@@ -17,6 +17,7 @@ import type {
   SMTone,
 } from "@/types/sm";
 import { LOGO_UPLOAD_HINT } from "@/lib/sm/logo-upload";
+import LogoReadinessPanel from "./LogoReadinessPanel";
 import LogoUploader from "./LogoUploader";
 import LogoVariantUploader from "./LogoVariantUploader";
 
@@ -37,7 +38,7 @@ export default function BrandProfileForm({
   onLogoUploaded,
   initial,
 }: {
-  onSave: (c: SMClient) => void;
+  onSave: (c: SMClient, options?: { includeLogo: boolean }) => void;
   onLogoUploaded?: () => void;
   initial?: Partial<SMClient>;
 }) {
@@ -69,6 +70,8 @@ export default function BrandProfileForm({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeLogo, setIncludeLogo] = useState(true);
+  const [logoReady, setLogoReady] = useState(false);
 
   function buildPayload() {
     return {
@@ -329,12 +332,22 @@ export default function BrandProfileForm({
       {savedClient && !hasBrandKit && (
         <LogoUploader
           clientId={savedClient.id}
+          initialPreviewUrl={savedClient.logo_url ?? savedClient.logos?.primary}
           onUploaded={(url) => {
             setSavedClient((prev) =>
               prev ? { ...prev, logo_url: url, logos: { ...prev.logos, primary: url } } : prev
             );
             onLogoUploaded?.();
           }}
+        />
+      )}
+
+      {savedClient && (
+        <LogoReadinessPanel
+          client={savedClient}
+          includeLogo={includeLogo}
+          onIncludeLogoChange={setIncludeLogo}
+          onValidationChange={(state) => setLogoReady(state.ready)}
         />
       )}
 
@@ -351,6 +364,11 @@ export default function BrandProfileForm({
               ? "Update brand kit fields, then continue."
               : "Brand saved. Add logos if needed, then continue."}
           </p>
+          {includeLogo && !logoReady && (
+            <p className="text-xs text-amber-400/90">
+              Upload and verify a working logo, or uncheck &ldquo;Include logo&rdquo; to continue.
+            </p>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -358,7 +376,7 @@ export default function BrandProfileForm({
                 setLoading(true);
                 try {
                   const client = await persistClient(savedClient.id);
-                  onSave(client);
+                  onSave(client, { includeLogo });
                 } catch (err) {
                   setError(err instanceof Error ? err.message : "Save failed");
                 } finally {
@@ -366,7 +384,7 @@ export default function BrandProfileForm({
                 }
               })();
             }}
-            disabled={loading}
+            disabled={loading || (includeLogo && !logoReady)}
             className={`${btnPrimary} w-fit`}
           >
             {loading ? "Saving…" : "Continue"}

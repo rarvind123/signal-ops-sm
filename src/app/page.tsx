@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   SMClient,
   SMCampaign,
@@ -30,9 +30,11 @@ type SMStep = "brand" | "brief" | "campaign_brief" | "signalops" | "assets";
 function SMStepIndicator({
   current,
   onStepClick,
+  reachableSteps,
 }: {
   current: SMStep;
   onStepClick: (step: SMStep) => void;
+  reachableSteps: Set<SMStep>;
 }) {
   const steps: { key: SMStep; label: string }[] = [
     { key: "brand", label: "Brand" },
@@ -48,18 +50,21 @@ function SMStepIndicator({
       {steps.map((s, i) => {
         const isCompleted = i < currentIndex;
         const isCurrent = s.key === current;
+        const canNavigate = s.key !== current && reachableSteps.has(s.key);
         return (
           <span key={s.key} className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => isCompleted && onStepClick(s.key)}
-              disabled={!isCompleted}
+              onClick={() => canNavigate && onStepClick(s.key)}
+              disabled={!canNavigate}
               className={`px-2 py-1 transition-colors ${
                 isCurrent
                   ? "text-zinc-100"
-                  : isCompleted
+                  : canNavigate
                     ? "cursor-pointer text-zinc-500 hover:text-zinc-300"
-                    : "cursor-default text-zinc-700"
+                    : isCompleted
+                      ? "text-zinc-600"
+                      : "cursor-default text-zinc-700"
               }`}
             >
               {s.label}
@@ -86,12 +91,25 @@ export default function Home() {
   const [signalopsLoading, setSignalopsLoading] = useState(false);
   const [selectedHeadline, setSelectedHeadline] = useState(0);
   const [generateLoading, setGenerateLoading] = useState(false);
+  const [includeLogoOnPoster, setIncludeLogoOnPoster] = useState(true);
+  const [creativeAngle, setCreativeAngle] = useState("");
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState(false);
 
   const formatMeta = CREATIVE_FORMATS.find((f) => f.id === activeFormat);
+
+  const reachableSteps = useMemo(() => {
+    const steps = new Set<SMStep>(["brand"]);
+    if (activeClient) steps.add("brief");
+    if (activeRequest) {
+      steps.add("brief");
+      steps.add("signalops");
+    }
+    if (activeRequest && signalOpsOutput) steps.add("assets");
+    return steps;
+  }, [activeClient, activeRequest, signalOpsOutput]);
 
   function tryAdminLogin() {
     if (adminPassword === "Mumbai") {
@@ -115,6 +133,8 @@ export default function Home() {
     setSelectedHeadline(0);
     setError(null);
     setShowCreateForm(true);
+    setIncludeLogoOnPoster(true);
+    setCreativeAngle("");
   }
 
   function goToBriefStep() {
@@ -128,6 +148,8 @@ export default function Home() {
     setActiveRequest(null);
     setSelectedHeadline(0);
     setError(null);
+    setIncludeLogoOnPoster(true);
+    setCreativeAngle("");
   }
 
   async function generateCreatives(
@@ -276,7 +298,11 @@ export default function Home() {
         {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
 
         {mode === "single_post" && (
-          <SMStepIndicator current={step} onStepClick={(s) => setStep(s)} />
+          <SMStepIndicator
+            current={step}
+            reachableSteps={reachableSteps}
+            onStepClick={(s) => setStep(s)}
+          />
         )}
 
         {error && (
@@ -326,8 +352,11 @@ export default function Home() {
               <BrandProfileForm
                 key="new-brand"
                 onLogoUploaded={() => void refreshActiveClient()}
-                onSave={(client) => {
+                onSave={(client, options) => {
                   setActiveClient(client);
+                  if (options?.includeLogo !== undefined) {
+                    setIncludeLogoOnPoster(options.includeLogo);
+                  }
                   setShowCreateForm(false);
                 }}
               />
@@ -351,7 +380,13 @@ export default function Home() {
           <CreativeBriefForm
             client={activeClient}
             activeFormat={activeFormat}
-            onSubmit={async (request) => {
+            initialRequest={activeRequest}
+            includeLogo={includeLogoOnPoster}
+            onIncludeLogoChange={setIncludeLogoOnPoster}
+            onSubmit={async (request, options) => {
+              if (options?.includeLogo !== undefined) {
+                setIncludeLogoOnPoster(options.includeLogo);
+              }
               await runSignalOps(request);
             }}
           />
@@ -376,6 +411,11 @@ export default function Home() {
           <div className="flex flex-col gap-8">
             <VisualApproachCard
               output={signalOpsOutput}
+              client={activeClient}
+              includeLogo={includeLogoOnPoster}
+              onIncludeLogoChange={setIncludeLogoOnPoster}
+              creativeAngle={creativeAngle}
+              onCreativeAngleChange={setCreativeAngle}
               onApprove={generateCreatives}
               loading={generateLoading}
               hasCreatives={generatedAssets.length > 0}
@@ -384,6 +424,7 @@ export default function Home() {
               <CreativePreviewGrid
                 assets={generatedAssets}
                 client={activeClient}
+                includeLogo={includeLogoOnPoster}
                 headlineMeta={signalOpsOutput.headlines[selectedHeadline]}
                 visualApproach={signalOpsOutput.visual_approach}
                 creativeFormat={activeRequest?.creative_format}

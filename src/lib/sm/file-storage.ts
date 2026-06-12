@@ -21,12 +21,13 @@ export function smPublicFileUrl(relativePath: string): string {
 export async function saveSmUpload(
   clientId: string,
   file: File,
-  kind: "assets" | "brief" = "assets"
+  kind: "assets" | "brief" = "assets",
+  preloadedBuffer?: Buffer
 ): Promise<{ relativePath: string; publicUrl: string; metadata: Record<string, unknown> }> {
   const ext = file.name?.includes(".") ? `.${file.name.split(".").pop()}` : ".bin";
   const filename = `${randomUUID()}${ext}`;
   const relativePath = `clients/${sanitizeSegment(clientId)}/${kind}/${filename}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const buffer = preloadedBuffer ?? Buffer.from(await file.arrayBuffer());
 
   const { error } = await supabase.storage.from(BUCKET).upload(relativePath, buffer, {
     contentType: file.type || "application/octet-stream",

@@ -27,6 +27,7 @@ import type {
   SMCreativeRequest,
 } from "@/types/sm";
 import ImageUploader from "./ImageUploader";
+import LogoReadinessPanel from "./LogoReadinessPanel";
 
 const GOALS: { key: SMGoal; label: string }[] = [
   { key: "offer", label: "Promote offer" },
@@ -47,11 +48,20 @@ const PLATFORMS: { key: SMPlatform; label: string }[] = [
 export default function CreativeBriefForm({
   client,
   activeFormat,
+  initialRequest,
+  includeLogo: includeLogoProp,
+  onIncludeLogoChange,
   onSubmit,
 }: {
   client: SMClient;
   activeFormat: SMCreativeFormat;
-  onSubmit: (request: SMCreativeRequest) => Promise<void>;
+  initialRequest?: SMCreativeRequest | null;
+  includeLogo?: boolean;
+  onIncludeLogoChange?: (value: boolean) => void;
+  onSubmit: (
+    request: SMCreativeRequest,
+    options?: { includeLogo: boolean }
+  ) => Promise<void>;
 }) {
   const isSocial = activeFormat === "social_media";
   const needsAdSize = activeFormat === "print_ad" || activeFormat === "outdoor";
@@ -69,6 +79,11 @@ export default function CreativeBriefForm({
   const [marketSource, setMarketSource] = useState<"meta" | "ai" | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(false);
   const [marketSearched, setMarketSearched] = useState(false);
+  const [includeLogoLocal, setIncludeLogoLocal] = useState(true);
+  const [logoReady, setLogoReady] = useState(false);
+
+  const includeLogo = includeLogoProp ?? includeLogoLocal;
+  const setIncludeLogo = onIncludeLogoChange ?? setIncludeLogoLocal;
 
   const selectedLens = CREATIVE_LENSES.find((l) => l.id === creativeLens);
 
@@ -106,6 +121,25 @@ export default function CreativeBriefForm({
     setSelectedSizeId("");
   }, [activeFormat]);
 
+  useEffect(() => {
+    if (!initialRequest) return;
+    setBrief(initialRequest.brief_text);
+    setMustInclude(initialRequest.must_include ?? "");
+    setMustExclude(initialRequest.must_exclude ?? "");
+    setGoal(initialRequest.goal ?? "awareness");
+    setCreativeLens(initialRequest.creative_lens ?? "signalops");
+    setPlatforms(
+      initialRequest.platforms.length > 0 ? initialRequest.platforms : ["instagram"]
+    );
+    setUploadedUrls(initialRequest.uploaded_image_urls ?? []);
+    if (initialRequest.ad_size_id) {
+      setSelectedSizeId(initialRequest.ad_size_id);
+    }
+    if (initialRequest.market_context) {
+      setMarketSearched(true);
+    }
+  }, [initialRequest?.id]);
+
   const togglePlatform = (p: SMPlatform) =>
     setPlatforms((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
@@ -116,7 +150,8 @@ export default function CreativeBriefForm({
     if (
       !brief.trim() ||
       (isSocial && platforms.length === 0) ||
-      (needsAdSize && !selectedSizeId)
+      (needsAdSize && !selectedSizeId) ||
+      (includeLogo && !logoReady)
     )
       return;
     setLoading(true);
@@ -146,7 +181,7 @@ export default function CreativeBriefForm({
       });
       const request = (await res.json()) as SMCreativeRequest & { error?: string };
       if (!res.ok) throw new Error(request.error ?? "Request failed");
-      await onSubmit(request);
+      await onSubmit(request, { includeLogo });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
@@ -159,6 +194,12 @@ export default function CreativeBriefForm({
       <div>
         <h2 className={sectionTitle}>Brief</h2>
         <p className={`${sectionSub} mt-1`}>{client.name}</p>
+        {initialRequest && (
+          <p className="mt-1 text-xs text-zinc-600">
+            Your previous brief is restored — edit and re-run, or use the Creatives step to
+            regenerate from your creative angle.
+          </p>
+        )}
       </div>
 
       {needsAdSize && (
@@ -344,7 +385,20 @@ export default function CreativeBriefForm({
         onUpload={(urls) => setUploadedUrls(urls)}
       />
 
+      <LogoReadinessPanel
+        client={client}
+        includeLogo={includeLogo}
+        onIncludeLogoChange={setIncludeLogo}
+        onValidationChange={(state) => setLogoReady(state.ready)}
+      />
+
       {error && <p className="text-sm text-red-400/90">{error}</p>}
+
+      {includeLogo && !logoReady && (
+        <p className="text-xs text-amber-400/90">
+          Fix or re-upload your logo, or uncheck &ldquo;Include logo&rdquo; to run {SIGNALOPS_TM}.
+        </p>
+      )}
 
       <button
         type="submit"
@@ -352,7 +406,8 @@ export default function CreativeBriefForm({
           loading ||
           !brief.trim() ||
           (isSocial && platforms.length === 0) ||
-          (needsAdSize && !selectedSizeId)
+          (needsAdSize && !selectedSizeId) ||
+          (includeLogo && !logoReady)
         }
         className={`${btnPrimary} w-fit`}
       >

@@ -129,6 +129,7 @@ const LOGO_POSITION_CLASSES: Record<LogoPosition, string> = {
 export default function AssetCard({
   asset,
   client,
+  includeLogo = true,
   headlineMeta,
   visualApproach,
   creativeFormat,
@@ -136,6 +137,7 @@ export default function AssetCard({
 }: {
   asset: SMGeneratedAsset;
   client: SMClient;
+  includeLogo?: boolean;
   headlineMeta?: SMSignalOpsHeadline;
   visualApproach?: SMVisualApproach;
   creativeFormat?: SMCreativeFormat;
@@ -172,9 +174,16 @@ export default function AssetCard({
 
   useEffect(() => {
     const options = overlayOptionsFromSettings(asset.overlay_settings);
-    setDraftOverlayOptions(options);
-    setAppliedOverlayOptions(options);
-  }, [asset.id, asset.overlay_settings]);
+    const resolved = includeLogo ? options : { ...options, logoStyle: "none" as const };
+    setDraftOverlayOptions(resolved);
+    setAppliedOverlayOptions(resolved);
+  }, [asset.id, asset.overlay_settings, includeLogo]);
+
+  useEffect(() => {
+    if (!includeLogo) {
+      setLogoUrl(null);
+    }
+  }, [includeLogo]);
 
   useEffect(() => {
     if (!typo.isCustomFont || !typo.fontFamily) return;

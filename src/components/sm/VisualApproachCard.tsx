@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { APPROACH_LABELS } from "@/lib/sm/visual-approach-ui";
 import { btnPrimary, chip, chipActive, field, label } from "@/lib/sm/ui";
-import type { SMSignalOpsOutput, SMVisualApproachMode } from "@/types/sm";
+import type { SMClient, SMSignalOpsOutput, SMVisualApproachMode } from "@/types/sm";
+import LogoReadinessPanel from "./LogoReadinessPanel";
 
 function Panel({
   title,
@@ -22,11 +23,21 @@ function Panel({
 
 export default function VisualApproachCard({
   output,
+  client,
+  includeLogo,
+  onIncludeLogoChange,
+  creativeAngle,
+  onCreativeAngleChange,
   onApprove,
   loading,
   hasCreatives,
 }: {
   output: SMSignalOpsOutput;
+  client: SMClient;
+  includeLogo: boolean;
+  onIncludeLogoChange: (value: boolean) => void;
+  creativeAngle?: string;
+  onCreativeAngleChange?: (value: string) => void;
   onApprove: (
     visualApproachOverride?: SMVisualApproachMode,
     sceneDescriptionOverride?: string
@@ -40,8 +51,14 @@ export default function VisualApproachCard({
   const [selectedMode, setSelectedMode] = useState<SMVisualApproachMode>(recommendedMode);
   const [modeSceneDescription, setModeSceneDescription] = useState(recommendedScene);
   const [regeneratingScene, setRegeneratingScene] = useState(false);
-  const [customAngle, setCustomAngle] = useState("");
+  const [customAngleLocal, setCustomAngleLocal] = useState("");
+  const [logoReady, setLogoReady] = useState(false);
   const braveScore = output.visual_approach?.brave_score ?? 5;
+
+  const customAngle = creativeAngle ?? customAngleLocal;
+  const setCustomAngle = onCreativeAngleChange ?? setCustomAngleLocal;
+  const isFirstGeneration = !hasCreatives;
+  const logoBlocks = isFirstGeneration && includeLogo && !logoReady;
 
   if (!output.visual_approach) return null;
 
@@ -201,23 +218,44 @@ export default function VisualApproachCard({
         )}
       </div>
 
-      {!hasCreatives && (
-        <button
-          type="button"
-          onClick={handleApprove}
-          disabled={loading || regeneratingScene}
-          className={`${btnPrimary} mt-4`}
-        >
-          {loading ? "Generating…" : "Approve & generate creatives"}
-        </button>
+      {isFirstGeneration && (
+        <div className="mt-4">
+          <LogoReadinessPanel
+            client={client}
+            includeLogo={includeLogo}
+            onIncludeLogoChange={onIncludeLogoChange}
+            onValidationChange={(state) => setLogoReady(state.ready)}
+          />
+        </div>
+      )}
+
+      {logoBlocks && (
+        <p className="mt-2 text-xs text-amber-400/90">
+          Upload a working logo or uncheck &ldquo;Include logo&rdquo; before generating.
+        </p>
       )}
 
       {hasCreatives && (
         <p className="mt-4 text-xs text-zinc-600">
-          Creatives generated with{" "}
-          {isRecommended ? "recommended" : APPROACH_LABELS[selectedMode].label} approach.
+          Not happy with the result? Adjust your creative angle above and regenerate — you&apos;ll
+          stay on this page.
         </p>
       )}
+
+      <button
+        type="button"
+        onClick={handleApprove}
+        disabled={loading || regeneratingScene || logoBlocks}
+        className={`${btnPrimary} mt-4`}
+      >
+        {loading
+          ? "Generating…"
+          : hasCreatives
+            ? customAngle.trim()
+              ? "Regenerate with your angle"
+              : "Regenerate creatives"
+            : "Approve & generate creatives"}
+      </button>
     </Panel>
   );
 }

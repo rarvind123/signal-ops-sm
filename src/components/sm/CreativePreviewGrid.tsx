@@ -13,6 +13,7 @@ import AssetCard from "./AssetCard";
 export default function CreativePreviewGrid({
   assets,
   client,
+  includeLogo = true,
   headlineMeta,
   visualApproach,
   creativeFormat,
@@ -22,6 +23,7 @@ export default function CreativePreviewGrid({
 }: {
   assets: SMGeneratedAsset[];
   client: SMClient;
+  includeLogo?: boolean;
   headlineMeta?: SMSignalOpsHeadline;
   visualApproach?: SMVisualApproach;
   creativeFormat?: SMCreativeFormat;
@@ -54,6 +56,7 @@ export default function CreativePreviewGrid({
             key={asset.id}
             asset={asset}
             client={client}
+            includeLogo={includeLogo}
             headlineMeta={headlineMeta}
             visualApproach={visualApproach}
             creativeFormat={creativeFormat}
