@@ -5,7 +5,14 @@ import {
   buildMarketContextSummary,
   type MetaMarketAd,
 } from "@/lib/sm/market-reference";
-import { getSizesForFormat } from "@/lib/sm/ad-sizes";
+import {
+  buildCustomAdSize,
+  buildCustomSizeId,
+  CUSTOM_SIZE_ID,
+  getAdSize,
+  getSizesForFormat,
+  parseCustomSizeId,
+} from "@/lib/sm/ad-sizes";
 import { CREATIVE_LENSES } from "@/lib/sm/creative-lenses-ui";
 import {
   btnPrimary,
@@ -68,6 +75,8 @@ export default function CreativeBriefForm({
   const isSocial = activeFormat === "social_media";
   const needsAdSize = activeFormat === "print_ad" || activeFormat === "outdoor";
   const [selectedSizeId, setSelectedSizeId] = useState("");
+  const [customWidthCm, setCustomWidthCm] = useState("");
+  const [customHeightCm, setCustomHeightCm] = useState("");
   const [brief, setBrief] = useState("");
   const [mustInclude, setMustInclude] = useState("");
   const [mustExclude, setMustExclude] = useState("");
@@ -121,6 +130,8 @@ export default function CreativeBriefForm({
 
   useEffect(() => {
     setSelectedSizeId("");
+    setCustomWidthCm("");
+    setCustomHeightCm("");
   }, [activeFormat]);
 
   useEffect(() => {
@@ -135,12 +146,49 @@ export default function CreativeBriefForm({
     );
     setUploadedUrls(initialRequest.uploaded_image_urls ?? []);
     if (initialRequest.ad_size_id) {
-      setSelectedSizeId(initialRequest.ad_size_id);
+      const custom = parseCustomSizeId(initialRequest.ad_size_id);
+      if (custom) {
+        setSelectedSizeId(CUSTOM_SIZE_ID);
+        setCustomWidthCm(String(custom.widthCm));
+        setCustomHeightCm(String(custom.heightCm));
+      } else {
+        setSelectedSizeId(initialRequest.ad_size_id);
+        setCustomWidthCm("");
+        setCustomHeightCm("");
+      }
     }
     if (initialRequest.market_context) {
       setMarketSearched(true);
     }
   }, [initialRequest?.id]);
+
+  function resolvedAdSizeId(): string | undefined {
+    if (!needsAdSize) return undefined;
+    if (selectedSizeId === CUSTOM_SIZE_ID) {
+      const w = parseFloat(customWidthCm);
+      const h = parseFloat(customHeightCm);
+      if (w > 0 && h > 0) return buildCustomSizeId(w, h);
+      return undefined;
+    }
+    return selectedSizeId || undefined;
+  }
+
+  function isAdSizeReady(): boolean {
+    if (!needsAdSize) return true;
+    if (selectedSizeId === CUSTOM_SIZE_ID) {
+      const w = parseFloat(customWidthCm);
+      const h = parseFloat(customHeightCm);
+      return w > 0 && h > 0 && w <= 500 && h <= 500;
+    }
+    return Boolean(selectedSizeId);
+  }
+
+  const selectedSize =
+    selectedSizeId === CUSTOM_SIZE_ID && isAdSizeReady()
+      ? buildCustomAdSize(parseFloat(customWidthCm), parseFloat(customHeightCm), activeFormat)
+      : selectedSizeId
+        ? getAdSize(activeFormat, resolvedAdSizeId() ?? selectedSizeId)
+        : null;
 
   const togglePlatform = (p: SMPlatform) =>
     setPlatforms((prev) =>
@@ -152,7 +200,7 @@ export default function CreativeBriefForm({
     if (
       !brief.trim() ||
       (isSocial && platforms.length === 0) ||
-      (needsAdSize && !selectedSizeId) ||
+      (needsAdSize && !isAdSizeReady()) ||
       (includeLogo && !logoReady)
     )
       return;
@@ -178,7 +226,7 @@ export default function CreativeBriefForm({
             marketAds.length > 0
               ? buildMarketContextSummary(marketAds, marketSource ?? "meta")
               : undefined,
-          ad_size_id: selectedSizeId || undefined,
+          ad_size_id: resolvedAdSizeId(),
         }),
       });
       const request = (await res.json()) as SMCreativeRequest & { error?: string };
@@ -214,7 +262,11 @@ export default function CreativeBriefForm({
               <button
                 key={size.id}
                 type="button"
-                onClick={() => setSelectedSizeId(size.id)}
+                onClick={() => {
+                  setSelectedSizeId(size.id);
+                  setCustomWidthCm("");
+                  setCustomHeightCm("");
+                }}
                 className={`rounded-lg border px-3 py-2.5 text-left transition-all ${
                   selectedSizeId === size.id
                     ? "border-violet-500 bg-violet-500/10"
@@ -232,11 +284,82 @@ export default function CreativeBriefForm({
                 <p className="mt-0.5 truncate text-xs text-zinc-700">{size.common_use}</p>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setSelectedSizeId(CUSTOM_SIZE_ID)}
+              className={`rounded-lg border px-3 py-2.5 text-left transition-all ${
+                selectedSizeId === CUSTOM_SIZE_ID
+                  ? "border-violet-500 bg-violet-500/10"
+                  : "border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <p
+                className={`text-xs font-medium ${
+                  selectedSizeId === CUSTOM_SIZE_ID ? "text-violet-300" : "text-zinc-300"
+                }`}
+              >
+                Custom size
+              </p>
+              <p className="mt-0.5 text-xs text-zinc-600">Enter width × height in cm</p>
+              <p className="mt-0.5 truncate text-xs text-zinc-700">Non-standard print spec</p>
+            </button>
           </div>
-          {selectedSizeId && (
-            <p className="text-xs text-zinc-600">
-              ↳ {getSizesForFormat(activeFormat).find((s) => s.id === selectedSizeId)?.common_use}
-            </p>
+
+          {selectedSizeId === CUSTOM_SIZE_ID && (
+            <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
+              <p className="text-xs text-zinc-500">Custom dimensions (centimetres)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="custom-width-cm" className="text-xs text-zinc-600">
+                    Width (cm)
+                  </label>
+                  <input
+                    id="custom-width-cm"
+                    type="number"
+                    min="1"
+                    max="500"
+                    step="0.1"
+                    value={customWidthCm}
+                    onChange={(e) => setCustomWidthCm(e.target.value)}
+                    placeholder="e.g. 21"
+                    className={`${field} py-2 text-sm`}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="custom-height-cm" className="text-xs text-zinc-600">
+                    Height (cm)
+                  </label>
+                  <input
+                    id="custom-height-cm"
+                    type="number"
+                    min="1"
+                    max="500"
+                    step="0.1"
+                    value={customHeightCm}
+                    onChange={(e) => setCustomHeightCm(e.target.value)}
+                    placeholder="e.g. 29.7"
+                    className={`${field} py-2 text-sm`}
+                  />
+                </div>
+              </div>
+              {isAdSizeReady() && selectedSize && (
+                <p className="text-xs text-green-400/90">
+                  {selectedSize.dimensions} · aspect {selectedSize.aspect_ratio}
+                </p>
+              )}
+              {selectedSizeId === CUSTOM_SIZE_ID && !isAdSizeReady() && (
+                <p className="text-xs text-amber-400/90">
+                  Enter width and height in cm (max 500 cm each).
+                </p>
+              )}
+            </div>
+          )}
+
+          {selectedSize && selectedSizeId !== CUSTOM_SIZE_ID && (
+            <p className="text-xs text-zinc-600">↳ {selectedSize.common_use}</p>
+          )}
+          {selectedSize && selectedSizeId === CUSTOM_SIZE_ID && isAdSizeReady() && (
+            <p className="text-xs text-zinc-600">↳ {selectedSize.common_use}</p>
           )}
         </div>
       )}
@@ -409,7 +532,7 @@ export default function CreativeBriefForm({
           loading ||
           !brief.trim() ||
           (isSocial && platforms.length === 0) ||
-          (needsAdSize && !selectedSizeId) ||
+          (needsAdSize && !isAdSizeReady()) ||
           (includeLogo && !logoReady)
         }
         className={`${btnPrimary} w-fit`}

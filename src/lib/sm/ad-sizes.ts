@@ -1,6 +1,8 @@
 import type { FluxAspectRatio } from "@/lib/sm/image-gen";
 import type { SMCreativeFormat } from "@/types/sm";
 
+export const CUSTOM_SIZE_ID = "custom";
+
 export interface AdSize {
   id: string;
   label: string;
@@ -115,6 +117,56 @@ export const OUTDOOR_AD_SIZES: AdSize[] = [
   },
 ];
 
+export function parseCustomSizeId(
+  sizeId: string
+): { widthCm: number; heightCm: number } | null {
+  const match = sizeId.match(/^custom_(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+  const widthCm = parseFloat(match[1]);
+  const heightCm = parseFloat(match[2]);
+  if (!Number.isFinite(widthCm) || !Number.isFinite(heightCm) || widthCm <= 0 || heightCm <= 0) {
+    return null;
+  }
+  return { widthCm, heightCm };
+}
+
+export function buildCustomSizeId(widthCm: number, heightCm: number): string {
+  const w = Number(widthCm.toFixed(1));
+  const h = Number(heightCm.toFixed(1));
+  return `custom_${w}x${h}`;
+}
+
+export function isCustomSizeId(sizeId: string): boolean {
+  return sizeId === CUSTOM_SIZE_ID || sizeId.startsWith("custom_");
+}
+
+function aspectRatioLabel(widthCm: number, heightCm: number): string {
+  const ratio = widthCm / heightCm;
+  if (ratio >= 1.55) return "16:9";
+  if (ratio >= 1.2) return "4:3";
+  if (ratio >= 0.85) return "3:4";
+  if (ratio >= 0.6) return "2:3";
+  return "9:16";
+}
+
+export function buildCustomAdSize(
+  widthCm: number,
+  heightCm: number,
+  formatId: string
+): AdSize {
+  const widthMm = Math.round(widthCm * 10);
+  const heightMm = Math.round(heightCm * 10);
+  const formatLabel = formatId === "outdoor" ? "outdoor" : "print";
+  return {
+    id: buildCustomSizeId(widthCm, heightCm),
+    label: "Custom size",
+    dimensions: `${widthCm} × ${heightCm} cm (${widthMm} × ${heightMm} mm)`,
+    aspect_ratio: aspectRatioLabel(widthCm, heightCm),
+    composition_note: `Custom ${formatLabel} size ${widthCm}×${heightCm} cm. Scale headline and visual hierarchy for this exact proportion; keep 5mm+ safe margins.`,
+    common_use: "Custom specification",
+  };
+}
+
 const FLUX_RATIO_MAP: Record<string, FluxAspectRatio> = {
   "3:4": "3:4",
   "4:3": "16:9",
@@ -128,6 +180,8 @@ const FLUX_RATIO_MAP: Record<string, FluxAspectRatio> = {
 };
 
 export function getAdSize(formatId: string, sizeId: string): AdSize | null {
+  const custom = parseCustomSizeId(sizeId);
+  if (custom) return buildCustomAdSize(custom.widthCm, custom.heightCm, formatId);
   const sizes = formatId === "print_ad" ? PRINT_AD_SIZES : OUTDOOR_AD_SIZES;
   return sizes.find((s) => s.id === sizeId) ?? null;
 }
