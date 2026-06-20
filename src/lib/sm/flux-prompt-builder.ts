@@ -1,4 +1,5 @@
 import type { SMClient, SMSignalOpsOutput } from "@/types/sm";
+import { rewriteFluxSceneForSafety } from "@/lib/sm/flux-safety-rewrite";
 
 /** Permanent FLUX exclusions — FLUX must never render brand products (hallucinated packaging). */
 export const FLUX_PRODUCT_EXCLUSIONS = [
@@ -19,9 +20,14 @@ export function buildFluxPrompt(
 ): string {
   const { visual_approach: approach, color_recommendation } = signalops;
 
-  const conceptCore = approach.scene_description?.trim()
+  const rawCore = approach.scene_description?.trim()
     ? approach.scene_description.trim()
     : signalops.visual_direction;
+
+  const { text: conceptCore } = rewriteFluxSceneForSafety(
+    rawCore,
+    approach.impossible_element
+  );
 
   const copyDep = approach.copy_dependency ?? 3;
 
