@@ -143,13 +143,18 @@ export default function AssetCard({
   creativeFormat?: SMCreativeFormat;
   onRegenerate: (id: string, direction?: string) => Promise<void>;
 }) {
+  const copyDependency = visualApproach?.copy_dependency ?? 3;
+  const isConceptAd =
+    visualApproach?.image_is_the_ad === true || copyDependency <= 2;
+  const isBalancedAd = !isConceptAd && copyDependency === 3;
+
   const [regenerating, setRegenerating] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
   const [showRedoInput, setShowRedoInput] = useState(false);
   const [redoDirection, setRedoDirection] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [localAsset, setLocalAsset] = useState(asset);
-  const [showTextOverlay, setShowTextOverlay] = useState(true);
+  const [showTextOverlay, setShowTextOverlay] = useState(!isConceptAd);
   const [draftOverlayOptions, setDraftOverlayOptions] =
     useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
   const [appliedOverlayOptions, setAppliedOverlayOptions] =
@@ -163,10 +168,9 @@ export default function AssetCard({
   const typo = getClientTypography(client);
   const fontProps = getTypographyFontProps(typo);
 
-  const copyDependency = visualApproach?.copy_dependency ?? 3;
-  const isConceptAd =
-    visualApproach?.image_is_the_ad === true || copyDependency <= 2;
-  const isBalancedAd = !isConceptAd && copyDependency === 3;
+  useEffect(() => {
+    setShowTextOverlay(!isConceptAd);
+  }, [isConceptAd]);
 
   useEffect(() => {
     setLocalAsset(asset);
@@ -352,7 +356,7 @@ export default function AssetCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         overlay_options: appliedOverlayOptions,
-        show_text_overlay: showTextOverlay && !isConceptAd,
+        show_text_overlay: showTextOverlay,
       }),
     });
     if (!res.ok) return;
@@ -401,7 +405,6 @@ export default function AssetCard({
             />
             {localAsset.headline &&
               showTextOverlay &&
-              !isConceptAd &&
               (() => {
                 const tiers = resolveHeadlineTiers(localAsset.headline, headlineMeta);
                 if (!tiers) return null;
@@ -691,6 +694,10 @@ export default function AssetCard({
           onChange={setDraftOverlayOptions}
           onApply={handleApplyOverlayChanges}
           onCancel={handleCancelOverlayChanges}
+          showTextOverlay={showTextOverlay}
+          isConceptAd={isConceptAd}
+          hasHeadline={Boolean(localAsset.headline)}
+          onToggleText={() => setShowTextOverlay((prev) => !prev)}
         />
       )}
 

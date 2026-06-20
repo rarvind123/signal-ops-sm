@@ -77,7 +77,7 @@ async function buildDownloadImage(
     visualApproach?.image_is_the_ad === true || copyDependency <= 2;
   const isBalancedAd = !isConceptAd && copyDependency === 3;
   const shouldCompositeText =
-    Boolean(asset.headline) && !isConceptAd && showTextOverlay;
+    Boolean(asset.headline) && showTextOverlay;
 
   const layoutTemplate = asset.layout_template ?? "full_bleed_gradient";
   const logoStyle = overlayOptions?.logoStyle ?? "box";

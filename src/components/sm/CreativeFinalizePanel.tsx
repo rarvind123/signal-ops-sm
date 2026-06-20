@@ -10,11 +10,19 @@ export default function CreativeFinalizePanel({
   onChange,
   onApply,
   onCancel,
+  showTextOverlay = true,
+  isConceptAd = false,
+  hasHeadline = false,
+  onToggleText,
 }: {
   options: OverlayOptions;
   onChange: React.Dispatch<React.SetStateAction<OverlayOptions>>;
   onApply: () => Promise<void>;
   onCancel: () => void;
+  showTextOverlay?: boolean;
+  isConceptAd?: boolean;
+  hasHeadline?: boolean;
+  onToggleText?: () => void;
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const set = (patch: Partial<OverlayOptions>) =>
@@ -31,6 +39,26 @@ export default function CreativeFinalizePanel({
 
   return (
     <div className="flex flex-col gap-4 border-t border-zinc-800 bg-zinc-900/50 p-4">
+      {hasHeadline && (
+        <div className="mb-1 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-zinc-500">Text overlay</p>
+            {isConceptAd && (
+              <p className="mt-0.5 text-xs text-zinc-600">Concept ad — off by default</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => onToggleText?.()}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              showTextOverlay ? "bg-white text-black" : "bg-zinc-800 text-zinc-500"
+            }`}
+          >
+            {showTextOverlay ? "On" : "Off"}
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         <p className="text-xs uppercase tracking-wider text-zinc-500">Typography</p>
         <div className="flex flex-col gap-1">
