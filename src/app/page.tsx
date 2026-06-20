@@ -383,6 +383,7 @@ export default function Home() {
             initialRequest={activeRequest}
             includeLogo={includeLogoOnPoster}
             onIncludeLogoChange={setIncludeLogoOnPoster}
+            onLogoUploaded={() => void refreshActiveClient()}
             onSubmit={async (request, options) => {
               if (options?.includeLogo !== undefined) {
                 setIncludeLogoOnPoster(options.includeLogo);
@@ -414,6 +415,7 @@ export default function Home() {
               client={activeClient}
               includeLogo={includeLogoOnPoster}
               onIncludeLogoChange={setIncludeLogoOnPoster}
+              onLogoUploaded={() => void refreshActiveClient()}
               creativeAngle={creativeAngle}
               onCreativeAngleChange={setCreativeAngle}
               onApprove={generateCreatives}

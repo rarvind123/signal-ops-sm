@@ -51,6 +51,7 @@ export default function CreativeBriefForm({
   initialRequest,
   includeLogo: includeLogoProp,
   onIncludeLogoChange,
+  onLogoUploaded,
   onSubmit,
 }: {
   client: SMClient;
@@ -58,6 +59,7 @@ export default function CreativeBriefForm({
   initialRequest?: SMCreativeRequest | null;
   includeLogo?: boolean;
   onIncludeLogoChange?: (value: boolean) => void;
+  onLogoUploaded?: () => void;
   onSubmit: (
     request: SMCreativeRequest,
     options?: { includeLogo: boolean }
@@ -390,6 +392,7 @@ export default function CreativeBriefForm({
         includeLogo={includeLogo}
         onIncludeLogoChange={setIncludeLogo}
         onValidationChange={(state) => setLogoReady(state.ready)}
+        onLogoUploaded={onLogoUploaded}
       />
 
       {error && <p className="text-sm text-red-400/90">{error}</p>}

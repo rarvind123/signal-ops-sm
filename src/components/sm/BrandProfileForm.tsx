@@ -348,6 +348,14 @@ export default function BrandProfileForm({
           includeLogo={includeLogo}
           onIncludeLogoChange={setIncludeLogo}
           onValidationChange={(state) => setLogoReady(state.ready)}
+          onLogoUploaded={() => {
+            void (async () => {
+              if (!savedClient) return;
+              const res = await fetch(`/api/sm/clients/${savedClient.id}`);
+              if (res.ok) setSavedClient((await res.json()) as SMClient);
+              onLogoUploaded?.();
+            })();
+          }}
         />
       )}
 

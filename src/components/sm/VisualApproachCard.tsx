@@ -26,6 +26,7 @@ export default function VisualApproachCard({
   client,
   includeLogo,
   onIncludeLogoChange,
+  onLogoUploaded,
   creativeAngle,
   onCreativeAngleChange,
   onApprove,
@@ -36,6 +37,7 @@ export default function VisualApproachCard({
   client: SMClient;
   includeLogo: boolean;
   onIncludeLogoChange: (value: boolean) => void;
+  onLogoUploaded?: () => void;
   creativeAngle?: string;
   onCreativeAngleChange?: (value: string) => void;
   onApprove: (
@@ -220,12 +222,13 @@ export default function VisualApproachCard({
 
       {isFirstGeneration && (
         <div className="mt-4">
-          <LogoReadinessPanel
-            client={client}
-            includeLogo={includeLogo}
-            onIncludeLogoChange={onIncludeLogoChange}
-            onValidationChange={(state) => setLogoReady(state.ready)}
-          />
+            <LogoReadinessPanel
+              client={client}
+              includeLogo={includeLogo}
+              onIncludeLogoChange={onIncludeLogoChange}
+              onValidationChange={(state) => setLogoReady(state.ready)}
+              onLogoUploaded={onLogoUploaded}
+            />
         </div>
       )}
 
