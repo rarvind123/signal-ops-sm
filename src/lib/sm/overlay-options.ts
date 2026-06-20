@@ -18,6 +18,7 @@ export interface OverlayOptions {
   pipPosition: CornerPosition;
   pipSize: "sm" | "md" | "lg";
   showPip: boolean;
+  selectedFontId: string | null;
 }
 
 function migrateLogoStyle(settings: SMOverlaySettings): SMLogoStyle {
@@ -46,6 +47,7 @@ export function overlaySettingsFromOptions(
     pip_url: options.pipImageUrl,
     pip_position: options.pipPosition,
     pip_size: options.pipSize,
+    selected_font_id: options.selectedFontId,
   };
 }
 
@@ -71,6 +73,7 @@ export function overlayOptionsFromSettings(
     pipImageUrl: settings.pip_url ?? DEFAULT_OVERLAY_OPTIONS.pipImageUrl,
     pipPosition: settings.pip_position ?? DEFAULT_OVERLAY_OPTIONS.pipPosition,
     pipSize: settings.pip_size ?? DEFAULT_OVERLAY_OPTIONS.pipSize,
+    selectedFontId: settings.selected_font_id ?? DEFAULT_OVERLAY_OPTIONS.selectedFontId,
   };
 }
 
@@ -89,6 +92,7 @@ export const DEFAULT_OVERLAY_OPTIONS: OverlayOptions = {
   pipPosition: "bottom-right",
   pipSize: "sm",
   showPip: false,
+  selectedFontId: null,
 };
 
 export const LOGO_SIZE_PX: Record<OverlayOptions["logoSize"], number> = {

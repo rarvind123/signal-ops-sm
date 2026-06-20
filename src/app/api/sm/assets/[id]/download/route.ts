@@ -125,6 +125,7 @@ async function buildDownloadImage(
           layout_template: layoutTemplate,
           text_position: overlayOptions?.textPosition,
           text_size: overlayOptions?.textSize,
+          selected_font_id: overlayOptions?.selectedFontId,
         }
       );
     } catch (e) {

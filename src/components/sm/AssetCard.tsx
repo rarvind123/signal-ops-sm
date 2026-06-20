@@ -3,6 +3,7 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import CreativeFinalizePanel from "@/components/sm/CreativeFinalizePanel";
+import { getFontById, loadGoogleFont } from "@/lib/sm/font-catalogue";
 import { getAdSize } from "@/lib/sm/ad-sizes";
 import {
   brightnessFromPalette,
@@ -167,10 +168,29 @@ export default function AssetCard({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const typo = getClientTypography(client);
   const fontProps = getTypographyFontProps(typo);
+  const activeFont = (showFinalizePanel ? draftOverlayOptions : appliedOverlayOptions)
+    .selectedFontId
+    ? getFontById(
+        (showFinalizePanel ? draftOverlayOptions : appliedOverlayOptions).selectedFontId!
+      )
+    : null;
+  const fontFamilyOverride = activeFont
+    ? `'${activeFont.family}', sans-serif`
+    : fontProps.fontFamily;
+  const fontWeightBase = activeFont?.weight ?? typo.fontWeight;
+  const letterSpacingOverride = activeFont?.letterSpacing ?? typo.letterSpacing;
+  const textTransformOverride = activeFont?.textTransform ?? typo.textTransform;
 
   useEffect(() => {
     setShowTextOverlay(!isConceptAd);
   }, [isConceptAd]);
+
+  useEffect(() => {
+    const fontId = draftOverlayOptions.selectedFontId ?? appliedOverlayOptions.selectedFontId;
+    if (!fontId) return;
+    const font = getFontById(fontId);
+    if (font?.googleUrl) loadGoogleFont(font.googleUrl);
+  }, [draftOverlayOptions.selectedFontId, appliedOverlayOptions.selectedFontId]);
 
   useEffect(() => {
     setLocalAsset(asset);
@@ -449,8 +469,8 @@ export default function AssetCard({
                         : "sm"
                   : appliedOverlayOptions.textSize;
                 const sizes = TEXT_SIZE_MAP[textSizeKey];
-                const setupWeight = Math.max(typo.fontWeight - 200, 300);
-                const punchWeight = Math.min(typo.fontWeight + 200, 900);
+                const setupWeight = Math.max(fontWeightBase - 200, 300);
+                const punchWeight = Math.min(fontWeightBase + 200, 900);
                 const accentColor = getReadableBrandAccent(client);
                 const logoClearsText =
                   useBand &&
@@ -475,12 +495,12 @@ export default function AssetCard({
                         style={{
                           color: overlay.setupColor,
                           fontWeight: setupWeight,
-                          letterSpacing: typo.letterSpacing,
-                          textTransform: typo.textTransform,
+                          letterSpacing: letterSpacingOverride,
+                          textTransform: textTransformOverride,
                           fontSize: sizes.setup,
                           lineHeight: 1.25,
                           textShadow: overlay.setupShadow,
-                          fontFamily: fontProps.fontFamily,
+                          fontFamily: fontFamilyOverride,
                           wordBreak: "break-word",
                         }}
                       >
@@ -494,13 +514,13 @@ export default function AssetCard({
                       cssClass={`${fontProps.className} break-words`}
                       fontWeight={punchWeight}
                       letterSpacing={
-                        typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing
+                        textTransformOverride === "uppercase" ? "0.04em" : letterSpacingOverride
                       }
-                      textTransform={typo.textTransform}
+                      textTransform={textTransformOverride}
                       fontSize={sizes.punch}
                       punchColor={overlay.punchColor}
                       textShadow={overlay.punchShadow}
-                      fontFamily={fontProps.fontFamily}
+                      fontFamily={fontFamilyOverride}
                     />
                   </div>
                 );
@@ -602,7 +622,7 @@ export default function AssetCard({
               >
                 <p
                   style={{
-                    fontFamily: fontProps.fontFamily ?? "inherit",
+                    fontFamily: fontFamilyOverride ?? "inherit",
                     fontSize: "clamp(10px, 2.5cqi, 14px)",
                     color: "rgba(255,255,255,0.85)",
                     textShadow: "0 1px 3px rgba(0,0,0,0.8)",

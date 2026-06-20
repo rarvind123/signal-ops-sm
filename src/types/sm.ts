@@ -240,6 +240,7 @@ export interface SMOverlaySettings {
   pip_url?: string | null;
   pip_position?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
   pip_size?: "sm" | "md" | "lg";
+  selected_font_id?: string | null;
 }
 
 export interface SMGeneratedAsset {

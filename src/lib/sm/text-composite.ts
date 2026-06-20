@@ -1,6 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
+import { getFontById } from "@/lib/sm/font-catalogue";
 import { getOverlayConfig } from "@/lib/sm/overlay-config";
 import {
   getBrandAccentColor,
@@ -81,12 +82,21 @@ export async function compositeTextOntoImage(
     layout_template?: SMLayoutTemplate;
     text_position?: OverlayOptions["textPosition"];
     text_size?: OverlayOptions["textSize"];
+    selected_font_id?: string | null;
     skip_bands?: boolean;
   }
 ): Promise<Buffer> {
   const { width = 1080, height = 1080 } = await sharp(imageBuffer).metadata();
   const typo = client ? getClientTypography(client) : getTypography();
-  const fontStack = svgSafeFontStack(typo);
+  const fontOverride = options?.selected_font_id
+    ? getFontById(options.selected_font_id)
+    : null;
+  const fontStack = fontOverride
+    ? `'${fontOverride.family}', sans-serif`
+    : svgSafeFontStack(typo);
+  const fontWeightBase = fontOverride?.weight ?? typo.fontWeight;
+  const letterSpacing = fontOverride?.letterSpacing ?? typo.letterSpacing;
+  const textTransform = fontOverride?.textTransform ?? typo.textTransform;
   const tiers = resolveHeadlineTiers(headline, options);
   if (!tiers) return imageBuffer;
 
@@ -104,8 +114,8 @@ export async function compositeTextOntoImage(
   const useBand = Boolean(overlay.bandPosition);
   const paddingX = Math.round(width * (format === "print_ad" ? 0.07 : 0.05));
   const paddingY = Math.round(height * 0.05);
-  const setupWeight = Math.max(typo.fontWeight - 200, 300);
-  const punchWeight = Math.min(typo.fontWeight + 200, 900);
+  const setupWeight = Math.max(fontWeightBase - 200, 300);
+  const punchWeight = Math.min(fontWeightBase + 200, 900);
   const accentColor = client ? getReadableBrandAccent(client) : undefined;
 
   const punchLineH = punchSize * 1.1;
@@ -146,12 +156,12 @@ export async function compositeTextOntoImage(
   const setupText = tiers.setup
     ? `<text x="${textX}" y="${setupY}"
       font-family="${fontStack}" font-size="${setupSize}" font-weight="${setupWeight}"
-      letter-spacing="${typo.letterSpacing}"
+      letter-spacing="${letterSpacing}"
       fill="${overlay.setupColor}" filter="url(#shadow)">${escapeXml(tiers.setup)}</text>`
     : "";
 
   const punchLetterSpacing =
-    typo.textTransform === "uppercase" ? "0.04em" : typo.letterSpacing;
+    textTransform === "uppercase" ? "0.04em" : letterSpacing;
 
   const punchText = `<text x="${textX}" y="${punchY}"
       font-family="${fontStack}" font-size="${punchSize}" font-weight="${punchWeight}"
@@ -161,7 +171,7 @@ export async function compositeTextOntoImage(
         options?.emphasis_word,
         accentColor,
         overlay.punchColor,
-        typo.textTransform
+        textTransform
       )}</text>`;
 
   const whiteBand =

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type React from "react";
+import { FONT_CATALOGUE, loadGoogleFont } from "@/lib/sm/font-catalogue";
 import { field } from "@/lib/sm/ui";
 import type { OverlayOptions } from "@/lib/sm/overlay-options";
 
@@ -27,6 +28,12 @@ export default function CreativeFinalizePanel({
   const [isSaving, setIsSaving] = useState(false);
   const set = (patch: Partial<OverlayOptions>) =>
     onChange((prev) => ({ ...prev, ...patch }));
+
+  useEffect(() => {
+    for (const font of FONT_CATALOGUE) {
+      if (font.googleUrl) loadGoogleFont(font.googleUrl);
+    }
+  }, []);
 
   async function handleApplyChanges() {
     setIsSaving(true);
@@ -99,6 +106,51 @@ export default function CreativeFinalizePanel({
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="mb-5">
+        <p className="mb-2 text-xs uppercase tracking-wider text-zinc-500">Font</p>
+        <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto pr-1">
+          <button
+            type="button"
+            onClick={() => set({ selectedFontId: null })}
+            className={`flex items-center justify-between rounded-lg px-3 py-2 text-left transition-colors ${
+              !options.selectedFontId
+                ? "bg-white text-black"
+                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+            }`}
+          >
+            <span className="text-sm font-medium">Brand default</span>
+            <span className="text-xs text-zinc-500">Auto</span>
+          </button>
+
+          {FONT_CATALOGUE.map((font) => (
+            <button
+              key={font.id}
+              type="button"
+              onClick={() => set({ selectedFontId: font.id })}
+              className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
+                options.selectedFontId === font.id
+                  ? "bg-white text-black"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+            >
+              <span
+                style={{
+                  fontFamily: `'${font.family}', sans-serif`,
+                  fontSize: "15px",
+                  fontWeight: font.weight,
+                  letterSpacing: font.letterSpacing,
+                  textTransform: font.textTransform,
+                  lineHeight: 1,
+                }}
+              >
+                {font.label}
+              </span>
+              <span className="ml-2 shrink-0 text-xs text-zinc-500">{font.mood}</span>
+            </button>
+          ))}
         </div>
       </div>
 
