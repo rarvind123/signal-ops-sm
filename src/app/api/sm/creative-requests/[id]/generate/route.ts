@@ -189,8 +189,8 @@ export async function POST(req: Request, context: RouteContext) {
     }> = [];
 
     if (explore) {
-      const baseMode: SMVisualApproachMode =
-        signalops.visual_approach?.mode ?? "concept_first";
+      const baseMode = (signalops.visual_approach?.mode ??
+        "concept_first") as SMVisualApproachMode;
       const headlineCount = Math.max(signalops.headlines.length, 1);
       const directions: ExploreDirection[] = [
         { label: "Strategy pick", headline_index, visual_approach_mode: baseMode },
