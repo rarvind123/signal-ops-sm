@@ -48,52 +48,25 @@ export async function GET(req: Request) {
   }
 
   try {
-    const orRes = await fetch("https://openrouter.ai/api/v1/auth/key", {
-      headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
-    });
-    if (orRes.ok) {
-      const data = (await orRes.json()) as {
-        data?: { usage?: number; limit?: number | null };
-      };
-      const usage = data?.data?.usage ?? null;
-      const limit = data?.data?.limit ?? null;
-      const remaining = limit !== null && usage !== null ? limit - usage : null;
-
-      if (remaining !== null && remaining < 2) {
-        alerts.push({
-          service: `OpenRouter (${SIGNALOPS_TM} AI)`,
-          status: "critical",
-          message: `Credit nearly exhausted: $${remaining.toFixed(2)} remaining. Top up at openrouter.ai/credits`,
-        });
-      } else if (remaining !== null && remaining < 10) {
-        alerts.push({
-          service: `OpenRouter (${SIGNALOPS_TM} AI)`,
-          status: "low",
-          message: `Credit running low: $${remaining.toFixed(2)} remaining. Consider topping up at openrouter.ai/credits`,
-        });
-      } else {
-        const msg =
-          remaining !== null
-            ? `$${remaining.toFixed(2)} credit remaining`
-            : "API key valid";
-        alerts.push({
-          service: `OpenRouter (${SIGNALOPS_TM} AI)`,
-          status: "ok",
-          message: msg,
-        });
-      }
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (apiKey) {
+      alerts.push({
+        service: `Anthropic (${SIGNALOPS_TM} AI)`,
+        status: "ok",
+        message: "API key configured. Check usage at console.anthropic.com",
+      });
     } else {
       alerts.push({
-        service: `OpenRouter (${SIGNALOPS_TM} AI)`,
+        service: `Anthropic (${SIGNALOPS_TM} AI)`,
         status: "critical",
-        message: `API key invalid (HTTP ${orRes.status}). Check at openrouter.ai/keys`,
+        message: "ANTHROPIC_API_KEY is not set in environment variables",
       });
     }
   } catch {
     alerts.push({
-      service: `OpenRouter (${SIGNALOPS_TM} AI)`,
+      service: `Anthropic (${SIGNALOPS_TM} AI)`,
       status: "unknown",
-      message: "Could not reach OpenRouter API",
+      message: "Could not check Anthropic configuration",
     });
   }
 

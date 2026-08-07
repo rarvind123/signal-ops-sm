@@ -1,3 +1,4 @@
+import { withBasePath } from "@/lib/base-path";
 import type { SMLogoSet } from "@/types/sm";
 import { selectLogoForFormat } from "@/lib/sm/logo-selector";
 
@@ -45,5 +46,5 @@ export function clientLogoProxyUrl(
   }
   if (options?.format) params.set("format", options.format);
   const qs = params.toString();
-  return `/api/sm/clients/${clientId}/logo/file${qs ? `?${qs}` : ""}`;
+  return withBasePath(`/api/sm/clients/${clientId}/logo/file${qs ? `?${qs}` : ""}`);
 }

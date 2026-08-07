@@ -4,6 +4,7 @@ import { useState } from "react";
 import { btnPrimary, btnSecondary } from "@/lib/sm/ui";
 import { FORMAT_COLORS, formatLabel } from "@/lib/sm/content-format-ui";
 import type { SMCreativeBrief } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function CreativeBriefCard({
   brief,
@@ -17,7 +18,7 @@ export default function CreativeBriefCard({
   async function handleGenerate() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/sm/briefs/${brief.id}/generate`, { method: "POST" });
+      const res = await fetch(apiUrl(`/api/sm/briefs/${brief.id}/generate`), { method: "POST" });
       if (!res.ok) {
         const json = (await res.json()) as { error?: string };
         console.error(json.error);

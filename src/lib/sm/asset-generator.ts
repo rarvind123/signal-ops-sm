@@ -1,6 +1,9 @@
 import { completeJson } from "@/lib/ai";
 import { getAdSize } from "@/lib/sm/ad-sizes";
 import { buildFluxPrompt, FLUX_PRODUCT_EXCLUSIONS } from "@/lib/sm/flux-prompt-builder";
+import { layoutRequiresHeadline } from "@/lib/sm/layout-utils";
+import { brandKitColorDirective } from "@/lib/sm/brand-kit-lock";
+import { sceneMustIncludeClause, splitMustInclude } from "@/lib/sm/must-include";
 import { getBrandAccentColor } from "@/lib/sm/typography";
 import type {
   SMClient,
@@ -181,6 +184,9 @@ function typographyZoneForFormat(creativeFormat?: SMCreativeFormat): string {
 }
 
 function colorContextForClient(client: SMClient, signalops: SMSignalOpsOutput): string {
+  const brandLock = brandKitColorDirective(client);
+  if (brandLock) return brandLock;
+
   const p = client.color_palette ?? {};
   const accent = getBrandAccentColor(client);
   if (p.primary || accent) {
@@ -204,17 +210,38 @@ function adSizeCompositionNote(
 function visualConstraintsForRequest(
   request?: Pick<SMCreativeRequest, "must_include" | "must_exclude">
 ): string {
-  const excludeRule = request?.must_exclude
-    ? [request.must_exclude, "no hands (unless explicitly required above)"].join(", ")
-    : "no hands (unless explicitly required by the brief)";
+  const mustInclude = request?.must_include?.trim();
+  const { sceneSubjects, copyFacts } = splitMustInclude(mustInclude);
+  const handsRequired = sceneSubjects.some((s) =>
+    /\b(hands?|fists?|palms?|fingers?)\b/i.test(s)
+  );
 
-  return [
-    request?.must_include ? `MUST INCLUDE: ${request.must_include}` : null,
-    excludeRule,
-  ]
+  const excludeRule = handsRequired
+    ? request?.must_exclude
+      ? `MUST EXCLUDE: ${request.must_exclude}`
+      : null
+    : request?.must_exclude
+      ? `MUST EXCLUDE: ${request.must_exclude}, no hands unless required above`
+      : "no hands unless explicitly required by scene subjects";
+
+  const copyNote =
+    copyFacts.length > 0
+      ? `Do NOT paint these as on-image text (they are added later as typography overlay): ${copyFacts.join("; ")}`
+      : null;
+
+  return [sceneMustIncludeClause(mustInclude), copyNote, excludeRule]
     .filter(Boolean)
     .join(", ");
 }
+
+export type ImagePromptExtras = {
+  /** Merged user + visual-research reference URLs (for has-refs prompt locking) */
+  referenceImageUrls?: string[];
+  /** User-uploaded refs — lock composition to these first */
+  userReferenceUrls?: string[];
+  /** Agency style brief from visual research */
+  styleBrief?: string | null;
+};
 
 export function buildImageGenerationPrompt(
   client: SMClient,
@@ -225,16 +252,32 @@ export function buildImageGenerationPrompt(
   creativeFormat?: SMCreativeFormat,
   request?: Pick<
     SMCreativeRequest,
-    "must_include" | "must_exclude" | "ad_size_id" | "creative_format"
-  >
+    | "must_include"
+    | "must_exclude"
+    | "ad_size_id"
+    | "creative_format"
+    | "uploaded_image_urls"
+  >,
+  extras?: ImagePromptExtras
 ): string {
   const approach = signalops.visual_approach;
   const modeInstructions =
     VISUAL_APPROACH_INSTRUCTIONS[approach?.mode ?? "concept_first"];
 
-  const photoStyle = client.photo_style
-    ? PHOTO_STYLE_MAP[client.photo_style]
-    : "professional commercial photography";
+  const hasReferenceImages =
+    (extras?.referenceImageUrls?.length ?? 0) > 0 ||
+    (request?.uploaded_image_urls?.length ?? 0) > 0;
+  const hasUserReference =
+    (extras?.userReferenceUrls?.length ?? 0) > 0 ||
+    (request?.uploaded_image_urls?.length ?? 0) > 0;
+
+  const photoStyle = hasUserReference
+    ? "match the user-uploaded reference image for composition, pose, lighting, and visual metaphor — do not drift to generic stock"
+    : hasReferenceImages
+      ? "match reference photographic style — naturalistic, non-corporate, editorial"
+      : client.photo_style
+        ? PHOTO_STYLE_MAP[client.photo_style]
+        : "professional commercial photography";
 
   const isVertical =
     assetType === "story" ||
@@ -242,8 +285,9 @@ export function buildImageGenerationPrompt(
     (platform === "instagram" && assetType === "post");
 
   const copyDep = approach?.copy_dependency ?? 3;
+  const layoutNeedsHeadline = layoutRequiresHeadline(signalops.layout_template);
   const compositionNote = isVertical
-    ? copyDep <= 2
+    ? copyDep <= 2 && !layoutNeedsHeadline
       ? "vertical portrait, subject fills entire frame, no reserved text zones"
       : layoutCompositionNote(signalops.layout_template)
     : platform === "linkedin"
@@ -252,9 +296,16 @@ export function buildImageGenerationPrompt(
 
   const portraitRule = isVertical ? PORTRAIT_COMPOSITION_RULE : null;
 
-  const fluxCore = buildFluxPrompt(signalops, client);
+  const fluxCore = buildFluxPrompt(signalops, client, request?.must_include, {
+    hasReferenceImages,
+    hasUserReference,
+    styleBrief: extras?.styleBrief,
+  });
+  const constraints = visualConstraintsForRequest(request);
 
+  // Put strategy + constraints first so the 3800-char slice never drops them.
   const parts = [
+    constraints,
     fluxCore,
     portraitRule,
     colorContextForClient(client, signalops),
@@ -263,10 +314,8 @@ export function buildImageGenerationPrompt(
     adSizeCompositionNote(request),
     compositionNote,
     modeInstructions,
-    visualConstraintsForRequest(request),
     "ultra high quality",
     "sharp focus",
-    "8k resolution",
     UNIVERSAL_EXCLUSIONS,
     FLUX_PRODUCT_EXCLUSIONS,
   ]
@@ -283,17 +332,23 @@ export async function generateCopyForPlatform(
   goal: string,
   headline: string
 ): Promise<{ caption: string; cta: string }> {
-  const systemPrompt = `You are a social media copywriter. Return ONLY valid JSON with keys "caption" and "cta". No markdown.`;
-  const userPrompt = `You are a social media copywriter for ${client.name}.
+  const systemPrompt = `You are a senior creative copywriter. Return ONLY valid JSON with keys "caption" and "cta". No markdown.`;
+  const trigger = signalops.be_trigger;
+  const userPrompt = `You are writing social copy for ${client.name}.
 Tone: ${client.tone ?? "professional"}
 Platform: ${platform}
 Goal: ${goal}
 Campaign theme: ${signalops.theme}
-Headline: "${headline}"
+Approved headline (on-image): "${headline}"
+Psychological trigger: ${trigger?.label ?? ""} — ${trigger?.primary ?? ""}
+How to apply it: ${trigger?.application ?? ""}
+Human truth: ${signalops.insight_bridge?.human_truth ?? ""}
+Brand truth: ${signalops.insight_bridge?.brand_truth ?? ""}
 
-Write:
-1. A caption for this ${platform} post (platform-appropriate length, no hashtags yet)
-2. A CTA button text (max 4 words)
+Write copy that EXECUTES the psychological strategy above — do not invent a different angle.
+Do not lead with price/fee/checklist facts; those are fine print only.
+1. caption for this ${platform} post (platform-appropriate length, no hashtags)
+2. CTA button text (max 4 words) that advances the strategy
 
 Return JSON: { "caption": "...", "cta": "..." }`;
 
@@ -301,7 +356,7 @@ Return JSON: { "caption": "...", "cta": "..." }`;
     systemPrompt,
     userPrompt,
     "claude-sonnet-4-6",
-    { maxTokens: 1024, temperature: 0.75 }
+    { maxTokens: 1024, temperature: 0.7 }
   );
 
   return {

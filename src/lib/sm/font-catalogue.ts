@@ -150,6 +150,26 @@ export function getFontById(id: string): FontOption | undefined {
   return FONT_CATALOGUE.find((f) => f.id === id);
 }
 
+/** Tone / goal → suggested catalogue font for social creatives (UAT: font recommendation). */
+export function recommendFontId(tone?: string | null, goal?: string | null): string {
+  const t = (tone ?? "professional").toLowerCase();
+  const g = (goal ?? "").toLowerCase();
+
+  if (g === "offer" || g === "cta" || t === "urgent") return "oswald";
+  if (t === "bold") return "bebas";
+  if (t === "premium") return "cormorant";
+  if (t === "warm") return "lora";
+  if (t === "playful") return "dm-sans";
+  if (g === "awareness" || g === "launch") return "outfit";
+  if (t === "professional") return "inter";
+  return "outfit";
+}
+
+export function getRecommendedFont(tone?: string | null, goal?: string | null): FontOption {
+  const id = recommendFontId(tone, goal);
+  return getFontById(id) ?? FONT_CATALOGUE[0];
+}
+
 export function loadGoogleFont(url: string): void {
   if (typeof document === "undefined") return;
   if (document.querySelector(`link[href="${url}"]`)) return;

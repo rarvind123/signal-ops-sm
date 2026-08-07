@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { btnGhost, label, sectionTitle } from "@/lib/sm/ui";
 import type { SMClient } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function ClientSelector({
   onSelect,
@@ -17,7 +18,7 @@ export default function ClientSelector({
   useEffect(() => {
     void (async () => {
       try {
-        const res = await fetch("/api/sm/clients");
+        const res = await fetch(apiUrl("/api/sm/clients"));
         const data = (await res.json()) as SMClient[] | { error?: string };
         if (res.ok && Array.isArray(data)) setClients(data);
       } finally {

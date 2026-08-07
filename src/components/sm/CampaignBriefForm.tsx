@@ -11,6 +11,7 @@ import {
   sectionTitle,
 } from "@/lib/sm/ui";
 import type { SMCampaign, SMCampaignObjective, SMClient, SMPlatform } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 const OBJECTIVES: { key: SMCampaignObjective; label: string }[] = [
   { key: "awareness", label: "Brand awareness" },
@@ -62,7 +63,7 @@ export default function CampaignBriefForm({
 
     async function prefill() {
       try {
-        const res = await fetch(`/api/sm/clients/${client.id}/last-campaign`);
+        const res = await fetch(apiUrl(`/api/sm/clients/${client.id}/last-campaign`));
         if (!res.ok) return;
         const last = (await res.json()) as SMCampaign | null;
 
@@ -104,7 +105,7 @@ export default function CampaignBriefForm({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/sm/campaigns", {
+      const res = await fetch(apiUrl("/api/sm/campaigns"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +123,7 @@ export default function CampaignBriefForm({
       const campaign = (await res.json()) as SMCampaign & { error?: string };
       if (!res.ok) throw new Error(campaign.error ?? "Failed to create campaign");
 
-      const strategyRes = await fetch(`/api/sm/campaigns/${campaign.id}/strategy`, {
+      const strategyRes = await fetch(apiUrl(`/api/sm/campaigns/${campaign.id}/strategy`), {
         method: "POST",
       });
       const strategyJson = (await strategyRes.json()) as {

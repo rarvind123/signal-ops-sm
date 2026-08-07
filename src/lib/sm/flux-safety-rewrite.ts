@@ -2,6 +2,9 @@ const BABY_TERMS =
   /\b(newborn|new-born|infants?|bab(?:y|ies)|neonate|neonatal)\b/i;
 const SKIN_HEAVY_TERMS =
   /\b(fists?|hands?|handprint|finger(?:s|tips)?|palms?|skin|close[- ]?up|extreme\s+close|macro(?:\s+shot)?)\b/i;
+const HAND_TERMS = /\b(fists?|hands?|handprint|finger(?:s|tips)?|palms?)\b/i;
+const ELDER_TERMS =
+  /\b(grandmother|grandma|nan(?:ny)?|elderly|old\s+lad(?:y|ies)|aged|weathered)\b/i;
 
 const NON_SKIN_SUBJECT_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bherb[a-z-]*\s+(?:green\s+)?lines?\b/i, label: "herb-green botanical lines" },
@@ -19,6 +22,16 @@ export function isBabySkinHeavyPrompt(text: string): boolean {
   const normalized = text.trim();
   if (!normalized) return false;
   return BABY_TERMS.test(normalized) && SKIN_HEAVY_TERMS.test(normalized);
+}
+
+export function mustIncludeRequestsHands(mustInclude?: string | null): boolean {
+  if (!mustInclude?.trim()) return false;
+  return HAND_TERMS.test(mustInclude);
+}
+
+export function mustIncludeRequestsInfantSubject(mustInclude?: string | null): boolean {
+  if (!mustInclude?.trim()) return false;
+  return BABY_TERMS.test(mustInclude) && HAND_TERMS.test(mustInclude);
 }
 
 export function softenCloseUpLanguage(text: string): string {
@@ -67,6 +80,31 @@ function stripLeadingBodyCentricOpener(text: string): string {
     .trim();
 }
 
+/** Safer framing when the user explicitly required infant/hands in must_include. */
+export function rewriteExplicitInfantHandsScene(
+  sceneDescription: string,
+  mustInclude: string,
+  impossibleElement?: string | null
+): string {
+  const softened = softenCloseUpLanguage(sceneDescription);
+  const elder = ELDER_TERMS.test(mustInclude) || ELDER_TERMS.test(softened);
+  const subject = elder
+    ? "an elderly grandmother's weathered hand gently near a realistic infant's small chubby hand — clear age contrast, both hands clearly present"
+    : "a realistic infant hand with accurate baby proportions (chubby short fingers, soft rounded knuckles, small palm) — unmistakably a baby, not an adult hand";
+
+  const parts = [
+    `Mid-shot to three-quarter close-up (not extreme macro). PRIMARY SUBJECT: ${subject}.`,
+    softened ? `Scene context: ${softened}` : null,
+    impossibleElement?.trim()
+      ? `Impossible element must remain visible: ${impossibleElement.trim()}.`
+      : null,
+    `Mandatory brief elements that MUST remain visible and accurate: ${mustInclude.trim()}.`,
+    "Soft diffused natural light. Tasteful commercial framing. No extreme skin-pore macro. No adult hands substituted for the infant hand.",
+  ].filter(Boolean);
+
+  return parts.join(" ");
+}
+
 export function rewriteBabySkinHeavyScene(
   sceneDescription: string,
   impossibleElement?: string | null
@@ -93,17 +131,28 @@ export function rewriteBabySkinHeavyScene(
 
 export function rewriteFluxSceneForSafety(
   sceneDescription: string,
-  impossibleElement?: string | null
+  impossibleElement?: string | null,
+  mustInclude?: string | null
 ): { text: string; rewritten: boolean } {
   const trimmed = sceneDescription.trim();
   if (!trimmed) {
     return { text: trimmed, rewritten: false };
   }
 
-  if (!isBabySkinHeavyPrompt(trimmed)) {
+  // User explicitly required infant/hands — keep the subject, use safer framing.
+  if (mustIncludeRequestsInfantSubject(mustInclude)) {
+    return {
+      text: rewriteExplicitInfantHandsScene(trimmed, mustInclude!, impossibleElement),
+      rewritten: true,
+    };
+  }
+
+  const combined = `${trimmed} ${mustInclude ?? ""}`;
+  if (!isBabySkinHeavyPrompt(combined) && !isBabySkinHeavyPrompt(trimmed)) {
     return { text: softenCloseUpLanguage(trimmed), rewritten: false };
   }
 
+  // Auto-generated baby/hand language without explicit must_include — demote for safety.
   return {
     text: rewriteBabySkinHeavyScene(trimmed, impossibleElement),
     rewritten: true,

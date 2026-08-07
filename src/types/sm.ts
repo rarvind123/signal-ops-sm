@@ -122,6 +122,8 @@ export interface SMCreativeRequest {
   creative_lens?: SMCreativeLens;
   market_context?: string;
   ad_size_id?: string;
+  review_token?: string;
+  review_enabled?: boolean;
   status: "pending" | "processing" | "done" | "failed";
   created_at: string;
 }
@@ -243,6 +245,8 @@ export interface SMOverlaySettings {
   selected_font_id?: string | null;
 }
 
+export type SMAssetApprovalStatus = "pending" | "approved" | "rejected" | "changes_requested";
+
 export interface SMGeneratedAsset {
   id: string;
   request_id: string;
@@ -257,6 +261,11 @@ export interface SMGeneratedAsset {
   layout_template?: SMLayoutTemplate;
   ad_size_id?: string;
   overlay_settings?: SMOverlaySettings;
+  approval_status?: SMAssetApprovalStatus;
+  approved_at?: string;
+  approved_by?: string;
+  client_comment?: string;
+  explore_label?: string;
   status: "pending" | "generating" | "done" | "failed";
   error_message?: string;
   created_at: string;
@@ -267,6 +276,27 @@ export interface SMAssetVersion {
   asset_id: string;
   storage_url: string;
   version_number: number;
+  change_note?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface SMAuditEvent {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  actor?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SMRevisionRound {
+  id: string;
+  request_id: string;
+  asset_id: string;
+  round_number: number;
+  direction?: string;
   created_at: string;
 }
 

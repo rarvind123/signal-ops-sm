@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import CampaignNav from "@/components/sm/CampaignNav";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
 import type { SMCampaign } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function CampaignOverviewPage() {
   const params = useParams();
@@ -18,7 +19,7 @@ export default function CampaignOverviewPage() {
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch(`/api/sm/campaigns/${id}`);
+      const res = await fetch(apiUrl(`/api/sm/campaigns/${id}`));
       if (res.ok) {
         const data = (await res.json()) as {
           campaign: SMCampaign;
@@ -35,7 +36,7 @@ export default function CampaignOverviewPage() {
   if (!campaign) return <p className="px-6 py-12 text-sm text-red-400/90">Campaign not found</p>;
 
   async function handleShareReview() {
-    const res = await fetch(`/api/sm/campaigns/${id}/enable-review`, { method: "POST" });
+    const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/enable-review`), { method: "POST" });
     if (!res.ok) return;
     const json = (await res.json()) as { campaign?: SMCampaign };
     const token = json.campaign?.review_token;

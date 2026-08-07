@@ -9,6 +9,7 @@ import VisualBriefCard from "@/components/sm/VisualBriefCard";
 import { parseBriefsResponse } from "@/lib/sm/briefs-api";
 import { readApiJson } from "@/lib/sm/api-client";
 import type { SMCampaign, SMCreativeBrief, SMClient } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function CampaignReviewPage() {
   const { id: campaignId } = useParams<{ id: string }>();
@@ -23,8 +24,8 @@ export default function CampaignReviewPage() {
   useEffect(() => {
     async function load() {
       const [briefsRes, campaignRes] = await Promise.all([
-        fetch(`/api/sm/campaigns/${campaignId}/briefs`),
-        fetch(`/api/sm/campaigns/${campaignId}`),
+        fetch(apiUrl(`/api/sm/campaigns/${campaignId}/briefs`),
+        fetch(apiUrl(`/api/sm/campaigns/${campaignId}`),
       ]);
       if (briefsRes.ok) {
         setBriefs(await parseBriefsResponse(briefsRes));
@@ -44,7 +45,7 @@ export default function CampaignReviewPage() {
 
   function handleApprove(id: string) {
     setBriefs((prev) => prev.map((b) => (b.id === id ? { ...b, approved: true } : b)));
-    void fetch(`/api/sm/briefs/${id}/approve`, {
+    void fetch(apiUrl(`/api/sm/briefs/${id}/approve`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ approved: true }),
@@ -53,7 +54,7 @@ export default function CampaignReviewPage() {
 
   function handleReject(id: string) {
     setBriefs((prev) => prev.map((b) => (b.id === id ? { ...b, approved: false } : b)));
-    void fetch(`/api/sm/briefs/${id}/approve`, {
+    void fetch(apiUrl(`/api/sm/briefs/${id}/approve`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ approved: false }),
@@ -62,7 +63,7 @@ export default function CampaignReviewPage() {
 
   function handleEdit(id: string, field: string, value: string) {
     setBriefs((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
-    void fetch(`/api/sm/briefs/${id}`, {
+    void fetch(apiUrl(`/api/sm/briefs/${id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [field]: value }),
@@ -77,7 +78,7 @@ export default function CampaignReviewPage() {
     for (const briefId of queue) {
       setCurrentlyGenerating(briefId);
       try {
-        const res = await fetch(`/api/sm/briefs/${briefId}/generate`, { method: "POST" });
+        const res = await fetch(apiUrl(`/api/sm/briefs/${briefId}/generate`), { method: "POST" });
         const json = await readApiJson<{ error?: string }>(res);
         if (!res.ok) throw new Error(json.error ?? "Generation failed");
         setBriefs((prev) =>
@@ -94,7 +95,7 @@ export default function CampaignReviewPage() {
   }
 
   async function handleShareReview() {
-    const res = await fetch(`/api/sm/campaigns/${campaignId}/enable-review`, {
+    const res = await fetch(apiUrl(`/api/sm/campaigns/${campaignId}/enable-review`), {
       method: "POST",
     });
     if (!res.ok) return;

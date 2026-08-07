@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { overlaySettingsFromOptions } from "@/lib/sm/overlay-options";
 import type { OverlayOptions } from "@/lib/sm/overlay-options";
+import { enforceBrandKitOverlay } from "@/lib/sm/brand-kit-lock";
 import { smRouteHandler } from "@/lib/sm/api-auth";
-import { getGeneratedAsset, updateGeneratedAsset } from "@/lib/sm/store";
+import { logAuditEvent } from "@/lib/sm/audit";
+import { getClient, getCreativeRequest, getGeneratedAsset, updateGeneratedAsset } from "@/lib/sm/store";
 
 export const runtime = "nodejs";
 
@@ -22,13 +24,29 @@ export async function PATCH(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "overlay_options required" }, { status: 400 });
     }
 
+    const request = await getCreativeRequest(asset.request_id);
+    const client = request ? await getClient(request.client_id) : null;
+    const overlaySettings = client
+      ? enforceBrandKitOverlay(
+          client,
+          overlaySettingsFromOptions(overlayOptions),
+          request?.goal
+        )
+      : overlaySettingsFromOptions(overlayOptions);
+
     const updated = await updateGeneratedAsset(id, {
-      overlay_settings: overlaySettingsFromOptions(overlayOptions),
+      overlay_settings: overlaySettings,
     });
 
     if (!updated) {
       return NextResponse.json({ error: "Failed to update asset" }, { status: 500 });
     }
+
+    void logAuditEvent({
+      entity_type: "asset",
+      entity_id: id,
+      action: "overlay_saved",
+    });
 
     return updated;
   });

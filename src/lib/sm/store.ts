@@ -22,6 +22,7 @@ import type {
   SMSignalOpsOutput,
   SMVisualApproach,
   SMSocialAccount,
+  SMAssetApprovalStatus,
 } from "@/types/sm";
 
 const DEFAULT_VISUAL_APPROACH: SMVisualApproach = {
@@ -46,12 +47,26 @@ const DEFAULT_CREATIVE_ANALOGY: SMCreativeAnalogy = {
   no_explanation_test: "",
 };
 
-function throwIfError(error: { message: string } | null): void {
+function throwIfError(error: { message: string; details?: string; hint?: string } | null): void {
   if (!error) return;
   if (isReviewColumnError(error.message)) {
     throw new Error(`${SCHEMA_MIGRATION_HINT} (${error.message})`);
   }
-  throw new Error(error.message);
+  const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
+  // Supabase JS surfaces DNS/network failures as "TypeError: fetch failed"
+  if (/fetch failed|enotfound|getaddrinfo/i.test(detail)) {
+    throw new Error(
+      "Cannot reach the database (Supabase). Check NEXT_PUBLIC_SUPABASE_URL — " +
+        "the project may be paused, deleted, or the URL may be wrong."
+    );
+  }
+  if (/invalid api key|invalid jwt|jwt expired/i.test(detail)) {
+    throw new Error(
+      "Supabase rejected the API key. URL and SUPABASE_SECRET_KEY must be from the same project. " +
+        "Update .env.local from Supabase → Project Settings → API, then restart."
+    );
+  }
+  throw new Error(detail);
 }
 
 function campaignPatchForDb(
@@ -201,6 +216,8 @@ function mapCreativeRequest(row: Record<string, unknown>): SMCreativeRequest {
     creative_lens: (row.creative_lens as SMCreativeRequest["creative_lens"]) ?? "signalops",
     market_context: row.market_context ? String(row.market_context) : undefined,
     ad_size_id: row.ad_size_id ? String(row.ad_size_id) : undefined,
+    review_token: row.review_token ? String(row.review_token) : undefined,
+    review_enabled: row.review_enabled === true,
     status: row.status as SMCreativeRequest["status"],
     created_at: String(row.created_at),
   };
@@ -270,6 +287,13 @@ function mapGeneratedAsset(row: Record<string, unknown>): SMGeneratedAsset {
     overlay_settings: row.overlay_settings
       ? (row.overlay_settings as SMGeneratedAsset["overlay_settings"])
       : undefined,
+    approval_status: row.approval_status
+      ? (row.approval_status as SMAssetApprovalStatus)
+      : "pending",
+    approved_at: row.approved_at ? String(row.approved_at) : undefined,
+    approved_by: row.approved_by ? String(row.approved_by) : undefined,
+    client_comment: row.client_comment ? String(row.client_comment) : undefined,
+    explore_label: row.explore_label ? String(row.explore_label) : undefined,
     status: row.status as SMGeneratedAsset["status"],
     error_message: row.error_message ? String(row.error_message) : undefined,
     created_at: String(row.created_at),
@@ -282,6 +306,8 @@ function mapAssetVersion(row: Record<string, unknown>): SMAssetVersion {
     asset_id: String(row.asset_id),
     storage_url: String(row.storage_url),
     version_number: Number(row.version_number ?? 1),
+    change_note: row.change_note ? String(row.change_note) : undefined,
+    created_by: row.created_by ? String(row.created_by) : undefined,
     created_at: String(row.created_at),
   };
 }
@@ -664,6 +690,9 @@ export async function createGeneratedAsset(
       generation_prompt: input.generation_prompt ?? null,
       layout_template: input.layout_template ?? null,
       ad_size_id: input.ad_size_id ?? null,
+      overlay_settings: input.overlay_settings ?? null,
+      explore_label: input.explore_label ?? null,
+      approval_status: input.approval_status ?? "pending",
       status: input.status ?? "pending",
       error_message: input.error_message ?? null,
     })
@@ -671,6 +700,17 @@ export async function createGeneratedAsset(
     .single();
   throwIfError(error);
   return mapGeneratedAsset(data as Record<string, unknown>);
+}
+
+export async function updateSignalOpsVisualApproach(
+  requestId: string,
+  visualApproach: SMSignalOpsOutput["visual_approach"]
+): Promise<void> {
+  const { error } = await supabase
+    .from("sm_signalops_outputs")
+    .update({ visual_approach: visualApproach })
+    .eq("request_id", requestId);
+  throwIfError(error);
 }
 
 export async function updateGeneratedAsset(
@@ -696,11 +736,53 @@ export async function createAssetVersion(
       asset_id: input.asset_id,
       storage_url: input.storage_url,
       version_number: input.version_number,
+      change_note: input.change_note ?? null,
+      created_by: input.created_by ?? null,
     })
     .select("*")
     .single();
   throwIfError(error);
   return mapAssetVersion(data as Record<string, unknown>);
+}
+
+export async function listAssetVersions(assetId: string): Promise<SMAssetVersion[]> {
+  const { data, error } = await supabase
+    .from("sm_asset_versions")
+    .select("*")
+    .eq("asset_id", assetId)
+    .order("version_number", { ascending: false });
+  if (error) {
+    console.warn("[store] listAssetVersions:", error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => mapAssetVersion(row as Record<string, unknown>));
+}
+
+export async function createRevisionRound(input: {
+  request_id: string;
+  asset_id: string;
+  round_number: number;
+  direction?: string;
+}): Promise<void> {
+  const { error } = await supabase.from("sm_revision_rounds").insert({
+    request_id: input.request_id,
+    asset_id: input.asset_id,
+    round_number: input.round_number,
+    direction: input.direction ?? null,
+  });
+  if (error) console.warn("[store] createRevisionRound:", error.message);
+}
+
+export async function nextRevisionRoundNumber(assetId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("sm_revision_rounds")
+    .select("round_number")
+    .eq("asset_id", assetId)
+    .order("round_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return 1;
+  return Number(data.round_number ?? 0) + 1;
 }
 
 export async function listSocialAccounts(clientId: string): Promise<SMSocialAccount[]> {
@@ -1060,6 +1142,100 @@ export async function enableCampaignReview(campaignId: string): Promise<SMCampai
   }
 
   return updateCampaign(campaignId, patch, { includeReviewFields: true });
+}
+
+export async function enableRequestReview(requestId: string): Promise<SMCreativeRequest | null> {
+  const request = await getCreativeRequest(requestId);
+  if (!request) return null;
+
+  const patch: Partial<SMCreativeRequest> = { review_enabled: true };
+  if (!request.review_token) {
+    patch.review_token = randomBytes(16).toString("hex");
+  }
+
+  return updateCreativeRequest(requestId, patch);
+}
+
+export async function getRequestReviewByToken(token: string): Promise<{
+  request: SMCreativeRequest;
+  client: SMClient;
+  assets: SMGeneratedAsset[];
+} | null> {
+  const { data, error } = await supabase
+    .from("sm_creative_requests")
+    .select("*")
+    .eq("review_token", token)
+    .eq("review_enabled", true)
+    .maybeSingle();
+  throwIfError(error);
+  if (!data) return null;
+
+  const request = mapCreativeRequest(data as Record<string, unknown>);
+  const [client, assets] = await Promise.all([
+    getClient(request.client_id),
+    listGeneratedAssets(request.id),
+  ]);
+  if (!client) return null;
+  return {
+    request,
+    client,
+    assets: assets.filter((a) => a.status === "done"),
+  };
+}
+
+export async function updateAssetApproval(
+  assetId: string,
+  patch: {
+    approval_status: SMAssetApprovalStatus;
+    approved_by?: string;
+    client_comment?: string;
+  }
+): Promise<SMGeneratedAsset | null> {
+  const row: Record<string, unknown> = {
+    approval_status: patch.approval_status,
+    client_comment: patch.client_comment ?? null,
+    approved_by: patch.approved_by ?? null,
+  };
+  if (patch.approval_status === "approved") {
+    row.approved_at = new Date().toISOString();
+  } else {
+    row.approved_at = null;
+  }
+
+  const { data, error } = await supabase
+    .from("sm_generated_assets")
+    .update(row)
+    .eq("id", assetId)
+    .select("*")
+    .maybeSingle();
+  throwIfError(error);
+  return data ? mapGeneratedAsset(data as Record<string, unknown>) : null;
+}
+
+export async function getReviewByToken(token: string): Promise<
+  | {
+      kind: "campaign";
+      campaign: SMCampaign;
+      client: SMClient;
+      briefs: SMCreativeBrief[];
+    }
+  | {
+      kind: "request";
+      request: SMCreativeRequest;
+      client: SMClient;
+      assets: SMGeneratedAsset[];
+    }
+  | null
+> {
+  const campaignReview = await getCampaignReviewByToken(token);
+  if (campaignReview) {
+    return { kind: "campaign", ...campaignReview };
+  }
+  const requestReview = await getRequestReviewByToken(token);
+  if (requestReview) {
+    return { kind: "request", ...requestReview };
+  }
+  return null;
 }
 
 export async function updateCalendarItemStatus(

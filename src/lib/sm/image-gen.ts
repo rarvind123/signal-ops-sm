@@ -1,5 +1,6 @@
 import "server-only";
 
+import { configureFal, fal, isFalConfigured } from "@/lib/fal";
 import { getReplicate, isReplicateConfigured } from "@/lib/replicate";
 import { supabase } from "@/lib/supabase";
 import type { SMAssetType, SMPlatform } from "@/types/sm";
@@ -7,6 +8,21 @@ import type { SMAssetType, SMPlatform } from "@/types/sm";
 const FLUX_ULTRA = "black-forest-labs/flux-1.1-pro-ultra";
 const FLUX_PRO = "black-forest-labs/flux-1.1-pro";
 const BUCKET = "sm-assets";
+
+/** fal model cascade: Nano Banana 2 edit (refs) → Nano Banana 2 → Ideogram → FLUX.2 Pro */
+const FAL_NANO_BANANA = "fal-ai/nano-banana-2";
+const FAL_NANO_BANANA_EDIT = "fal-ai/nano-banana-2/edit";
+const FAL_IDEOGRAM = "fal-ai/ideogram/v3";
+const FAL_FLUX_2_PRO = "fal-ai/flux-2-pro";
+
+export type GenerateImageOptions = {
+  /** Public URLs of brief reference / inspiration images */
+  referenceImageUrls?: string[];
+  /** Subset of referenceImageUrls that the user uploaded — match composition first */
+  userReferenceUrls?: string[];
+  /** Optional seed for variation across regenerations */
+  seed?: number;
+};
 
 type FluxInput = {
   prompt: string;
@@ -35,9 +51,19 @@ function extractImageUrl(output: unknown): string | null {
     return extractImageUrl(output[0]);
   }
   if (output && typeof output === "object") {
-    const fileOutput = output as FileOutputLike;
-    if (typeof fileOutput.url === "function") {
-      const value = fileOutput.url();
+    const obj = output as Record<string, unknown>;
+    if (Array.isArray(obj.images) && obj.images.length > 0) {
+      return extractImageUrl(obj.images[0]);
+    }
+    if (obj.image && typeof obj.image === "object") {
+      return extractImageUrl(obj.image);
+    }
+    const urlValue = obj.url;
+    if (typeof urlValue === "string" && urlValue.startsWith("http")) {
+      return urlValue;
+    }
+    if (typeof urlValue === "function") {
+      const value = (urlValue as () => URL | string)();
       return typeof value === "string" ? value : String(value);
     }
     const asString = String(output);
@@ -67,6 +93,38 @@ async function resolveReplicateOutputToBuffer(output: unknown): Promise<Buffer> 
   );
 }
 
+function fluxImageSize(
+  aspectRatio: FluxAspectRatio
+): "square_hd" | "portrait_16_9" | "landscape_16_9" | "portrait_4_3" {
+  switch (aspectRatio) {
+    case "9:16":
+      return "portrait_16_9";
+    case "16:9":
+      return "landscape_16_9";
+    case "4:5":
+    case "3:4":
+      return "portrait_4_3";
+    default:
+      return "square_hd";
+  }
+}
+
+async function runFalModel(
+  model: string,
+  input: Record<string, unknown>,
+  label: string
+): Promise<Buffer> {
+  configureFal();
+  console.info(`[image-gen] fal → ${label} (${model})`);
+  const result = await fal.subscribe(model, { input, logs: false });
+  const data = (result as { data?: unknown }).data ?? result;
+  const url = extractImageUrl(data);
+  if (!url) {
+    throw new Error(`fal ${label} returned no image URL`);
+  }
+  return downloadMarketingImage(url);
+}
+
 export function formatSmImageError(error: unknown): string {
   if (!(error instanceof Error) && (error === null || typeof error !== "object")) {
     return String(error ?? "Unknown error");
@@ -84,22 +142,34 @@ export function formatSmImageError(error: unknown): string {
   if (
     status === 402 ||
     message.includes("Insufficient credit") ||
-    message.includes("Payment Required")
+    message.includes("Payment Required") ||
+    message.toLowerCase().includes("exhausted")
   ) {
-    return "Image generation unavailable: Replicate account has insufficient credit. Add billing at https://replicate.com/account/billing, wait a few minutes, then retry.";
+    return "Image generation unavailable: account has insufficient credit. Top up fal/Replicate billing, then retry.";
   }
 
-  if (message.toLowerCase().includes("nsfw")) {
+  if (message.toLowerCase().includes("nsfw") || message.toLowerCase().includes("safety")) {
     return "Image blocked by safety filter. Try Redo with a different scene direction, or simplify the brief (avoid skin-heavy close-ups).";
   }
 
   return status ? `${message} (HTTP ${status})` : message;
 }
 
-function isNsfwError(error: unknown): boolean {
+function isRetryableModelError(error: unknown): boolean {
   const message =
     error instanceof Error ? error.message : String(error ?? "");
-  return message.toLowerCase().includes("nsfw");
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("nsfw") ||
+    lower.includes("safety") ||
+    lower.includes("content") ||
+    lower.includes("moderat") ||
+    lower.includes("timeout") ||
+    lower.includes("429") ||
+    lower.includes("503") ||
+    lower.includes("502") ||
+    lower.includes("no image")
+  );
 }
 
 async function runFluxModel(model: string, input: FluxInput): Promise<Buffer> {
@@ -131,26 +201,184 @@ export function getAspectRatio(
 export async function downloadMarketingImage(tempUrl: string): Promise<Buffer> {
   const res = await fetch(tempUrl);
   if (!res.ok) {
-    throw new Error(`Failed to download Replicate image (HTTP ${res.status})`);
+    throw new Error(`Failed to download generated image (HTTP ${res.status})`);
   }
   return Buffer.from(await res.arrayBuffer());
 }
 
-export async function generateMarketingImageBytes(
+function sanitizeReferenceUrls(urls?: string[]): string[] {
+  if (!urls?.length) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of urls) {
+    const url = raw?.trim();
+    if (!url || !/^https?:\/\//i.test(url) || seen.has(url)) continue;
+    seen.add(url);
+    out.push(url);
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+function referenceAwarePrompt(
   prompt: string,
-  aspectRatio: FluxAspectRatio = "1:1"
+  hasRefs: boolean,
+  hasUserRefs: boolean
+): string {
+  if (!hasRefs) return prompt.slice(0, 3800);
+  const userLead = hasUserRefs
+    ? "USER REFERENCE IMAGE attached — this is the composition master. Match its exact subject, pose, framing, lighting, wardrobe, and shadow metaphor. Do NOT invent a different yoga pose or scene. "
+    : "";
+  const lead =
+    userLead +
+    "Create a NEW Instagram advertising photograph. Attached references may include best-in-category ad creatives and photographic mood boards. " +
+    "Match their craft level: lighting, color grade, composition tension, wardrobe realism, and mood. " +
+    "Do not copy reference text, logos, watermarks, headlines, or layouts. No corporate stock look. No neon/CGI silhouette overlays. ";
+  return `${lead}${prompt}`.replace(/\s+/g, " ").trim().slice(0, 3800);
+}
+
+function variationSeed(options?: GenerateImageOptions): number {
+  if (typeof options?.seed === "number" && Number.isFinite(options.seed)) {
+    return Math.abs(Math.floor(options.seed)) % 2_147_483_647;
+  }
+  return Math.floor(Math.random() * 2_147_483_647);
+}
+
+async function generateViaFal(
+  prompt: string,
+  aspectRatio: FluxAspectRatio,
+  options?: GenerateImageOptions
 ): Promise<Buffer> {
-  if (!isReplicateConfigured()) {
-    throw new Error(
-      "REPLICATE_API_TOKEN is not set. Add it to .env.local and Vercel env vars."
+  const allRefs = sanitizeReferenceUrls(options?.referenceImageUrls);
+  const userRefs = sanitizeReferenceUrls(options?.userReferenceUrls);
+  const hasUserRefs = userRefs.length > 0;
+  const refs = hasUserRefs ? userRefs.slice(0, 2) : allRefs;
+  const seed = variationSeed(options);
+
+  if (refs.length > 0) {
+    console.info(
+      `[image-gen] fal edit refs=${refs.length} userOnly=${hasUserRefs} urls=${refs.map((u) => u.slice(0, 80)).join(" | ")}`
     );
   }
 
+  const trimmedPrompt = referenceAwarePrompt(
+    `${prompt} Variation seed ${seed}: ${hasUserRefs ? "preserve reference composition; subtle camera shift only" : "change camera angle, crop, and moment — do not repeat a previous frame"}.`,
+    refs.length > 0,
+    hasUserRefs
+  );
+
+  const editInput = (editSeed: number) => ({
+    prompt: trimmedPrompt,
+    image_urls: refs,
+    num_images: 1,
+    aspect_ratio: aspectRatio,
+    resolution: "1K",
+    output_format: "jpeg",
+    safety_tolerance: "5",
+    limit_generations: true,
+    seed: editSeed,
+  });
+
+  // When refs exist, retry edit before falling back to text-only models.
+  if (refs.length > 0) {
+    let lastEditError: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await runFalModel(
+          FAL_NANO_BANANA_EDIT,
+          editInput(seed + attempt),
+          attempt === 0 ? "nano-banana-2-edit-refs" : "nano-banana-2-edit-refs-retry"
+        );
+      } catch (error) {
+        lastEditError = error;
+        console.warn(
+          `[image-gen] fal nano-banana-2/edit attempt ${attempt + 1} failed: ${formatSmImageError(error)}`
+        );
+      }
+    }
+    console.warn(
+      `[image-gen] all reference-edit attempts failed (${refs.length} refs) — refusing text-only fallback`
+    );
+    throw lastEditError instanceof Error
+      ? lastEditError
+      : new Error(
+          hasUserRefs
+            ? "Could not apply user reference image — fal edit failed"
+            : "Reference image edit failed — refusing to generate without refs"
+        );
+  }
+
+  const attempts: Array<{
+    label: string;
+    model: string;
+    input: Record<string, unknown>;
+  }> = [
+    {
+      label: "nano-banana-2-1k",
+      model: FAL_NANO_BANANA,
+      input: {
+        prompt: trimmedPrompt,
+        num_images: 1,
+        aspect_ratio: aspectRatio,
+        resolution: "1K",
+        output_format: "jpeg",
+        safety_tolerance: "5",
+        seed,
+      },
+    },
+    {
+      label: "flux-2-pro",
+      model: FAL_FLUX_2_PRO,
+      input: {
+        prompt: trimmedPrompt,
+        image_size: fluxImageSize(aspectRatio),
+        output_format: "jpeg",
+        safety_tolerance: "5",
+        seed,
+      },
+    },
+  ];
+
+  if (refs.length === 0) {
+    attempts.push({
+      label: "ideogram-v3",
+      model: FAL_IDEOGRAM,
+      input: {
+        prompt: trimmedPrompt,
+        aspect_ratio: aspectRatio,
+        rendering_speed: "QUALITY",
+        expand_prompt: false,
+        num_images: 1,
+      },
+    });
+  }
+
+  let lastError: unknown;
+  for (const attempt of attempts) {
+    try {
+      return await runFalModel(attempt.model, attempt.input, attempt.label);
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `[image-gen] fal ${attempt.label} failed: ${formatSmImageError(error)} — trying next…`
+      );
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("fal image generation failed on all models");
+}
+
+async function generateViaReplicateFlux(
+  prompt: string,
+  aspectRatio: FluxAspectRatio
+): Promise<Buffer> {
   const trimmedPrompt = prompt.slice(0, 3800);
   const attempts: Array<{ model: string; input: FluxInput; label: string }> = [
     {
       model: FLUX_ULTRA,
-      label: "ultra-raw",
+      label: "replicate-ultra-raw",
       input: {
         prompt: trimmedPrompt,
         aspect_ratio: aspectRatio,
@@ -162,7 +390,7 @@ export async function generateMarketingImageBytes(
     },
     {
       model: FLUX_ULTRA,
-      label: "ultra-standard",
+      label: "replicate-ultra-standard",
       input: {
         prompt: trimmedPrompt,
         aspect_ratio: aspectRatio,
@@ -174,7 +402,7 @@ export async function generateMarketingImageBytes(
     },
     {
       model: FLUX_PRO,
-      label: "pro-fallback",
+      label: "replicate-pro-fallback",
       input: {
         prompt: trimmedPrompt,
         aspect_ratio: aspectRatio,
@@ -187,15 +415,15 @@ export async function generateMarketingImageBytes(
   ];
 
   let lastError: unknown;
-
   for (const attempt of attempts) {
     try {
+      console.info(`[image-gen] replicate → ${attempt.label}`);
       return await runFluxModel(attempt.model, attempt.input);
     } catch (error) {
       lastError = error;
-      if (!isNsfwError(error)) throw error;
+      if (!isRetryableModelError(error)) throw error;
       console.warn(
-        `[image-gen] NSFW block on ${attempt.label}, trying next strategy…`
+        `[image-gen] NSFW/safety block on ${attempt.label}, trying next strategy…`
       );
     }
   }
@@ -205,12 +433,49 @@ export async function generateMarketingImageBytes(
     : new Error("Image generation failed after safety-filter retries");
 }
 
+export async function generateMarketingImageBytes(
+  prompt: string,
+  aspectRatio: FluxAspectRatio = "1:1",
+  options?: GenerateImageOptions
+): Promise<Buffer> {
+  const wantsRefs =
+    (options?.referenceImageUrls?.length ?? 0) > 0 ||
+    (options?.userReferenceUrls?.length ?? 0) > 0;
+
+  if (isFalConfigured()) {
+    try {
+      return await generateViaFal(prompt, aspectRatio, options);
+    } catch (falError) {
+      if (wantsRefs) throw falError;
+      console.warn(
+        `[image-gen] fal cascade failed: ${formatSmImageError(falError)} — falling back to Replicate FLUX if configured`
+      );
+      if (!isReplicateConfigured()) throw falError;
+    }
+  }
+
+  if (wantsRefs) {
+    throw new Error(
+      "Reference image generation requires FAL_KEY — Replicate fallback cannot use refs"
+    );
+  }
+
+  if (isReplicateConfigured()) {
+    return generateViaReplicateFlux(prompt, aspectRatio);
+  }
+
+  throw new Error(
+    "No image provider configured. Set FAL_KEY (preferred) or REPLICATE_API_TOKEN in .env.local / Vercel."
+  );
+}
+
 export async function generateAndStoreImage(
   prompt: string,
   aspectRatio: AspectRatio,
-  assetId: string
+  assetId: string,
+  options?: GenerateImageOptions
 ): Promise<string> {
-  const bytes = await generateMarketingImageBytes(prompt, aspectRatio);
+  const bytes = await generateMarketingImageBytes(prompt, aspectRatio, options);
   const path = `generated/${assetId}-${Date.now()}.jpg`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, bytes, {
     contentType: "image/jpeg",

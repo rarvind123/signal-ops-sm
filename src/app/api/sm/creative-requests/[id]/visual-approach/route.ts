@@ -49,6 +49,24 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     const modeLabel = mode.replace(/_/g, " ").toUpperCase();
+    const mustInclude = request.must_include?.trim() ?? "";
+    const handsRequired = /\b(hands?|fists?|palms?|fingers?|baby\s+hands?)\b/i.test(
+      mustInclude
+    );
+    const hasRefs = (request.uploaded_image_urls?.length ?? 0) > 0;
+    const strategyBits = [
+      signalops.visual_direction?.trim()
+        ? `APPROVED VISUAL DIRECTION (honor lighting/mood/metaphor): ${signalops.visual_direction.trim()}`
+        : null,
+      signalops.be_trigger?.application?.trim()
+        ? `PSYCHOLOGICAL APPLICATION (express visually, not as text): ${signalops.be_trigger.application.trim()}`
+        : null,
+      hasRefs
+        ? `STYLE REFERENCES ATTACHED — match their naturalistic lighting/composition language; no neon glow or corporate stock look.`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const prompt = `You are a senior art director generating a scene description for a specific visual execution mode.
 
@@ -56,22 +74,24 @@ BRAND: ${client.name}
 BRAND TONE: ${client.tone ?? "professional"}
 CAMPAIGN THEME: ${signalops.theme}
 CREATIVE TENSION: ${signalops.insight_bridge?.creative_tension ?? ""}
-
+${strategyBits ? `\n${strategyBits}\n` : ""}
 CHOSEN VISUAL MODE: ${modeLabel}
 MODE DESCRIPTION: ${MODE_DESCRIPTIONS[mode]}
 
 MANDATORY CONSTRAINTS:
-${request.must_exclude ? `- FORBIDDEN: ${request.must_exclude}` : "- No hands as primary subject"}
-${request.must_include ? `- MUST INCLUDE: ${request.must_include}` : ""}
+${mustInclude ? `- MUST INCLUDE scene subjects (people/objects/setting) — OVERRIDE category cliché bans. Fees, prices, "women only", and location LABELS are overlay copy later — never paint them as text. Location may inform setting only: ${mustInclude}` : ""}
+${request.must_exclude ? `- FORBIDDEN: ${request.must_exclude}` : handsRequired ? "" : "- No hands as primary subject unless required above"}
 - Absolutely no text, numbers, logos, or watermarks in the image
 - ONE primary subject only (maximum economy rule)
+${handsRequired ? "- Because MUST INCLUDE requires hands/infant elements: make them the accurate primary subject with realistic proportions (infant hands must look like a baby, not an adult)." : ""}
 
 Generate a single, specific, FLUX-renderable scene description for this mode.
 The description must:
 - Name the exact primary subject (one noun)
 - Describe its position, lighting, and background
 - Be specific enough to brief a photographer
-- Reject any scene featuring hands as the primary subject
+- Preserve any approved visual metaphor (e.g. mismatched natural shadow) — do not replace with glow/CGI effects
+${handsRequired ? "- Honor MUST INCLUDE even if it features hands as the primary subject" : "- Reject any scene featuring hands as the primary subject unless MUST INCLUDE requires them"}
 
 Return ONLY the scene description as plain text. No explanation. No preamble.`;
 

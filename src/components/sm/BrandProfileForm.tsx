@@ -20,6 +20,7 @@ import { LOGO_UPLOAD_HINT } from "@/lib/sm/logo-upload";
 import LogoReadinessPanel from "./LogoReadinessPanel";
 import LogoUploader from "./LogoUploader";
 import LogoVariantUploader from "./LogoVariantUploader";
+import { apiUrl } from "@/lib/base-path";
 
 const TONES: SMTone[] = ["bold", "warm", "premium", "playful", "professional", "urgent"];
 const PHOTO_STYLES: SMPhotoStyle[] = [
@@ -98,12 +99,26 @@ export default function BrandProfileForm({
   async function persistClient(clientId?: string) {
     const payload = buildPayload();
     const isUpdate = Boolean(clientId);
-    const res = await fetch(isUpdate ? `/api/sm/clients/${clientId}` : "/api/sm/clients", {
-      method: isUpdate ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const client = (await res.json()) as SMClient & { error?: string };
+    let res: Response;
+    try {
+      res = await fetch(
+        isUpdate ? apiUrl(`/api/sm/clients/${clientId}`) : apiUrl("/api/sm/clients"),
+        {
+        method: isUpdate ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      throw new Error(
+        "Could not reach the API. Is the app running? If yes, check your network connection."
+      );
+    }
+    let client: SMClient & { error?: string };
+    try {
+      client = (await res.json()) as SMClient & { error?: string };
+    } catch {
+      throw new Error(`Save failed (HTTP ${res.status}).`);
+    }
     if (!res.ok) throw new Error(client.error ?? "Save failed");
     setSavedClient(client);
     return client;
@@ -127,7 +142,7 @@ export default function BrandProfileForm({
     const nextLogos = { ...logos, [variant]: url };
     setLogos(nextLogos);
     try {
-      const res = await fetch(`/api/sm/clients/${savedClient.id}`, {
+      const res = await fetch(apiUrl(`/api/sm/clients/${savedClient.id}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logos: nextLogos }),
@@ -351,7 +366,7 @@ export default function BrandProfileForm({
           onLogoUploaded={() => {
             void (async () => {
               if (!savedClient) return;
-              const res = await fetch(`/api/sm/clients/${savedClient.id}`);
+              const res = await fetch(apiUrl(`/api/sm/clients/${savedClient.id}`));
               if (res.ok) setSavedClient((await res.json()) as SMClient);
               onLogoUploaded?.();
             })();

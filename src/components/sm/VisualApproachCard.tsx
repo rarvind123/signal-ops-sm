@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiUrl } from "@/lib/base-path";
 import { APPROACH_LABELS } from "@/lib/sm/visual-approach-ui";
 import { btnPrimary, chip, chipActive, field, label } from "@/lib/sm/ui";
 import type { SMClient, SMSignalOpsOutput, SMVisualApproachMode } from "@/types/sm";
@@ -79,7 +80,7 @@ export default function VisualApproachCard({
     setRegeneratingScene(true);
     try {
       const res = await fetch(
-        `/api/sm/creative-requests/${output.request_id}/visual-approach`,
+        apiUrl(`/api/sm/creative-requests/${output.request_id}/visual-approach`),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

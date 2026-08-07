@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { btnPrimary, btnSecondary, field, sectionTitle } from "@/lib/sm/ui";
 import type { SMClient, SMGeneratedAsset } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function PublishModal({
   asset,
@@ -21,7 +22,7 @@ export default function PublishModal({
     setLoading(true);
     setMessage(null);
     try {
-      const res = await fetch(`/api/sm/assets/${asset.id}/publish`, {
+      const res = await fetch(apiUrl(`/api/sm/assets/${asset.id}/publish`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

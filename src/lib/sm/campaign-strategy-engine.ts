@@ -152,7 +152,7 @@ Return ONLY valid JSON.`;
   }
 
   throw new Error(
-    "Strategy generation returned malformed data — please retry. If this persists, check OPENROUTER_API_KEY on Vercel."
+    "Strategy generation returned malformed data — please retry. If this persists, check ANTHROPIC_API_KEY on Vercel."
   );
 }
 

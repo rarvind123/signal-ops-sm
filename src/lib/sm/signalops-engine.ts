@@ -2,8 +2,14 @@ import { completeText } from "@/lib/ai";
 import { cleanJsonResponse } from "@/lib/json-sanitize";
 import { supabase } from "@/lib/supabase";
 import { getAdSize } from "@/lib/sm/ad-sizes";
+import {
+  formatIngredientsForMustInclude,
+  needsIngredientResearch,
+  researchBrandIngredients,
+} from "@/lib/sm/brand-ingredient-research";
 import { getFormat } from "@/lib/sm/creative-formats";
 import { getLensPhilosophy } from "@/lib/sm/creative-lenses";
+import { getStylePackForBrief } from "@/lib/sm/visual-research";
 import type {
   SMCopyDependency,
   SMCreativeAnalogy,
@@ -20,6 +26,30 @@ type SignalOpsPayload = Omit<SMSignalOpsOutput, "id" | "request_id" | "created_a
 
 const LIONS_SCORE_THRESHOLD = 6.0;
 const MAX_LIONS_RETRIES = 2;
+const MAX_CLICHE_RETRIES = 2;
+
+/** Stock wellness visual the engine keeps converging on without user reference. */
+const WELLNESS_POSE_SHADOW_CLICHE =
+  /\b(shadow|silhouette)\b.*\b(wall|tree|yoga|pose|asana|warrior|canopy|trunk)\b|\b(yoga|asana|warrior|tree\s*pose|vrikshasana|meditat)\b.*\b(shadow|silhouette)\b/i;
+
+export function isWellnessPoseShadowCliche(approach: SMVisualApproach): boolean {
+  const hay = [
+    approach.scene_description,
+    approach.impossible_element,
+    approach.rationale,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return WELLNESS_POSE_SHADOW_CLICHE.test(hay);
+}
+
+function shouldRetryForCliche(
+  request: SMCreativeRequest,
+  approach: SMVisualApproach
+): boolean {
+  if ((request.uploaded_image_urls?.length ?? 0) > 0) return false;
+  return isWellnessPoseShadowCliche(approach);
+}
 
 type RawSignalOpsPayload = Partial<SignalOpsPayload> & {
   headlines?: Array<{
@@ -35,12 +65,29 @@ type RawSignalOpsPayload = Partial<SignalOpsPayload> & {
 export async function runSignalOpsEngine(
   client: SMClient,
   request: SMCreativeRequest
-): Promise<SignalOpsPayload> {
+): Promise<{ output: SignalOpsPayload; must_include?: string }> {
   let lastOutput: SignalOpsPayload | null = null;
+  const enrichedRequest = await enrichRequestWithIngredientResearch(client, request);
+  let clicheRetries = 0;
 
   for (let attempt = 0; attempt <= MAX_LIONS_RETRIES; attempt += 1) {
-    const parsed = await callSignalOpsModel(client, request, attempt);
+    const parsed = await callSignalOpsModel(client, enrichedRequest, attempt, {
+      clicheRetry: clicheRetries > 0,
+    });
     lastOutput = normalizeSignalOpsOutput(parsed);
+
+    if (shouldRetryForCliche(enrichedRequest, lastOutput.visual_approach)) {
+      if (clicheRetries < MAX_CLICHE_RETRIES) {
+        clicheRetries += 1;
+        console.warn(
+          `[SignalOps] Wellness pose+shadow cliché detected — retrying (${clicheRetries}/${MAX_CLICHE_RETRIES})`
+        );
+        continue;
+      }
+      console.warn(
+        "[SignalOps] Wellness cliché persists after retries — proceeding"
+      );
+    }
 
     if (!validateUnstockable(lastOutput.visual_approach)) {
       console.warn(
@@ -49,7 +96,10 @@ export async function runSignalOpsEngine(
     }
 
     if (lastOutput.lions_score.overall >= LIONS_SCORE_THRESHOLD) {
-      return lastOutput;
+      return {
+        output: lastOutput,
+        must_include: enrichedRequest.must_include,
+      };
     }
 
     console.warn(
@@ -61,7 +111,10 @@ export async function runSignalOpsEngine(
     throw new Error("SignalOps engine returned no output");
   }
 
-  return lastOutput;
+  return {
+    output: lastOutput,
+    must_include: enrichedRequest.must_include,
+  };
 }
 
 async function getRecentCreativeSignatures(clientId: string): Promise<string> {
@@ -127,16 +180,20 @@ If all 5 modes have been used recently, pick the one least recently used.`;
 async function callSignalOpsModel(
   client: SMClient,
   request: SMCreativeRequest,
-  attempt: number
+  attempt: number,
+  options?: { clicheRetry?: boolean }
 ): Promise<RawSignalOpsPayload> {
   const brandContext = buildBrandContext(client);
-  const briefContext = buildBriefContext(request);
+  const briefContext = buildBriefContext(request, client);
   const beMenu = buildBEMenu(request.goal);
   const recentHistory = await getRecentCreativeSignatures(client.id);
   const retryNote =
     attempt > 0
       ? `\n\nRETRY ${attempt}: Your previous direction scored below ${LIONS_SCORE_THRESHOLD}/10 on Lions quality. Rewrite with a sharper insight bridge, a braver headline option, and more specific visual direction.`
       : "";
+  const clicheNote = options?.clicheRetry
+    ? `\n\nCLICHÉ REJECT: Your last idea was a stock wellness trope (woman in yoga pose + mismatched shadow on wall). That is FORBIDDEN unless the user uploaded that exact reference. Invent a DIFFERENT impossible element — not tree-shadow, not warrior-pose shadow, not silhouette-on-wall yoga.`
+    : "";
 
   const format = getFormat(request.creative_format);
   const formatContext = format.signalops_context;
@@ -324,7 +381,7 @@ If the brief is for any of: baby care, skincare, wellness, natural products, hea
 - "Cupped hands" is always cliché.
 - Even if your three rejected ideas did not feature hands, check your chosen scene: does it feature hands as the primary subject? If yes — try again.
 
-BLOCKED subjects by brand category (only override if user explicitly requests them in must_include):
+BLOCKED subjects by brand category (HARD OVERRIDE — if must_include / MANDATORY VISUAL ELEMENTS names them, you MUST include them accurately and they become the primary subject):
 - Baby/maternal brands: hands, feet, cuddling, cradle
 - Skincare/beauty: mirrors, before/after, glowing skin close-up, hand applying product
 - Food brands: steam rising from fork, family at table, overhead flat-lay
@@ -332,9 +389,19 @@ BLOCKED subjects by brand category (only override if user explicitly requests th
 - Finance/insurance: family umbrella, handshake, piggy bank
 - Tech: person on laptop, blue abstract network, lock icon
 
+MANDATORY ELEMENTS RULE (highest priority):
+If the brief lists MANDATORY VISUAL ELEMENTS, split them:
+- SCENE SUBJECTS (people, objects, actions, setting) MUST appear clearly in scene_description.
+- COPY/FACTS (fees, prices, INR amounts, "women only", location labels meant as ad copy) must NOT be painted into the image as text — they belong in headlines/overlay later. You may use location only as a setting cue (e.g. "studio in JP Nagar"), never as lettering.
+Category cliché bans, maximum economy, and unstockable rules yield to scene subjects.
+If scene subjects include "baby hands" / infant hands: specify realistic infant proportions (chubby fingers, small palm) — never adult hands.
+If scene subjects include ingredients/herbs: those ingredients must be the visual hero, not vague botanical mood.
+When STYLE REFERENCE images are attached, visual_direction and scene_description MUST lock to that reference's lighting, color grade, composition language, and photographic mood (e.g. naturalistic mismatched shadow, warm window light) — do not invent neon/CGI glow alternatives.
+
 PATTERN CHECK: After writing the scene_description, re-read it and identify the primary subject noun.
 Look it up against the blocklist above for this brand's category.
-If it matches — find a different subject that is NOT on the blocklist.
+If it matches AND was NOT requested in MANDATORY VISUAL ELEMENTS — find a different subject.
+If it matches AND was requested in MANDATORY VISUAL ELEMENTS — keep it; make it accurate and specific.
 
 The goal: the viewer should not be able to guess what category the brand is in from the image alone,
 before reading the copy. Category-breaking images win awards. Category-confirming images win nothing.
@@ -631,7 +698,7 @@ Generate a complete SignalOps creative direction in this exact JSON structure:
 
 IMPORTANT: If your lions_score.overall is below 6.0, do NOT return that output. Rewrite the creative direction until it scores 6.5 or higher. A score below 6 means the insight is too generic or the idea is not distinct enough.
 
-Return ONLY valid JSON.${retryNote}`;
+Return ONLY valid JSON.${retryNote}${clicheNote}`;
 
   const response = await completeText(systemPrompt, userPrompt, "claude-sonnet-4-6", {
     maxTokens: 8192,
@@ -937,19 +1004,50 @@ function buildBrandContext(client: SMClient): string {
   return lines.filter(Boolean).join("\n");
 }
 
-function buildBriefContext(request: SMCreativeRequest): string {
+export async function enrichRequestWithIngredientResearch(
+  client: SMClient,
+  request: SMCreativeRequest
+): Promise<SMCreativeRequest> {
+  if (!needsIngredientResearch(request.brief_text, request.must_include)) {
+    return request;
+  }
+
+  const ingredients = await researchBrandIngredients(client);
+  if (ingredients.length === 0) return request;
+
+  const ingredientClause = formatIngredientsForMustInclude(ingredients);
+  const existing = request.must_include?.trim();
+  const must_include = existing
+    ? `${existing}; ${ingredientClause}`
+    : ingredientClause;
+
+  console.info(
+    `[SignalOps] Auto-researched ingredients for ${client.name}: ${ingredients.join(", ")}`
+  );
+
+  return { ...request, must_include };
+}
+
+function buildBriefContext(request: SMCreativeRequest, client?: SMClient): string {
+  const packInfo = client
+    ? getStylePackForBrief(client, request)
+    : null;
+
   const lines = [
     `Brief: ${request.brief_text}`,
     `Goal: ${request.goal ?? "general"}`,
     `Platforms: ${request.platforms.join(", ")}`,
     request.must_include
-      ? `MANDATORY VISUAL ELEMENTS — must appear in the image: ${request.must_include}`
+      ? `MANDATORY ELEMENTS (scene subjects → image; fees/prices/audience/location labels → overlay copy later, never as painted text): ${request.must_include}`
       : null,
     request.must_exclude
       ? `FORBIDDEN VISUAL ELEMENTS — must NOT appear in the image under any circumstances: ${request.must_exclude}`
       : null,
     request.uploaded_image_urls.length > 0
-      ? `Uploaded images: ${request.uploaded_image_urls.join(", ")}`
+      ? `USER-UPLOADED REFERENCE (PRIMARY — non-negotiable): Image generation receives these exact pixels as the composition anchor. Your scene_description, visual_direction, and impossible_element MUST faithfully describe THIS reference — same subject, pose, shadow treatment, lighting, and setting. Do NOT substitute a different yoga pose or shadow metaphor (e.g. do not swap tree pose for warrior pose). URLs: ${request.uploaded_image_urls.join(", ")}`
+      : null,
+    packInfo
+      ? `INTERNAL VISUAL RESEARCH — category "${packInfo.categoryHint}" (${packInfo.pack.label}). After you return strategy, the system will search visual refs using your theme, visual_direction, be_trigger, and scene — then lock image prompts to that craft level: ${packInfo.styleBrief}`
       : null,
     request.market_context
       ? `\nMARKET REFERENCE — What competitors are currently running in India (differentiate from these):\n${request.market_context}`

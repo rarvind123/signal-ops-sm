@@ -24,6 +24,7 @@ import AdminPanel from "@/components/sm/AdminPanel";
 import ClientGallery from "@/components/sm/ClientGallery";
 import { CREATIVE_FORMATS } from "@/lib/sm/creative-formats-ui";
 import { SIGNALOPS_TM } from "@/lib/sm/ui";
+import { apiUrl } from "@/lib/base-path";
 
 type SMStep = "brand" | "brief" | "campaign_brief" | "signalops" | "assets";
 
@@ -160,7 +161,7 @@ export default function Home() {
     setError(null);
     setGenerateLoading(true);
     try {
-      const res = await fetch(`/api/sm/creative-requests/${activeRequest.id}/generate`, {
+      const res = await fetch(apiUrl(`/api/sm/creative-requests/${activeRequest.id}/generate`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -187,9 +188,52 @@ export default function Home() {
     }
   }
 
+  async function exploreCreatives() {
+    if (!activeRequest) return;
+    setError(null);
+    setGenerateLoading(true);
+    try {
+      const res = await fetch(apiUrl(`/api/sm/creative-requests/${activeRequest.id}/generate`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platforms: activeRequest.platforms,
+          asset_types: ["post"],
+          headline_index: selectedHeadline,
+          explore: true,
+        }),
+      });
+      const json = (await res.json()) as {
+        assets?: SMGeneratedAsset[];
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.error ?? "Explore failed");
+      }
+      setGeneratedAssets(json.assets ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Explore failed");
+    } finally {
+      setGenerateLoading(false);
+    }
+  }
+
+  async function enableClientReview(): Promise<string | null> {
+    if (!activeRequest) return null;
+    const res = await fetch(
+      apiUrl(`/api/sm/creative-requests/${activeRequest.id}/enable-review`),
+      { method: "POST" }
+    );
+    const json = (await res.json()) as { review_url?: string; error?: string };
+    if (!res.ok) {
+      throw new Error(json.error ?? "Failed to create review link");
+    }
+    return json.review_url ?? null;
+  }
+
   async function refreshActiveClient() {
     if (!activeClient) return;
-    const res = await fetch(`/api/sm/clients/${activeClient.id}`);
+    const res = await fetch(apiUrl(`/api/sm/clients/${activeClient.id}`));
     if (res.ok) {
       const updated = (await res.json()) as SMClient;
       setActiveClient(updated);
@@ -201,7 +245,7 @@ export default function Home() {
     setError(null);
     setSignalopsLoading(true);
     try {
-      const res = await fetch(`/api/sm/creative-requests/${request.id}/signalops`, {
+      const res = await fetch(apiUrl(`/api/sm/creative-requests/${request.id}/signalops`), {
         method: "POST",
       });
       const output = (await res.json()) as SMSignalOpsOutput & { error?: string };
@@ -426,12 +470,15 @@ export default function Home() {
               <CreativePreviewGrid
                 assets={generatedAssets}
                 client={activeClient}
+                requestId={activeRequest?.id}
                 includeLogo={includeLogoOnPoster}
                 headlineMeta={signalOpsOutput.headlines[selectedHeadline]}
                 visualApproach={signalOpsOutput.visual_approach}
                 creativeFormat={activeRequest?.creative_format}
+                onExplore={exploreCreatives}
+                onEnableReview={enableClientReview}
                 onRegenerate={async (assetId, direction) => {
-                  const res = await fetch(`/api/sm/assets/${assetId}/regenerate`, {
+                  const res = await fetch(apiUrl(`/api/sm/assets/${assetId}/regenerate`), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ direction: direction || undefined }),

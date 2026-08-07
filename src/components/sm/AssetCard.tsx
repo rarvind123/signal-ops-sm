@@ -2,6 +2,7 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { apiUrl } from "@/lib/base-path";
 import CreativeFinalizePanel from "@/components/sm/CreativeFinalizePanel";
 import { getFontById, loadGoogleFont } from "@/lib/sm/font-catalogue";
 import { getAdSize } from "@/lib/sm/ad-sizes";
@@ -22,6 +23,10 @@ import {
   type OverlayOptions,
 } from "@/lib/sm/overlay-options";
 import { getOverlayConfig, type LogoPosition } from "@/lib/sm/overlay-config";
+import {
+  layoutRequiresHeadline,
+  overlayLayoutForAsset,
+} from "@/lib/sm/layout-utils";
 import {
   getBrandAccentColor,
   getClientTypography,
@@ -155,7 +160,12 @@ export default function AssetCard({
   const [redoDirection, setRedoDirection] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [localAsset, setLocalAsset] = useState(asset);
-  const [showTextOverlay, setShowTextOverlay] = useState(!isConceptAd);
+  const layoutTemplate = localAsset.layout_template ?? "full_bleed_gradient";
+  const headlineLayout = layoutRequiresHeadline(layoutTemplate);
+  const overlayLayout = overlayLayoutForAsset(layoutTemplate, isConceptAd);
+  const [showTextOverlay, setShowTextOverlay] = useState(
+    headlineLayout || !isConceptAd
+  );
   const [draftOverlayOptions, setDraftOverlayOptions] =
     useState<OverlayOptions>(DEFAULT_OVERLAY_OPTIONS);
   const [appliedOverlayOptions, setAppliedOverlayOptions] =
@@ -164,6 +174,10 @@ export default function AssetCard({
     clientLogoProxyUrl(client.id, { format: creativeFormat })
   );
   const [showFinalizePanel, setShowFinalizePanel] = useState(false);
+  const useServerPreview =
+    !showFinalizePanel &&
+    localAsset.status === "done" &&
+    Boolean(localAsset.storage_url);
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const typo = getClientTypography(client);
@@ -182,8 +196,8 @@ export default function AssetCard({
   const textTransformOverride = activeFont?.textTransform ?? typo.textTransform;
 
   useEffect(() => {
-    setShowTextOverlay(!isConceptAd);
-  }, [isConceptAd]);
+    setShowTextOverlay(headlineLayout || !isConceptAd);
+  }, [isConceptAd, headlineLayout]);
 
   useEffect(() => {
     const fontId = draftOverlayOptions.selectedFontId ?? appliedOverlayOptions.selectedFontId;
@@ -326,7 +340,7 @@ export default function AssetCard({
   }
 
   async function handleApplyOverlayChanges() {
-    const res = await fetch(`/api/sm/assets/${localAsset.id}`, {
+    const res = await fetch(apiUrl(`/api/sm/assets/${localAsset.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ overlay_options: draftOverlayOptions }),
@@ -371,7 +385,7 @@ export default function AssetCard({
       return;
     }
 
-    const res = await fetch(`/api/sm/assets/${localAsset.id}/download`, {
+    const res = await fetch(apiUrl(`/api/sm/assets/${localAsset.id}/download`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -406,38 +420,39 @@ export default function AssetCard({
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${localAsset.storage_url}?v=${refreshKey}`}
+              src={
+                useServerPreview
+                  ? apiUrl(`/api/sm/assets/${localAsset.id}/preview?v=${refreshKey}&show_text=${showTextOverlay}`)
+                  : `${localAsset.storage_url}?v=${refreshKey}`
+              }
               alt={`${platformLabel} ${typeLabel}`}
               className={
-                (() => {
-                  const layout = isConceptAd
-                    ? "full_bleed_gradient"
-                    : (localAsset.layout_template ?? "full_bleed_gradient");
+                useServerPreview
+                  ? "h-full w-full object-cover"
+                  : (() => {
                   const overlay = getOverlayConfig(
                     creativeFormat,
                     5,
-                    layout,
+                    overlayLayout,
                     getBrandAccentColor(client)
                   );
                   return overlay.imageClass;
                 })()
               }
             />
-            {localAsset.headline &&
+            {!useServerPreview &&
+            localAsset.headline &&
               showTextOverlay &&
               (() => {
                 const tiers = resolveHeadlineTiers(localAsset.headline, headlineMeta);
                 if (!tiers) return null;
 
                 const punchWordCount = tiers.punch.split(" ").length;
-                const layout = isConceptAd
-                  ? "full_bleed_gradient"
-                  : (localAsset.layout_template ?? "full_bleed_gradient");
                 const brandColor = getBrandAccentColor(client);
                 const overlay = getOverlayConfig(
                   creativeFormat,
                   punchWordCount,
-                  layout,
+                  overlayLayout,
                   brandColor
                 );
                 const useBand = Boolean(overlay.bandPosition);
@@ -566,6 +581,8 @@ export default function AssetCard({
                   </div>
                 );
               })()}
+            {!useServerPreview && (
+              <>
             {visualApproach?.product_placement === "corner_stamp" &&
               logoUrl &&
               appliedOverlayOptions.logoStyle !== "none" && (
@@ -587,13 +604,10 @@ export default function AssetCard({
               appliedOverlayOptions.logoStyle !== "none" &&
               visualApproach?.product_placement !== "corner_stamp" &&
               (() => {
-                const layout = isConceptAd
-                  ? "full_bleed_gradient"
-                  : (localAsset.layout_template ?? "full_bleed_gradient");
                 const overlay = getOverlayConfig(
                   creativeFormat,
                   5,
-                  layout,
+                  overlayLayout,
                   getBrandAccentColor(client)
                 );
                 if (overlay.logoInBand) return null;
@@ -654,6 +668,8 @@ export default function AssetCard({
                 />
               </div>
             )}
+              </>
+            )}
           </>
         )}
 
@@ -683,8 +699,28 @@ export default function AssetCard({
           </div>
         )}
 
-        <div className="absolute left-2 top-2 rounded bg-black/50 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
-          {formatLabel}
+        <div className="absolute left-2 top-2 flex flex-col gap-1">
+          <span className="rounded bg-black/50 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+            {formatLabel}
+          </span>
+          {localAsset.explore_label && (
+            <span className="rounded bg-violet-900/60 px-2 py-0.5 text-[10px] text-violet-300">
+              {localAsset.explore_label}
+            </span>
+          )}
+          {localAsset.approval_status && localAsset.approval_status !== "pending" && (
+            <span
+              className={`rounded px-2 py-0.5 text-[10px] ${
+                localAsset.approval_status === "approved"
+                  ? "bg-green-900/60 text-green-300"
+                  : localAsset.approval_status === "rejected"
+                    ? "bg-red-900/60 text-red-300"
+                    : "bg-amber-900/60 text-amber-300"
+              }`}
+            >
+              {localAsset.approval_status.replace("_", " ")}
+            </span>
+          )}
         </div>
 
       </div>
@@ -716,17 +752,19 @@ export default function AssetCard({
           onCancel={handleCancelOverlayChanges}
           showTextOverlay={showTextOverlay}
           isConceptAd={isConceptAd}
+          headlineLayout={headlineLayout}
           hasHeadline={Boolean(localAsset.headline)}
           onToggleText={() => setShowTextOverlay((prev) => !prev)}
+          brandTone={client.tone}
         />
       )}
 
-      {localAsset.headline && !isConceptAd && (
+      {localAsset.headline && (headlineLayout || !isConceptAd) && (
         <div className="px-3 pt-3">
           <p className="text-sm text-zinc-200">&ldquo;{localAsset.headline}&rdquo;</p>
         </div>
       )}
-      {isConceptAd && visualApproach?.impossible_element && (
+      {isConceptAd && !headlineLayout && visualApproach?.impossible_element && (
         <div className="px-3 pt-3">
           <p className="text-[10px] uppercase tracking-wider text-amber-400/80">
             Concept ad — image only

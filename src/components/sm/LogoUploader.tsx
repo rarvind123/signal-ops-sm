@@ -11,6 +11,7 @@ import {
 } from "@/lib/sm/logo-upload";
 import { clientLogoProxyUrl } from "@/lib/sm/logo-url";
 import { label } from "@/lib/sm/ui";
+import { apiUrl } from "@/lib/base-path";
 
 export default function LogoUploader({
   clientId,
@@ -88,7 +89,7 @@ export default function LogoUploader({
       const formData = new FormData();
       formData.set("file", file);
       formData.set("type", "logo");
-      const res = await fetch(`/api/sm/clients/${clientId}/assets`, {
+      const res = await fetch(apiUrl(`/api/sm/clients/${clientId}/assets`), {
         method: "POST",
         body: formData,
       });

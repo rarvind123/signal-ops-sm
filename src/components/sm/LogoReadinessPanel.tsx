@@ -12,6 +12,7 @@ import {
 import { clientLogoProxyUrl } from "@/lib/sm/logo-url";
 import { btnSecondary, label } from "@/lib/sm/ui";
 import type { SMClient } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function LogoReadinessPanel({
   client,
@@ -92,7 +93,7 @@ export default function LogoReadinessPanel({
       const formData = new FormData();
       formData.set("file", file);
       formData.set("type", "logo");
-      const res = await fetch(`/api/sm/clients/${client.id}/assets`, {
+      const res = await fetch(apiUrl(`/api/sm/clients/${client.id}/assets`), {
         method: "POST",
         body: formData,
       });

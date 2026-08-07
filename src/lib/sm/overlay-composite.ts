@@ -7,6 +7,8 @@ import {
   PIP_SIZE_PX,
   type OverlayOptions,
 } from "@/lib/sm/overlay-options";
+import { resolveServerFont } from "@/lib/sm/server-fonts";
+import { compositeSvgOverlay } from "@/lib/sm/svg-rasterize";
 
 function escapeXml(text: string): string {
   return text.replace(/[<>&"]/g, (c) => {
@@ -93,12 +95,21 @@ export async function compositeExtraTextOntoImage(
   imageBuffer: Buffer,
   text: string,
   position: OverlayOptions["extraTextPosition"],
-  fontStack = "Inter, Arial, sans-serif"
+  fontOptions?: {
+    selectedFontId?: string | null;
+    tone?: string | null;
+  }
 ): Promise<Buffer> {
   const { width = 1080, height = 1080 } = await sharp(imageBuffer).metadata();
   const padding = Math.round(width * 0.04);
   const fontSize = Math.round(width * 0.028);
   const y = height - padding - 8;
+  const serverFont = resolveServerFont({
+    selectedFontId: fontOptions?.selectedFontId,
+    tone: fontOptions?.tone,
+    text,
+  });
+  const fontStack = `'${serverFont.family}', sans-serif`;
 
   let x = padding;
   let anchor = "";
@@ -111,27 +122,30 @@ export async function compositeExtraTextOntoImage(
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <text x="${x}" y="${y}" ${anchor}
-      font-family="${fontStack}" font-size="${fontSize}" font-weight="400"
-      letter-spacing="0.05em" fill="rgba(255,255,255,0.85)"
-      filter="url(#shadow)">${escapeXml(text)}</text>
     <defs>
+      <style type="text/css"><![CDATA[
+        ${serverFont.fontFaceCss}
+      ]]></style>
       <filter id="shadow">
         <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.8"/>
       </filter>
     </defs>
+    <text x="${x}" y="${y}" ${anchor}
+      font-family="${fontStack}" font-size="${fontSize}" font-weight="500"
+      letter-spacing="0.04em" fill="rgba(255,255,255,0.9)"
+      filter="url(#shadow)">${escapeXml(text)}</text>
   </svg>`;
 
-  return sharp(imageBuffer)
-    .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
-    .jpeg({ quality: 90 })
-    .toBuffer();
+  return compositeSvgOverlay(imageBuffer, svg, serverFont.fontFilePaths);
 }
 
 export async function applyOverlayOptions(
   imageBuffer: Buffer,
   overlayOptions?: Partial<OverlayOptions>,
-  fontStack?: string
+  fontOptions?: {
+    selectedFontId?: string | null;
+    tone?: string | null;
+  }
 ): Promise<Buffer> {
   if (!overlayOptions) return imageBuffer;
 
@@ -168,7 +182,11 @@ export async function applyOverlayOptions(
         result,
         overlayOptions.extraText.trim(),
         overlayOptions.extraTextPosition ?? "bottom-center",
-        fontStack
+        {
+          selectedFontId:
+            fontOptions?.selectedFontId ?? overlayOptions.selectedFontId,
+          tone: fontOptions?.tone,
+        }
       );
     } catch (e) {
       console.warn("[overlay-composite] Extra text failed:", e);

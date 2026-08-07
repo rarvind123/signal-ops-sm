@@ -122,7 +122,7 @@ Return ONLY valid JSON. No markdown.`;
   }
 
   throw new Error(
-    `Calendar planner returned ${lastCount} of ${totalPosts} required posts — please retry. If this persists, check OPENROUTER_API_KEY.`
+    `Calendar planner returned ${lastCount} of ${totalPosts} required posts — please retry. If this persists, check ANTHROPIC_API_KEY.`
   );
 }
 

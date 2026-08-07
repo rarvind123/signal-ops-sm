@@ -35,6 +35,7 @@ import type {
 } from "@/types/sm";
 import ImageUploader from "./ImageUploader";
 import LogoReadinessPanel from "./LogoReadinessPanel";
+import { apiUrl } from "@/lib/base-path";
 
 const GOALS: { key: SMGoal; label: string }[] = [
   { key: "offer", label: "Promote offer" },
@@ -92,9 +93,14 @@ export default function CreativeBriefForm({
   const [marketSearched, setMarketSearched] = useState(false);
   const [includeLogoLocal, setIncludeLogoLocal] = useState(true);
   const [logoReady, setLogoReady] = useState(false);
+  const [researchingIngredients, setResearchingIngredients] = useState(false);
 
   const includeLogo = includeLogoProp ?? includeLogoLocal;
   const setIncludeLogo = onIncludeLogoChange ?? setIncludeLogoLocal;
+
+  const briefMentionsIngredients = /\bingredients?\b|\bherbs?\b|\bherbals?\b|\bbotanicals?\b/i.test(
+    brief
+  );
 
   const selectedLens = CREATIVE_LENSES.find((l) => l.id === creativeLens);
 
@@ -106,7 +112,7 @@ export default function CreativeBriefForm({
         brand: client.name,
         category: client.usp ?? "",
       });
-      const res = await fetch(`/api/sm/market-reference?${params}`);
+      const res = await fetch(apiUrl(`/api/sm/market-reference?${params}`));
       const data = (await res.json()) as {
         ads?: MetaMarketAd[];
         source?: "meta" | "ai";
@@ -207,7 +213,7 @@ export default function CreativeBriefForm({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/sm/creative-requests", {
+      const res = await fetch(apiUrl("/api/sm/creative-requests"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -421,17 +427,66 @@ export default function CreativeBriefForm({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor="must-include" className={label}>
-            Must include <span className="normal-case tracking-normal text-zinc-600">(optional)</span>
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="must-include" className={label}>
+              Must include{" "}
+              <span className="normal-case tracking-normal text-zinc-600">(optional)</span>
+            </label>
+            <button
+              type="button"
+              disabled={researchingIngredients}
+              onClick={async () => {
+                setResearchingIngredients(true);
+                setError(null);
+                try {
+                  const res = await fetch(
+                    apiUrl(`/api/sm/clients/${client.id}/suggest-ingredients`),
+                    { method: "POST" }
+                  );
+                  const data = (await res.json()) as {
+                    must_include_suggestion?: string;
+                    ingredients?: string[];
+                    error?: string;
+                  };
+                  if (!res.ok) {
+                    throw new Error(data.error ?? "Ingredient research failed");
+                  }
+                  const suggestion = data.must_include_suggestion?.trim();
+                  if (!suggestion) {
+                    throw new Error("No ingredients found — enter them manually.");
+                  }
+                  setMustInclude((prev) =>
+                    prev.trim() ? `${prev.trim()}; ${suggestion}` : suggestion
+                  );
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Ingredient research failed");
+                } finally {
+                  setResearchingIngredients(false);
+                }
+              }}
+              className="shrink-0 text-xs text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline disabled:opacity-50"
+            >
+              {researchingIngredients ? "Researching…" : "Research brand ingredients"}
+            </button>
+          </div>
           <textarea
             id="must-include"
             value={mustInclude}
             onChange={(e) => setMustInclude(e.target.value)}
-            placeholder="e.g. baby's face, forest background, product bottle, specific colour…"
+            placeholder="Scene subjects: yoga tutor stretching, warm studio light… Copy/facts (fee, women only, location) are added as typography — not painted into the photo."
             rows={2}
             className={`${field} resize-none`}
           />
+          <p className="text-xs text-zinc-500">
+            Tip: put visual subjects here. Fees, “women only”, and location labels become overlay
+            text with your font — they should not appear as AI-drawn lettering.
+          </p>
+          {briefMentionsIngredients && !mustInclude.trim() && (
+            <p className="text-xs text-amber-400/90">
+              Your brief mentions ingredients — research them above or type key ingredients so
+              the creative can showcase them clearly.
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="must-exclude" className={label}>
@@ -507,6 +562,7 @@ export default function CreativeBriefForm({
 
       <ImageUploader
         clientId={client.id}
+        initialUrls={uploadedUrls}
         onUpload={(urls) => setUploadedUrls(urls)}
       />
 
@@ -537,7 +593,9 @@ export default function CreativeBriefForm({
         }
         className={`${btnPrimary} w-fit`}
       >
-        {loading ? "Analyzing…" : `Run ${SIGNALOPS_TM}`}
+        {loading
+          ? "Strategy → visual research…"
+          : `Run ${SIGNALOPS_TM}`}
       </button>
     </form>
   );

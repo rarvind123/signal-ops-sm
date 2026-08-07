@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { BASE_PATH, withBasePath } from "@/lib/base-path";
 
 const SITE_PASSWORD = "arvind123";
 const COOKIE_NAME = "sm_site_auth";
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30,
-    path: "/",
+    path: BASE_PATH || "/",
   });
 
   return response;

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { SIGNALOPS_TM } from "@/lib/sm/ui";
+import { apiUrl } from "@/lib/base-path";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
@@ -17,7 +18,7 @@ function LoginForm() {
     setLoading(true);
     setError(false);
 
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),

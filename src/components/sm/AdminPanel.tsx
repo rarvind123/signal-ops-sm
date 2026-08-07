@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { label, SIGNALOPS_TM } from "@/lib/sm/ui";
+import { apiUrl } from "@/lib/base-path";
 
 const ADMIN_KEY = "Mumbai";
 
@@ -49,8 +50,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
       try {
         const headers = { "x-admin-key": ADMIN_KEY };
         const [statsRes, creditsRes] = await Promise.all([
-          fetch("/api/admin/stats", { headers }),
-          fetch("/api/admin/credits", { headers }),
+          fetch(apiUrl("/api/admin/stats"), { headers }),
+          fetch(apiUrl("/api/admin/credits"), { headers }),
         ]);
         const stats = (await statsRes.json()) as {
           summary?: Summary;
@@ -87,7 +88,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={async () => {
-                await fetch("/api/auth/logout", { method: "POST" });
+                await fetch(apiUrl("/api/auth/logout"), { method: "POST" });
                 window.location.href = "/login";
               }}
               className="text-xs text-zinc-600 transition-colors hover:text-red-400"
@@ -126,7 +127,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               setMigrating(true);
               setMigrateStatus(null);
               try {
-                const res = await fetch("/api/admin/migrate-schema", {
+                const res = await fetch(apiUrl("/api/admin/migrate-schema"), {
                   method: "POST",
                   headers: { "x-admin-key": ADMIN_KEY },
                 });
@@ -265,7 +266,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               </div>
               <p className="text-xs text-zinc-600">
                 Cost estimate: $0.04/image (Replicate FLUX 1.1 Pro) + $0.02/{SIGNALOPS_TM} run
-                (OpenRouter Claude Sonnet)
+                (Claude Sonnet)
               </p>
             </div>
           </>

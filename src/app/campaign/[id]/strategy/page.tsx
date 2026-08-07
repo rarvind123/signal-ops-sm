@@ -13,6 +13,7 @@ import {
   isStrategyCorrupted,
 } from "@/lib/sm/campaign-strategy-utils";
 import type { SMCampaign, SMCampaignStrategy } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 function isStrategyEmpty(strategy: SMCampaignStrategy): boolean {
   return (
@@ -46,8 +47,8 @@ export default function CampaignStrategyPage() {
   useEffect(() => {
     void (async () => {
       const [campRes, stratRes] = await Promise.all([
-        fetch(`/api/sm/campaigns/${id}`),
-        fetch(`/api/sm/campaigns/${id}/strategy`),
+        fetch(apiUrl(`/api/sm/campaigns/${id}`),
+        fetch(apiUrl(`/api/sm/campaigns/${id}/strategy`),
       ]);
       if (campRes.ok) {
         const data = (await campRes.json()) as {
@@ -68,7 +69,7 @@ export default function CampaignStrategyPage() {
     setRegenerateLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sm/campaigns/${id}/strategy`, { method: "POST" });
+      const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/strategy`), { method: "POST" });
       const json = (await res.json()) as SMCampaignStrategy & { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Strategy generation failed");
       if (isStrategyEmpty(json)) {
@@ -86,7 +87,7 @@ export default function CampaignStrategyPage() {
     setCalendarLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sm/campaigns/${id}/calendar`, { method: "POST" });
+      const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/calendar`), { method: "POST" });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Calendar generation failed");
       router.push(`/campaign/${id}/calendar`);

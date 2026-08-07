@@ -9,6 +9,7 @@ import CampaignNav from "@/components/sm/CampaignNav";
 import { parseBriefsResponse } from "@/lib/sm/briefs-api";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
 import type {
+import { apiUrl } from "@/lib/base-path";
   SMCampaign,
   SMCampaignCalendarItem,
   SMCampaignStrategy,
@@ -35,7 +36,7 @@ export default function CampaignCalendarPage() {
   ).length;
 
   const loadBriefs = useCallback(async () => {
-    const res = await fetch(`/api/sm/campaigns/${id}/briefs`);
+    const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/briefs`));
     if (res.ok) {
       setBriefs(await parseBriefsResponse(res));
     }
@@ -45,8 +46,8 @@ export default function CampaignCalendarPage() {
   useEffect(() => {
     void (async () => {
       const [campRes, calRes] = await Promise.all([
-        fetch(`/api/sm/campaigns/${id}`),
-        fetch(`/api/sm/campaigns/${id}/calendar`),
+        fetch(apiUrl(`/api/sm/campaigns/${id}`),
+        fetch(apiUrl(`/api/sm/campaigns/${id}/calendar`),
       ]);
       if (campRes.ok) {
         const data = (await campRes.json()) as {
@@ -76,7 +77,7 @@ export default function CampaignCalendarPage() {
     setCalendarLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sm/campaigns/${id}/calendar`, { method: "POST" });
+      const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/calendar`), { method: "POST" });
       const json = (await res.json()) as { items?: SMCampaignCalendarItem[]; error?: string };
       if (!res.ok) throw new Error(json.error ?? "Calendar generation failed");
       setItems(json.items ?? []);
@@ -92,7 +93,7 @@ export default function CampaignCalendarPage() {
     setBatchRetrying(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sm/campaigns/${id}/briefs/batch`, { method: "POST" });
+      const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/briefs/batch`), { method: "POST" });
       const json = (await res.json()) as { error?: string; errors?: string[] };
       if (!res.ok) throw new Error(json.error ?? "Batch brief generation failed");
       if (json.errors?.length) {

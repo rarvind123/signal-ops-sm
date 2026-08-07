@@ -3,6 +3,8 @@ import "server-only";
 import sharp from "sharp";
 import { getFontById } from "@/lib/sm/font-catalogue";
 import { getOverlayConfig } from "@/lib/sm/overlay-config";
+import { resolveServerFont } from "@/lib/sm/server-fonts";
+import { compositeSvgOverlay } from "@/lib/sm/svg-rasterize";
 import {
   getBrandAccentColor,
   getClientTypography,
@@ -11,7 +13,6 @@ import {
   getTypography,
   resolveHeadlineTiers,
   splitWord,
-  svgSafeFontStack,
 } from "@/lib/sm/typography";
 import { TEXT_SIZE_PX, type OverlayOptions } from "@/lib/sm/overlay-options";
 import type { SMCreativeFormat, SMClient, SMLayoutTemplate } from "@/types/sm";
@@ -91,9 +92,13 @@ export async function compositeTextOntoImage(
   const fontOverride = options?.selected_font_id
     ? getFontById(options.selected_font_id)
     : null;
-  const fontStack = fontOverride
-    ? `'${fontOverride.family}', sans-serif`
-    : svgSafeFontStack(typo);
+  const serverFont = resolveServerFont({
+    selectedFontId: options?.selected_font_id,
+    typo,
+    tone: client?.tone,
+    text: headline,
+  });
+  const fontStack = `'${serverFont.family}', sans-serif`;
   const fontWeightBase = fontOverride?.weight ?? typo.fontWeight;
   const letterSpacing = fontOverride?.letterSpacing ?? typo.letterSpacing;
   const textTransform = fontOverride?.textTransform ?? typo.textTransform;
@@ -209,6 +214,9 @@ export async function compositeTextOntoImage(
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
     <defs>
+      <style type="text/css"><![CDATA[
+        ${serverFont.fontFaceCss}
+      ]]></style>
       ${bottomGradientDef("gradBottom")}
       ${topGradientDef("gradTop")}
       <filter id="shadow">
@@ -223,8 +231,5 @@ export async function compositeTextOntoImage(
     ${punchText}
   </svg>`;
 
-  return sharp(imageBuffer)
-    .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
-    .jpeg({ quality: 90 })
-    .toBuffer();
+  return compositeSvgOverlay(imageBuffer, svg, serverFont.fontFilePaths);
 }

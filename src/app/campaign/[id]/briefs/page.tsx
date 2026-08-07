@@ -8,6 +8,7 @@ import CreativeBriefCard from "@/components/sm/CreativeBriefCard";
 import { parseBriefsResponse } from "@/lib/sm/briefs-api";
 import { sectionTitle } from "@/lib/sm/ui";
 import type { SMCreativeBrief } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function CampaignBriefsPage() {
   const params = useParams();
@@ -16,7 +17,7 @@ export default function CampaignBriefsPage() {
   const [loading, setLoading] = useState(true);
 
   const loadBriefs = useCallback(async () => {
-    const res = await fetch(`/api/sm/campaigns/${id}/briefs`);
+    const res = await fetch(apiUrl(`/api/sm/campaigns/${id}/briefs`));
     if (res.ok) {
       setBriefs(await parseBriefsResponse(res));
     }

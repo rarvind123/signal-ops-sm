@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type React from "react";
-import { FONT_CATALOGUE, loadGoogleFont } from "@/lib/sm/font-catalogue";
+import {
+  FONT_CATALOGUE,
+  loadGoogleFont,
+  recommendFontId,
+} from "@/lib/sm/font-catalogue";
 import { field } from "@/lib/sm/ui";
 import type { OverlayOptions } from "@/lib/sm/overlay-options";
 
@@ -13,8 +17,11 @@ export default function CreativeFinalizePanel({
   onCancel,
   showTextOverlay = true,
   isConceptAd = false,
+  headlineLayout = false,
   hasHeadline = false,
   onToggleText,
+  brandTone,
+  goal,
 }: {
   options: OverlayOptions;
   onChange: React.Dispatch<React.SetStateAction<OverlayOptions>>;
@@ -22,9 +29,13 @@ export default function CreativeFinalizePanel({
   onCancel: () => void;
   showTextOverlay?: boolean;
   isConceptAd?: boolean;
+  headlineLayout?: boolean;
   hasHeadline?: boolean;
   onToggleText?: () => void;
+  brandTone?: string | null;
+  goal?: string | null;
 }) {
+  const suggestedFontId = recommendFontId(brandTone, goal);
   const [isSaving, setIsSaving] = useState(false);
   const set = (patch: Partial<OverlayOptions>) =>
     onChange((prev) => ({ ...prev, ...patch }));
@@ -50,8 +61,11 @@ export default function CreativeFinalizePanel({
         <div className="mb-1 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-wider text-zinc-500">Text overlay</p>
-            {isConceptAd && (
+            {isConceptAd && !headlineLayout && (
               <p className="mt-0.5 text-xs text-zinc-600">Concept ad — off by default</p>
+            )}
+            {headlineLayout && (
+              <p className="mt-0.5 text-xs text-zinc-600">Strategy layout requires headline</p>
             )}
           </div>
           <button
@@ -110,7 +124,16 @@ export default function CreativeFinalizePanel({
       </div>
 
       <div className="mb-5">
-        <p className="mb-2 text-xs uppercase tracking-wider text-zinc-500">Font</p>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs uppercase tracking-wider text-zinc-500">Font</p>
+          <button
+            type="button"
+            onClick={() => set({ selectedFontId: suggestedFontId })}
+            className="text-xs text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+          >
+            Use suggested
+          </button>
+        </div>
         <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto pr-1">
           <button
             type="button"
@@ -125,32 +148,48 @@ export default function CreativeFinalizePanel({
             <span className="text-xs text-zinc-500">Auto</span>
           </button>
 
-          {FONT_CATALOGUE.map((font) => (
-            <button
-              key={font.id}
-              type="button"
-              onClick={() => set({ selectedFontId: font.id })}
-              className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
-                options.selectedFontId === font.id
-                  ? "bg-white text-black"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-              }`}
-            >
-              <span
-                style={{
-                  fontFamily: `'${font.family}', sans-serif`,
-                  fontSize: "15px",
-                  fontWeight: font.weight,
-                  letterSpacing: font.letterSpacing,
-                  textTransform: font.textTransform,
-                  lineHeight: 1,
-                }}
+          {FONT_CATALOGUE.map((font) => {
+            const isSuggested = font.id === suggestedFontId;
+            return (
+              <button
+                key={font.id}
+                type="button"
+                onClick={() => set({ selectedFontId: font.id })}
+                className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
+                  options.selectedFontId === font.id
+                    ? "bg-white text-black"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                }`}
               >
-                {font.label}
-              </span>
-              <span className="ml-2 shrink-0 text-xs text-zinc-500">{font.mood}</span>
-            </button>
-          ))}
+                <span
+                  style={{
+                    fontFamily: `'${font.family}', sans-serif`,
+                    fontSize: "15px",
+                    fontWeight: font.weight,
+                    letterSpacing: font.letterSpacing,
+                    textTransform: font.textTransform,
+                    lineHeight: 1,
+                  }}
+                >
+                  {font.label}
+                </span>
+                <span className="ml-2 flex shrink-0 items-center gap-1.5 text-xs text-zinc-500">
+                  {isSuggested && (
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                        options.selectedFontId === font.id
+                          ? "bg-black/10 text-black"
+                          : "bg-zinc-700 text-zinc-300"
+                      }`}
+                    >
+                      Suggested
+                    </span>
+                  )}
+                  {font.mood}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

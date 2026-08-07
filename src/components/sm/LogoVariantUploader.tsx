@@ -8,6 +8,7 @@ import {
   verifyRemoteLogoUrl,
 } from "@/lib/sm/logo-upload";
 import { clientLogoProxyUrl } from "@/lib/sm/logo-url";
+import { apiUrl } from "@/lib/base-path";
 
 export default function LogoVariantUploader({
   label: variantLabel,
@@ -53,7 +54,7 @@ export default function LogoVariantUploader({
       formData.set("file", file);
       formData.set("type", "logo");
       formData.set("logo_variant", variantLabel);
-      const res = await fetch(`/api/sm/clients/${clientId}/assets`, {
+      const res = await fetch(apiUrl(`/api/sm/clients/${clientId}/assets`), {
         method: "POST",
         body: formData,
       });

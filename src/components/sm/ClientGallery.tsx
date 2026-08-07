@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { btnPrimary } from "@/lib/sm/ui";
 import type { SMGeneratedAsset } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 export default function ClientGallery({
   clientId,
@@ -15,7 +16,7 @@ export default function ClientGallery({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void fetch(`/api/sm/clients/${clientId}/gallery?limit=12`)
+    void fetch(apiUrl(`/api/sm/clients/${clientId}/gallery?limit=12`))
       .then((r) => r.json())
       .then((data: { assets?: SMGeneratedAsset[] }) => {
         setAssets(data.assets ?? []);

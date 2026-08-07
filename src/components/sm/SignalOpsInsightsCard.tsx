@@ -6,6 +6,7 @@ import { LAYOUT_TEMPLATE_LABELS } from "@/lib/sm/market-reference";
 import StrategyProtected from "@/components/sm/StrategyProtected";
 import { btnPrimary, btnSecondary, label, sectionTitle, SIGNALOPS_TM } from "@/lib/sm/ui";
 import type { SMCreativeLens, SMSignalOpsOutput } from "@/types/sm";
+import { apiUrl } from "@/lib/base-path";
 
 const QUALITY_THRESHOLD = 6.5;
 
@@ -54,7 +55,7 @@ export default function SignalOpsInsightsCard({
   async function handleStrengthenStrategy() {
     setRegenLoading(true);
     try {
-      const res = await fetch(`/api/sm/creative-requests/${output.request_id}/signalops`, {
+      const res = await fetch(apiUrl(`/api/sm/creative-requests/${output.request_id}/signalops`), {
         method: "POST",
       });
       const newOutput = (await res.json()) as SMSignalOpsOutput & { error?: string };
