@@ -1,4 +1,26 @@
 {
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "inventious.co" }],
+      "destination": "https://promo-os-inventious.vercel.app/"
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.inventious.co" }],
+      "destination": "https://promo-os-inventious.vercel.app/"
+    },
+    {
+      "source": "/:path((?!admode).*)",
+      "has": [{ "type": "host", "value": "inventious.co" }],
+      "destination": "https://promo-os-inventious.vercel.app/:path*"
+    },
+    {
+      "source": "/:path((?!admode).*)",
+      "has": [{ "type": "host", "value": "www.inventious.co" }],
+      "destination": "https://promo-os-inventious.vercel.app/:path*"
+    }
+  ],
   "redirects": [
     {
       "source": "/admode",
