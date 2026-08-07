@@ -192,15 +192,19 @@ export async function POST(req: Request, context: RouteContext) {
       const baseMode = (signalops.visual_approach?.mode ??
         "concept_first") as SMVisualApproachMode;
       const headlineCount = Math.max(signalops.headlines.length, 1);
-      const directions: ExploreDirection[] = [
+      const directions = [
         { label: "Strategy pick", headline_index, visual_approach_mode: baseMode },
         {
           label: "Alt headline",
           headline_index: (headline_index + 1) % headlineCount,
           visual_approach_mode: baseMode,
         },
-        { label: "Brave visual", headline_index, visual_approach_mode: "visual_tension" },
-      ].slice(0, EXPLORE_DIRECTION_COUNT);
+        {
+          label: "Brave visual",
+          headline_index,
+          visual_approach_mode: "visual_tension" as SMVisualApproachMode,
+        },
+      ].slice(0, EXPLORE_DIRECTION_COUNT) as ExploreDirection[];
 
       workItems = directions.map((dir) => {
         const headlineIdx = dir.headline_index;
