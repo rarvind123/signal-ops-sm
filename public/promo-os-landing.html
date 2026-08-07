@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Promo OS — Inventious</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #060608;
+      color: #e4e4e7;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      padding: 4rem 1.5rem;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .logo {
+      position: fixed;
+      top: 1.5rem;
+      left: 1.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #f59e0b;
+    }
+    .admode-link {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      font-size: 0.75rem;
+      color: #a1a1aa;
+      text-decoration: none;
+    }
+    .admode-link:hover { color: #f59e0b; }
+    .wrap { position: relative; width: 100%; max-width: 32rem; text-align: center; }
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(245,158,11,0.9);
+    }
+    h1 {
+      margin-top: 2.5rem;
+      font-size: 1.25rem;
+      font-weight: 300;
+      letter-spacing: 0.02em;
+      color: #f4f4f5;
+    }
+    select {
+      margin-top: 2rem;
+      width: 100%;
+      padding: 0.875rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(63,63,70,0.8);
+      background: rgba(24,24,27,0.8);
+      color: #f4f4f5;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    select:focus { border-color: rgba(245,158,11,0.4); }
+    button {
+      margin-top: 2.5rem;
+      width: 100%;
+      padding: 0.875rem 2rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: #d97706;
+      color: #000;
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(245,158,11,0.9); }
+    .note {
+      margin-top: 1.5rem;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #71717a;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">Inventious</div>
+  <a class="admode-link" href="/admode">SignalOps →</a>
+  <div class="wrap">
+    <p class="eyebrow">Promo OS — GOD MODE</p>
+    <h1>I want to create</h1>
+    <select id="mode" aria-label="Product mode">
+      <option value="original">Original Promos</option>
+      <option value="episodic-crunches">Episodic Crunches</option>
+      <option value="versions">Versions of a Promo</option>
+      <option value="adaptation">Adaptation of a Promo</option>
+      <option value="script-analysis">Script Analysis</option>
+      <option value="contextualisation">Contextualisation</option>
+      <option value="powerstart-engine">PowerStart Engine</option>
+      <option value="sketch-video">Sketch Video</option>
+    </select>
+    <button type="button" onclick="alert('Full Promo OS tools coming soon. Use SignalOps at /admode for now.')">Continue</button>
+    <p class="note">Preview landing · tools wiring in progress</p>
+  </div>
+</body>
+</html>

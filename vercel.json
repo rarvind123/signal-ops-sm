@@ -3,22 +3,22 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "inventious.co" }],
-      "destination": "https://promo-os-inventious.vercel.app/"
+      "destination": "/promo-os-landing.html"
     },
     {
       "source": "/",
       "has": [{ "type": "host", "value": "www.inventious.co" }],
-      "destination": "https://promo-os-inventious.vercel.app/"
+      "destination": "/promo-os-landing.html"
     },
     {
-      "source": "/:path((?!admode).*)",
+      "source": "/:path((?!admode|promo-os-landing.html).*)",
       "has": [{ "type": "host", "value": "inventious.co" }],
-      "destination": "https://promo-os-inventious.vercel.app/:path*"
+      "destination": "/promo-os-landing.html"
     },
     {
-      "source": "/:path((?!admode).*)",
+      "source": "/:path((?!admode|promo-os-landing.html).*)",
       "has": [{ "type": "host", "value": "www.inventious.co" }],
-      "destination": "https://promo-os-inventious.vercel.app/:path*"
+      "destination": "/promo-os-landing.html"
     }
   ],
   "redirects": [
