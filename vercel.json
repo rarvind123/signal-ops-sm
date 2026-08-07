@@ -1,6 +1,18 @@
 {
   "redirects": [
     {
+      "source": "/admode",
+      "has": [{ "type": "host", "value": "signal-ops-sm.vercel.app" }],
+      "destination": "https://inventious.co/admode",
+      "permanent": true
+    },
+    {
+      "source": "/admode/:path*",
+      "has": [{ "type": "host", "value": "signal-ops-sm.vercel.app" }],
+      "destination": "https://inventious.co/admode/:path*",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "signal-ops-sm.vercel.app" }],
       "destination": "https://inventious.co/admode/:path*",
