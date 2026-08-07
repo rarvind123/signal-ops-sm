@@ -56,7 +56,7 @@ export default function AssetReviewCard({
       {asset.storage_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={apiUrl(`/api/sm/assets/${asset.id}/preview?v=${asset.created_at}`}
+          src={apiUrl(`/api/sm/assets/${asset.id}/preview?v=${asset.created_at}`)}
           alt={asset.headline ?? "Creative preview"}
           className="aspect-square w-full rounded-lg object-cover"
         />
@@ -108,7 +108,7 @@ export default function AssetReviewCard({
           Reject
         </button>
         <a
-          href={apiUrl(`/api/sm/assets/${asset.id}/download`}
+          href={apiUrl(`/api/sm/assets/${asset.id}/download`)}
           className="ml-auto rounded border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
         >
           Download
