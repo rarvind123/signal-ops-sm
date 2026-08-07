@@ -44,10 +44,6 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const appPath = stripBasePath(pathname);
 
-  if (INVENTIOUS_HOSTS.has(host) && pathname === "/") {
-    return NextResponse.redirect(new URL(withBasePath("/"), request.url));
-  }
-
   if (
     appPath === "/login" ||
     appPath.startsWith("/review/") ||
