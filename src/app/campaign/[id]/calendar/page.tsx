@@ -8,8 +8,8 @@ import CampaignCalendarView from "@/components/sm/CampaignCalendarView";
 import CampaignNav from "@/components/sm/CampaignNav";
 import { parseBriefsResponse } from "@/lib/sm/briefs-api";
 import { btnPrimary, sectionTitle } from "@/lib/sm/ui";
-import type {
 import { apiUrl } from "@/lib/base-path";
+import type {
   SMCampaign,
   SMCampaignCalendarItem,
   SMCampaignStrategy,
@@ -46,8 +46,8 @@ export default function CampaignCalendarPage() {
   useEffect(() => {
     void (async () => {
       const [campRes, calRes] = await Promise.all([
-        fetch(apiUrl(`/api/sm/campaigns/${id}`),
-        fetch(apiUrl(`/api/sm/campaigns/${id}/calendar`),
+        fetch(apiUrl(`/api/sm/campaigns/${id}`)),
+        fetch(apiUrl(`/api/sm/campaigns/${id}/calendar`)),
       ]);
       if (campRes.ok) {
         const data = (await campRes.json()) as {

@@ -24,8 +24,8 @@ export default function CampaignReviewPage() {
   useEffect(() => {
     async function load() {
       const [briefsRes, campaignRes] = await Promise.all([
-        fetch(apiUrl(`/api/sm/campaigns/${campaignId}/briefs`),
-        fetch(apiUrl(`/api/sm/campaigns/${campaignId}`),
+        fetch(apiUrl(`/api/sm/campaigns/${campaignId}/briefs`)),
+        fetch(apiUrl(`/api/sm/campaigns/${campaignId}`)),
       ]);
       if (briefsRes.ok) {
         setBriefs(await parseBriefsResponse(briefsRes));

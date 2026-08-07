@@ -47,8 +47,8 @@ export default function CampaignStrategyPage() {
   useEffect(() => {
     void (async () => {
       const [campRes, stratRes] = await Promise.all([
-        fetch(apiUrl(`/api/sm/campaigns/${id}`),
-        fetch(apiUrl(`/api/sm/campaigns/${id}/strategy`),
+        fetch(apiUrl(`/api/sm/campaigns/${id}`)),
+        fetch(apiUrl(`/api/sm/campaigns/${id}/strategy`)),
       ]);
       if (campRes.ok) {
         const data = (await campRes.json()) as {
